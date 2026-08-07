@@ -1,7 +1,7 @@
 package first.lyra.client.render;
 
-import first.lyra.client.render.renderConfig.ModelConfig;
-import first.lyra.client.render.renderConfig.TrailConfig;
+import first.lyra.client.render.trail.ModelConfig;
+import first.lyra.client.render.trail.TrailConfig;
 import first.lyra.common.entity.AttachmentEntity;
 
 /**

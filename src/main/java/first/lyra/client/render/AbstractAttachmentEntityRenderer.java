@@ -2,8 +2,8 @@ package first.lyra.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import first.lyra.client.render.renderConfig.ModelConfig;
-import first.lyra.client.render.renderConfig.TrailConfig;
+import first.lyra.client.render.trail.ModelConfig;
+import first.lyra.client.render.trail.TrailConfig;
 import first.lyra.client.renderType.TrailRenderType;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;

@@ -11,7 +11,7 @@ import java.util.Map;
  * 供 {@code LyraLanguageProvider} 数据生成输出。
  * </p>
  */
-public final class LyraLanguageRegister {
+public class LyraLanguageRegister {
 
     /** key -> {en, zh} */
     public static final Map<String, String[]> LanguageGenerate = new HashMap<>();

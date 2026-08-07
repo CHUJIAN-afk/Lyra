@@ -34,7 +34,7 @@ public class DamageInfoData {
             Vec3 pos = box.getCenter()
                     .add(0, box.getYsize() / 2, 0);
             Vec3 velocity = pos.add(0, box.getYsize() / 2, 0)
-                    .offsetRandom(random, (float) (box.getXsize() + box.getZsize()))
+                    .offsetRandom(random, (float) (box.getXsize() + box.getZsize()) * 0.5f)
                     .subtract(pos)
                     .normalize();
             boolean critical = damageSource instanceof IDamageSourceCritical iDamageSourceCritical && iDamageSourceCritical.lyra$isCritical();
