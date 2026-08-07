@@ -1,0 +1,123 @@
+package first.lyra.client.render;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import first.lyra.client.render.renderConfig.ModelConfig;
+import first.lyra.client.render.renderConfig.TrailConfig;
+import first.lyra.client.renderType.TrailRenderType;
+import first.lyra.common.entity.AttachmentEntity;
+import first.lyra.common.entity.PathNode;
+import first.lyra.client.config.ClientConfig;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Matrix3f;
+import org.joml.Matrix4f;
+import org.joml.Quaternionf;
+
+/**
+ * 附件实体渲染器抽象基类。
+ * <p>
+ * 提供完整的拖尾渲染和本体渲染框架，支持强类型配置分离。
+ * </p>
+ *
+ * @param <T> 附件实体类型
+ * @see RenderContext
+ * @see TrailConfig
+ * @see ModelConfig
+ */
+public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntity> implements IAttachmentEntityRenderer<T> {
+
+    /**
+     * 为指定附件实体创建渲染上下文
+     */
+    protected abstract RenderContext<T> createContext(T entity);
+
+    /** 渲染附件实体本体 */
+    protected abstract void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick);
+
+    @Override
+    public void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, int packedLight, PathNode visualNode) {
+        RenderContext<T> context = createContext(entity);
+        if (context != null) {
+            poseStack.pushPose();
+            if (ClientConfig.AlphaModify.isTrue()) {
+                AlphaBufferSource alphaBufferSource = new AlphaBufferSource(bufferSource);
+                alphaBufferSource.setAlpha(getAlphaModify(context, visualNode, partialTick));
+                bufferSource = alphaBufferSource;
+            }
+            if (context.hasTrail()) {
+                context.trail.render(entity, poseStack, bufferSource, partialTick, visualNode, TrailRenderType.getTrail());
+            }
+            modelModify(entity, poseStack, bufferSource, visualNode, context, partialTick);
+            poseStack.popPose();
+        }
+    }
+
+    protected void modelModify(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick) {
+        ModelConfig<T> model = context.model;
+
+        // 绕过 PoseStack 的 6 次 mulPose + scale + translate，
+        // 直接用 JOML 构造完整变换矩阵，一次性设入 PoseStack。
+        // 使用 Axis.rotationDegrees() 构造四元数，与原版 mulPose 完全一致。
+        float yawDeg = visualNode.yaw();
+        float pitchDeg = visualNode.pitch();
+        float rollDeg = visualNode.roll();
+
+        // 逐个构造四元数，再合成为一个旋转，与 mulPose 顺序完全一致
+        Quaternionf qYaw = Axis.YN.rotationDegrees(yawDeg);
+        Quaternionf qPitch = Axis.XP.rotationDegrees(pitchDeg);
+        Quaternionf qRoll = Axis.ZP.rotationDegrees(rollDeg);
+        Quaternionf qYawOff = Axis.YN.rotationDegrees(model.yawOffset);
+        Quaternionf qPitchOff = Axis.XP.rotationDegrees(model.pitchOffset);
+        Quaternionf qRollOff = Axis.ZP.rotationDegrees(model.rollOffset);
+
+        // mulPose 是左乘：result = q * current，所以合成的顺序是 qRollOff * qPitchOff * qYawOff * qRoll * qPitch * qYaw
+        Quaternionf rotation = new Quaternionf(qYaw)
+                .mul(qPitch)
+                .mul(qRoll)
+                .mul(qYawOff)
+                .mul(qPitchOff)
+                .mul(qRollOff);
+
+        float s = model.scale;
+        // 构造完整变换：旋转 → 缩放 → 平移
+        Matrix4f transform = new Matrix4f()
+                .rotate(rotation)
+                .scale(s, s, s)
+                .translate(model.translateX, model.translateY, model.translateZ);
+
+        poseStack.pushPose();
+        poseStack.last().pose().mul(transform);
+        poseStack.last().normal().mul(new Matrix3f().rotation(rotation));
+
+        render(entity, poseStack, bufferSource, visualNode, context, partialTick);
+        poseStack.popPose();
+    }
+
+    protected float getAlphaModify(RenderContext<T> config, PathNode visualNode, float partialTick) {
+        Minecraft minecraft = Minecraft.getInstance();
+        Player player = minecraft.player;
+        if (player == null || !minecraft.options.getCameraType().isFirstPerson()) {
+            return 1.0f;
+        }
+
+        Vec3 entityPos = visualNode.pos();
+        Vec3 eyePos = player.getEyePosition(partialTick);
+        double distance = entityPos.distanceTo(eyePos);
+
+        float minDistance = 0.5f * config.model.alphaDistanceFactor;
+        float maxDistance = 4.0f * config.model.alphaDistanceFactor;
+
+        if (distance <= minDistance) {
+            return 0.0f;
+        }
+        if (distance >= maxDistance) {
+            return 1.0f;
+        }
+
+        float alpha = (float) ((distance - minDistance) / (maxDistance - minDistance));
+        return Math.max(0.102f, Math.min(1.0f, alpha));
+    }
+}

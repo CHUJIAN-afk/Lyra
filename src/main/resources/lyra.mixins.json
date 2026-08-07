@@ -1,0 +1,24 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "first.lyra.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "CombatRulesMixin",
+    "CreativeModeTabMixin",
+    "LevelRendererAccessor",
+    "LivingEntityMixin",
+    "PlayerMixin"
+  ],
+  "client": [
+    "CreativeModeInventoryScreenMixin",
+    "EntityRendererMixin",
+    "LevelRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "overwrites": {
+    "requireAnnotations": true
+  }
+}

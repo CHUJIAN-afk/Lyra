@@ -1,0 +1,31 @@
+package first.lyra.client.geo;
+
+import software.bernie.geckolib.animatable.GeoAnimatable;
+import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.animatable.instance.SingletonAnimatableInstanceCache;
+import software.bernie.geckolib.animation.AnimatableManager;
+
+/**
+ * {@link GeoAnimatable} 最小壳，仅用于满足 {@code GeoRenderer} 接口的形式参数要求。
+ * <p>
+ * 不参与动画驱动——动画采样由 {@link GeoAnimationSampler} 独立完成。
+ */
+public class DummyGeoAnimatable implements GeoAnimatable {
+
+    private final AnimatableInstanceCache cache = new SingletonAnimatableInstanceCache(this);
+
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+        // 无动画控制器，动画由 GeoAnimationSampler 外部驱动
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return this.cache;
+    }
+
+    @Override
+    public double getTick(Object object) {
+        return 0;
+    }
+}

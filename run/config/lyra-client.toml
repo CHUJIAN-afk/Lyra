@@ -1,0 +1,4 @@
+dynamic_light = true
+alpha_modify = true
+damage_info = true
+debug_mode = false
