@@ -4,8 +4,8 @@ import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.dataGenerator.provider.LyraItemModelProvider;
 import first.lyra.dataGenerator.provider.LyraItemTagsProvider;
+import first.lyra.dataGenerator.provider.LyraLanguageProvider;
 import first.lyra.dataGenerator.provider.LyraRecipeProvider;
-import first.lyra.register.LyraLanguageRegister;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
@@ -21,29 +21,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-/**
- * Lyra 物品注册构建器（外接版）。
- * <p>
- * 库本身不注册任何物品：构建器使用宿主 mod 传入的 {@link DeferredRegister.Items} 注册物品，
- * 并链式配置：
- * <ul>
- *     <li>语言条目（写入 {@link LyraLanguageRegister}，由宿主 mod 语言数据生成器输出）</li>
- *     <li>配方/标签/模型数据生成</li>
- * </ul>
- * 创造模式分类不在此指定：物品只需带有 {@link Section} 定义的特征标签
- * （通过物品 Properties.tag 或数据生成标签），即自动归入对应分段。
- * 用法：
- * <pre>{@code
- * DeferredRegister.Items items = DeferredRegister.createItems("my_mod");
- * LyraItemRegisterBuilder.build(items, "my_item", () -> new MyItem(new Item.Properties().tag(MyTags.SECTION_A)))
- *         .itemLanguage("My Item", "我的物品")
- *         .recipe(output -> ShapedRecipeBuilder.shaped(...).save(output))
- *         .itemModel(LyraItemRegisterBuilder::basicModel)
- *         .build();
- * }</pre>
- * 数据生成条目（语言/配方/标签/模型）写入 Lyra 的 datagen 收集器，
- * 由 {@code LyraDataGeneratorEvent} 在宿主跑 runData 时输出。
- */
+
 public class LyraItemRegisterBuilder<T extends Item> {
 
     private final DeferredItem<T> register;
@@ -69,7 +47,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
 
     public LyraItemRegisterBuilder<T> language(String key, String enDesc, String zhDesc) {
         if (!FMLLoader.isProduction()) {
-            LyraLanguageRegister.entry(key, enDesc, zhDesc);
+            LyraLanguageProvider.entry(key, enDesc, zhDesc);
         }
         return this;
     }

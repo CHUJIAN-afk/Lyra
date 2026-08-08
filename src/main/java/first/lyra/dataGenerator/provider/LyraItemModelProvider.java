@@ -18,7 +18,12 @@ public class LyraItemModelProvider extends ItemModelProvider {
     public static final Map<ResourceLocation, BiConsumer<ResourceLocation, LyraItemModelProvider>> ItemModelGenerate = new HashMap<>();
 
     public LyraItemModelProvider(PackOutput packOutput, ExistingFileHelper existingFileHelper) {
-        super(packOutput, Lyra.MODID, existingFileHelper);
+        this(packOutput, existingFileHelper, Lyra.MODID);
+    }
+
+    /** 宿主 mod 使用:输出到宿主命名空间(模型 JSON 与物品 ID 命名空间需一致)。 */
+    public LyraItemModelProvider(PackOutput packOutput, ExistingFileHelper existingFileHelper, String modid) {
+        super(packOutput, modid, existingFileHelper);
     }
 
     @Override

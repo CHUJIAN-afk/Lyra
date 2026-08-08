@@ -1,11 +1,4 @@
 {
-  "attribute.lyra.health_regen": "Health Regen",
-  "attribute.lyra.sentry_servant_max_count": "Max Sentry Servants",
-  "attribute.lyra.servant_armor_pierce": "Servant Armor Pierce",
-  "attribute.lyra.servant_damage": "Servant Damage",
-  "attribute.lyra.servant_knockback": "Servant Knockback",
-  "attribute.lyra.servant_max_count": "Max Servants",
-  "attribute.lyra.servant_search_range": "Servant Search Range",
   "death.attack.lyra.servant": "%1$s was torn apart by a servant",
   "death.attack.lyra.servant.player": "%1$s was torn apart by a servant whilst fighting %2$s",
   "item.lyra.tooltip.armor_pierce": "Armor Pierce",
@@ -26,5 +19,12 @@
   "lyra.configuration.dynamic_light.tooltip": "Enable Lyra dynamic lighting, which increases additional rendering performance cost",
   "lyra.configuration.section.lyra.client.toml": "Client",
   "lyra.configuration.section.lyra.client.toml.title": "Client Configuration",
-  "lyra.configuration.title": "Lyra Configuration"
+  "lyra.configuration.title": "Lyra Configuration",
+  "lyra:health_regen": "Health Regen",
+  "lyra:sentry_servant_max_count": "Max Sentry Servants",
+  "lyra:servant_armor_pierce": "Servant Armor Pierce",
+  "lyra:servant_damage": "Servant Damage",
+  "lyra:servant_knockback": "Servant Knockback",
+  "lyra:servant_max_count": "Max Servants",
+  "lyra:servant_search_range": "Servant Search Range"
 }

@@ -12,7 +12,12 @@ import java.util.concurrent.CompletableFuture;
 public class LyraBlockTagsProvider extends BlockTagsProvider {
 
     public LyraBlockTagsProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider, ExistingFileHelper existingFileHelper) {
-        super(output, lookupProvider, Lyra.MODID, existingFileHelper);
+        this(output, lookupProvider, existingFileHelper, Lyra.MODID);
+    }
+
+    /** 宿主 mod 使用:输出到宿主命名空间。 */
+    public LyraBlockTagsProvider(PackOutput output, CompletableFuture<HolderLookup.Provider> lookupProvider, ExistingFileHelper existingFileHelper, String modid) {
+        super(output, lookupProvider, modid, existingFileHelper);
     }
 
     @Override

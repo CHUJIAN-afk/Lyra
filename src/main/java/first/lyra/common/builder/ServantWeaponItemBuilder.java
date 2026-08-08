@@ -7,6 +7,7 @@ import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.common.entity.PathNode;
 import first.lyra.common.item.IServantWeaponItem;
 import first.lyra.common.servant.Servant;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.InteractionHand;
@@ -55,6 +56,7 @@ public class ServantWeaponItemBuilder<T extends Servant> {
     private float knockback = 0;
     private float armorPierce = 0;
     private Supplier<SoundEvent> soundEventSupplier = () -> null;
+    private SummonTooltip<T> summonTooltip = null;
     private TriConsumer<@NotNull IServantWeaponItem<T>, @NotNull Player, @Nullable ItemStack> summonAction = (weapon, player, itemStack) -> {
         T servant = weapon.createServant(player, itemStack);
         LyraHelper lyraHelper = LyraHelper.get(player);
@@ -134,6 +136,17 @@ public class ServantWeaponItemBuilder<T extends Servant> {
     }
 
     /**
+     * 自定义召唤 tooltip 中"召唤目标"文本(覆写 {@link IServantWeaponItem#getSummonTooltip} 默认行为)。
+     * <p>
+     * 默认显示仆从类型名翻译;剑鞘类武器可借此显示存放的物品名。
+     * </p>
+     */
+    public ServantWeaponItemBuilder<T> summonTooltip(SummonTooltip<T> summonTooltip) {
+        this.summonTooltip = summonTooltip;
+        return this;
+    }
+
+    /**
      * 构建武器物品。
      */
     public ServantWeaponItem build() {
@@ -186,6 +199,14 @@ public class ServantWeaponItemBuilder<T extends Servant> {
         }
 
         @Override
+        public Component getSummonTooltip(ItemStack itemStack, AttachmentEntityType<?> type, ResourceLocation location, Player player) {
+            if (summonTooltip != null) {
+                return summonTooltip.apply(this, itemStack, type, location, player);
+            }
+            return IServantWeaponItem.super.getSummonTooltip(itemStack, type, location, player);
+        }
+
+        @Override
         public void remove(@NotNull Player player) {
             if (onRemove != null) {
                 onRemove.accept(player);
@@ -193,5 +214,11 @@ public class ServantWeaponItemBuilder<T extends Servant> {
                 IServantWeaponItem.super.remove(player);
             }
         }
+    }
+
+    /** 召唤 tooltip 自定义器:返回"召唤目标"文本。 */
+    @FunctionalInterface
+    public interface SummonTooltip<T extends Servant> {
+        Component apply(IServantWeaponItem<T> weapon, ItemStack itemStack, AttachmentEntityType<?> type, ResourceLocation location, Player player);
     }
 }

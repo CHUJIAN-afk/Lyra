@@ -29,7 +29,12 @@ public class LyraItemTagsProvider extends ItemTagsProvider {
     public static final Map<TagKey<Item>, List<ItemLike>> ItemTagsGenerate = new HashMap<>();
 
     public LyraItemTagsProvider(PackOutput packOutput, CompletableFuture<HolderLookup.Provider> lookupProvider, CompletableFuture<TagLookup<Block>> blockTags, ExistingFileHelper existingFileHelper) {
-        super(packOutput, lookupProvider, blockTags, Lyra.MODID, existingFileHelper);
+        this(packOutput, lookupProvider, blockTags, existingFileHelper, Lyra.MODID);
+    }
+
+    /** 宿主 mod 使用:输出到宿主命名空间(标签 JSON 与物品 ID 命名空间需一致)。 */
+    public LyraItemTagsProvider(PackOutput packOutput, CompletableFuture<HolderLookup.Provider> lookupProvider, CompletableFuture<TagLookup<Block>> blockTags, ExistingFileHelper existingFileHelper, String modid) {
+        super(packOutput, lookupProvider, blockTags, modid, existingFileHelper);
     }
 
     @Override

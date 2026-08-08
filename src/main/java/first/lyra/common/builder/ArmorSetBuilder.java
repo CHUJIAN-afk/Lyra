@@ -2,7 +2,7 @@ package first.lyra.common.builder;
 
 import com.google.common.collect.ImmutableMultimap;
 import first.lyra.common.armorSet.ArmorSet;
-import first.lyra.register.LyraLanguageRegister;
+import first.lyra.dataGenerator.provider.LyraLanguageProvider;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -48,7 +48,7 @@ public final class ArmorSetBuilder {
     }
 
     public ArmorSetBuilder tooltip(int index, String en, String zh) {
-        LyraLanguageRegister.entry("lyra." + id.getNamespace() + "." + id.getPath() + ".set." + index, en, zh);
+        LyraLanguageProvider.entry("lyra." + id.getNamespace() + "." + id.getPath() + ".set." + index, en, zh);
         return this;
     }
 
