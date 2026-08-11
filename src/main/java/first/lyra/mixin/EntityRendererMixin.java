@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.Mixin;
 public class EntityRendererMixin {
 
     @WrapMethod(method = "getPackedLightCoords")
-    private int getPackedLightCoords(Entity entity, float partialTicks, Operation<Integer> original) {
-        return DynamicLightDispatcher.getDynamicLight(entity.getLightProbePosition(partialTicks), original.call(entity, partialTicks));
+    private int getPackedLightCoords(Entity entity, float partialTickTime, Operation<Integer> original) {
+        return DynamicLightDispatcher.getDynamicLight(entity.getLightProbePosition(partialTickTime), original.call(entity, partialTickTime));
     }
 }

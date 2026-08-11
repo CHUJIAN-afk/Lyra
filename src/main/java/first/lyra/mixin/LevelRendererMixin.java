@@ -41,7 +41,7 @@ public class LevelRendererMixin {
     }
 
     @Inject(
-            method = "renderLevel",
+            method = "render",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/client/renderer/RenderBuffers;bufferSource()Lnet/minecraft/client/renderer/MultiBufferSource$BufferSource;"

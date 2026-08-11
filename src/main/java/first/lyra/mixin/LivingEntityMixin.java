@@ -7,6 +7,7 @@ import first.lyra.common.servant.Servant;
 import first.lyra.common.servant.ServantDamageSource;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -29,8 +30,9 @@ public class LivingEntityMixin {
         living.getData(LyraAttachmentRegister.InvincibleData).tick();
     }
 
-    @WrapMethod(method = "hurt")
-    public boolean hurt(DamageSource source, float amount, Operation<Boolean> original) {
+    // 26.2 中 hurt(DamageSource, float) 已移除,服务端伤害入口改为 hurtServer(ServerLevel, DamageSource, float)
+    @WrapMethod(method = "hurtServer")
+    public boolean hurtServer(ServerLevel level, DamageSource source, float amount, Operation<Boolean> original) {
         if (source instanceof ServantDamageSource servantDamageSource) {
             Servant servant = servantDamageSource.getServant();
             Player owner = servant.getOwner();
@@ -39,14 +41,15 @@ public class LivingEntityMixin {
             amount *= scale;
             amount *= 0.85f + owner.getRandom().nextFloat() * 0.3f;
         }
-        return original.call(source, amount);
+        return original.call(level, source, amount);
     }
 
+    // 26.2 中 knockback(DDD)V 已删除;伤害流程为 hurtServer -> dealDefaultKnockback -> knockback(DDD, DamageSource, float)
     @ModifyArg(
-            method = "hurt",
+            method = "dealDefaultKnockback",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/world/entity/LivingEntity;knockback(DDD)V"
+                    target = "Lnet/minecraft/world/entity/LivingEntity;knockback(DDDLnet/minecraft/world/damagesource/DamageSource;F)V"
             ),
             index = 0
     )

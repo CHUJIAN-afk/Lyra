@@ -3,7 +3,7 @@ package first.lyra.mixin;
 import first.lyra.client.creativeTab.AnimBanner;
 import first.lyra.common.creativeTab.CreativeTabDispatcher;
 import first.lyra.common.creativeTab.Section;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
@@ -25,14 +25,14 @@ public class CreativeModeInventoryScreenMixin {
     private float scrollOffs;
 
     @Inject(
-            method = "render",
+            method = "extractRenderState",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/gui/screens/inventory/EffectRenderingInventoryScreen;render(Lnet/minecraft/client/gui/GuiGraphics;IIF)V",
+                    target = "Lnet/minecraft/client/gui/screens/inventory/EffectsInInventory;extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;II)V",
                     shift = At.Shift.AFTER
             )
     )
-    private void simulated$render(final GuiGraphics guiGraphics, final int mouseX, final int mouseY, final float partialTick, final CallbackInfo ci) {
+    private void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a, CallbackInfo ci) {
         if (CreativeTabDispatcher.isManaged(selectedTab)) {
             CreativeModeInventoryScreen screen = (CreativeModeInventoryScreen) (Object) this;
             List<Section> sections = CreativeTabDispatcher.sortedSections();
@@ -44,8 +44,8 @@ public class CreativeModeInventoryScreenMixin {
             }
 
             int scrollRow = Math.round(scrollOffs * Math.max(0, totalRows - 5));
-            int left = screen.getGuiLeft() + 8;
-            int top = screen.getGuiTop() + 17;
+            int left = screen.getLeftPos() + 8;
+            int top = screen.getTopPos() + 17;
 
             int currentRow = 0;
             for (Section section : sections) {
@@ -57,7 +57,7 @@ public class CreativeModeInventoryScreenMixin {
                 int visibleRow = bannerRow - scrollRow;
                 if (visibleRow < 0 || visibleRow >= 5) continue;
                 int bannerY = top + visibleRow * 18;
-                AnimBanner.blitAnimated(guiGraphics, texture, animBanner, left, bannerY, 162, mouseX, mouseY, true);
+                AnimBanner.blitAnimated(graphics, texture, animBanner, left, bannerY, 162, mouseX, mouseY, true);
             }
         }
     }

@@ -1,5 +1,7 @@
 package first.lyra.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import first.lyra.common.servant.Servant;
 import first.lyra.common.servant.ServantDamageSource;
 import first.lyra.register.LyraAttributeRegister;
@@ -15,22 +17,17 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 @Mixin(CombatRules.class)
 public class CombatRulesMixin {
 
-    @ModifyVariable(
-            method = "getDamageAfterAbsorb",
-            at = @At("HEAD"),
-            argsOnly = true,
-            ordinal = 1
-    )
-    private static float modifyArmorValue(float armorValue, LivingEntity entity, float damage, DamageSource damageSource, float armorToughness) {
-        if (damageSource instanceof ServantDamageSource servantDamageSource) {
+    @WrapMethod(method = "getDamageAfterAbsorb")
+    private static float modifyArmorValue(LivingEntity victim, float damage, DamageSource source, float totalArmor, float armorToughness, Operation<Float> original) {
+        if (source instanceof ServantDamageSource servantDamageSource) {
             Servant servant = servantDamageSource.getServant();
-            armorValue -= servant.getArmorPierce();
+            totalArmor -= servant.getArmorPierce();
             Player owner = servant.getOwner();
             AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.ServantArmorPierce);
             if (instance != null) {
-                armorValue -= (float) instance.getValue();
+                totalArmor -= (float) instance.getValue();
             }
         }
-        return Math.max(armorValue, 0);
+        return original.call(victim, damage, source, Math.max(totalArmor, 0), armorToughness);
     }
 }
