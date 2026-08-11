@@ -148,7 +148,8 @@ publishing {
     }
     repositories {
         maven {
-            url "file://${project.projectDir}/repo"
+            // 直接给路径(Windows 下 file:// 双斜杠 URI 无法解析)
+            url "${project.projectDir}/repo"
         }
     }
 }

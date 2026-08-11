@@ -8,6 +8,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.Level;
@@ -38,7 +39,7 @@ public class DamageInfoRenderDispatcher {
             // 26.2: cameraOrientation() 移除,相机朝向从 dispatcher.camera.rotation() 取
             Quaternionf baseRotation = new Quaternionf(camera.rotation()).mul(Axis.XN.rotationDegrees(180), new Quaternionf());
             for (Map.Entry<Identifier, List<DamageInfo>> group : infos.entrySet()) {
-                var renderType = RenderTypes.entityTranslucent(group.getKey());
+                RenderType renderType = RenderTypes.entityTranslucent(group.getKey());
                 collector.submitCustomGeometry(new PoseStack(), renderType, (pose, consumer) -> {
                     for (DamageInfo info : group.getValue()) {
                         info.render(consumer, baseRotation, camPos, partialTick);

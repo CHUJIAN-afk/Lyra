@@ -24,13 +24,11 @@ import java.util.Map;
 
 public class DamageInfoData {
 
-    public static void handler(LivingDamageEvent.Post event) {
-        DamageSource damageSource = event.getSource();
-        LivingEntity entity = event.getEntity();
-        Level level = entity.level();
+    public static void handler(LivingEntity target, DamageSource damageSource, float damage) {
+        Level level = target.level();
         if (!level.isClientSide() && damageSource.getEntity() instanceof Player) {
-            AABB box = entity.getBoundingBox();
-            RandomSource random = entity.getRandom();
+            AABB box = target.getBoundingBox();
+            RandomSource random = target.getRandom();
             Vec3 pos = box.getCenter()
                     .add(0, box.getYsize() / 2, 0);
             Vec3 velocity = pos.add(0, box.getYsize() / 2, 0)
@@ -40,7 +38,7 @@ public class DamageInfoData {
             boolean critical = damageSource instanceof IDamageSourceCritical iDamageSourceCritical && iDamageSourceCritical.lyra$isCritical();
             DamageInfoData.build(level)
                     .damageType(damageSource.typeHolder().getRegisteredName())
-                    .damageAmount(event.getHealthDamage()) // 26.2: getNewDamage 移除
+                    .damageAmount(damage) // 26.2: getNewDamage 移除
                     .pos(pos)
                     .velocity(velocity.scale(random.nextInt(50, 70) * 0.01f))
                     .critical(critical)

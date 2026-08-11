@@ -45,24 +45,22 @@ public record BatchedDamageInfoPayload(List<Entry> entries) implements CustomPac
      */
     public static void handleClient(BatchedDamageInfoPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (ClientConfig.DamageInfo.isTrue()) {
-                Player player = context.player();
-                Level level = player.level();
-                DamageInfoData damageInfoData = level.getData(LyraAttachmentRegister.DamageInfoData);
-                for (Entry entry : payload.entries()) {
-                    DamageInfo info = null;
-                    DamageInfoStyle style = DamageInfoStyleManager.INSTANCE.getStyle(Identifier.parse(entry.damageType));
-                    if (style != null) {
-                        info = new DamageInfo(style, entry.damageAmount, new Vec3(entry.x, entry.y, entry.z), new Vec3(entry.vx, entry.vy, entry.vz), entry.critical);
-                    }
-                    if (info != null) {
-                        Vec3 pos = info.getRenderPos(0);
-                        Vec3 eyePosition = player.getEyePosition(0);
-                        if (pos.distanceToSqr(eyePosition) < 64 * 64) {
-                            damageInfoData.getActiveInfos()
-                                    .computeIfAbsent(info.getTexture(), key -> new ArrayList<>())
-                                    .add(info);
-                        }
+            Player player = context.player();
+            Level level = player.level();
+            DamageInfoData damageInfoData = level.getData(LyraAttachmentRegister.DamageInfoData);
+            for (Entry entry : payload.entries()) {
+                DamageInfo info = null;
+                DamageInfoStyle style = DamageInfoStyleManager.INSTANCE.getStyle(Identifier.parse(entry.damageType));
+                if (style != null) {
+                    info = new DamageInfo(style, entry.damageAmount, new Vec3(entry.x, entry.y, entry.z), new Vec3(entry.vx, entry.vy, entry.vz), entry.critical);
+                }
+                if (info != null) {
+                    Vec3 pos = info.getRenderPos(0);
+                    Vec3 eyePosition = player.getEyePosition(0);
+                    if (pos.distanceToSqr(eyePosition) < 64 * 64) {
+                        damageInfoData.getActiveInfos()
+                                .computeIfAbsent(info.getTexture(), key -> new ArrayList<>())
+                                .add(info);
                     }
                 }
             }
