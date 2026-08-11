@@ -11,7 +11,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -32,7 +32,7 @@ import java.util.List;
  */
 public record BatchedDamageInfoPayload(List<Entry> entries) implements CustomPacketPayload {
 
-    public static final Type<BatchedDamageInfoPayload> TYPE = new Type<>(Lyra.rl("damage_info"));
+    public static final Type<BatchedDamageInfoPayload> TYPE = new Type<>(Lyra.id("damage_info"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, BatchedDamageInfoPayload> STREAM_CODEC = StreamCodec.composite(
             Entry.STREAM_CODEC.apply(ByteBufCodecs.list()),
@@ -51,7 +51,7 @@ public record BatchedDamageInfoPayload(List<Entry> entries) implements CustomPac
                 DamageInfoData damageInfoData = level.getData(LyraAttachmentRegister.DamageInfoData);
                 for (Entry entry : payload.entries()) {
                     DamageInfo info = null;
-                    DamageInfoStyle style = DamageInfoStyleManager.INSTANCE.getStyle(ResourceLocation.parse(entry.damageType));
+                    DamageInfoStyle style = DamageInfoStyleManager.INSTANCE.getStyle(Identifier.parse(entry.damageType));
                     if (style != null) {
                         info = new DamageInfo(style, entry.damageAmount, new Vec3(entry.x, entry.y, entry.z), new Vec3(entry.vx, entry.vy, entry.vz), entry.critical);
                     }

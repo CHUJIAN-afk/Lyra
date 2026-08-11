@@ -13,7 +13,7 @@ public class TrailRenderType extends RenderType {
 
     private static final RenderType TRAIL = create("lyra_trail", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, true, CompositeState.builder()
             .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_EMISSIVE_SHADER)
-            .setTextureState(new TextureStateShard(Lyra.rl("textures/trail.png"), false, false))
+            .setTextureState(new TextureStateShard(Lyra.id("textures/trail.png"), false, false))
             .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
             .setCullState(NO_CULL)
             .setLightmapState(LIGHTMAP)

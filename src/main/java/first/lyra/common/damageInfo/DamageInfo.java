@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.utils.EasingCurve;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
@@ -93,7 +93,7 @@ public class DamageInfo {
     }
 
     /** 获取伤害数字贴图 */
-    public ResourceLocation getTexture() {
+    public Identifier getTexture() {
         return style.texture();
     }
 

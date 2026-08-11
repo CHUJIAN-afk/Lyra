@@ -5,7 +5,7 @@ import first.lyra.common.creativeTab.CreativeTabDispatcher;
 import first.lyra.common.creativeTab.Section;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTab;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -52,7 +52,7 @@ public class CreativeModeInventoryScreenMixin {
                 int bannerRow = currentRow;
                 int itemRows = (CreativeTabDispatcher.itemsOf(section).size() + 8) / 9;
                 currentRow += 1 + itemRows;
-                ResourceLocation texture = section.texture();
+                Identifier texture = section.texture();
                 AnimBanner animBanner = section.animBanner();
                 int visibleRow = bannerRow - scrollRow;
                 if (visibleRow < 0 || visibleRow >= 5) continue;

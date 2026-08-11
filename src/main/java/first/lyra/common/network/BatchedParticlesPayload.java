@@ -34,7 +34,7 @@ import java.util.List;
  */
 public record BatchedParticlesPayload(List<Entry> entries) implements CustomPacketPayload {
 
-    public static final Type<BatchedParticlesPayload> TYPE = new Type<>(Lyra.rl("batched_particles"));
+    public static final Type<BatchedParticlesPayload> TYPE = new Type<>(Lyra.id("batched_particles"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, BatchedParticlesPayload> STREAM_CODEC = StreamCodec.composite(
             Entry.STREAM_CODEC.apply(ByteBufCodecs.list()),

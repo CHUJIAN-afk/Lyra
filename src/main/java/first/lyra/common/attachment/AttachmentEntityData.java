@@ -8,7 +8,7 @@ import first.lyra.common.servant.Servant;
 import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.attachment.AttachmentSyncHandler;
@@ -199,9 +199,9 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
             Map<AttachmentEntityType<?>, List<AttachmentEntity>> inner = typeEntry.getValue();
             buf.writeVarInt(inner.size());
             for (Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>> entityEntry : inner.entrySet()) {
-                ResourceLocation typeId = LyraRegistries.ATTACHMENT_ENTITY_TYPES.getKey(entityEntry.getKey());
+                Identifier typeId = LyraRegistries.ATTACHMENT_ENTITY_TYPES.getKey(entityEntry.getKey());
                 assert typeId != null;
-                buf.writeResourceLocation(typeId);
+                buf.writeIdentifier(typeId);
                 List<AttachmentEntity> list = entityEntry.getValue();
                 buf.writeVarInt(list.size());
                 for (AttachmentEntity entity : list) {
@@ -240,7 +240,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
             Map<AttachmentEntityType<?>, List<AttachmentEntity>> inner = data.groups.computeIfAbsent(type, k -> new HashMap<>());
             int entityCount = buf.readVarInt();
             for (int j = 0; j < entityCount; j++) {
-                ResourceLocation typeId = buf.readResourceLocation();
+                Identifier typeId = buf.readIdentifier();
                 AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.get(typeId);
                 assert entityType != null;
                 List<AttachmentEntity> list = inner.computeIfAbsent(entityType, k -> new ArrayList<>());

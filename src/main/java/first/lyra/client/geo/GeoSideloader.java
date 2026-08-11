@@ -5,7 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animation.state.BoneSnapshot;
@@ -73,7 +73,7 @@ public class GeoSideloader implements GeoRenderer<DummyGeoAnimatable> {
      * @param location 模型资源定位，命名空间+路径对应 geo/texture/animation 文件
      * @return 全新的 Sideloader 实例
      */
-    public static GeoSideloader create(ResourceLocation location) {
+    public static GeoSideloader create(Identifier location) {
         return new GeoSideloader(new GeoAttachmentModel(location));
     }
 
@@ -116,7 +116,7 @@ public class GeoSideloader implements GeoRenderer<DummyGeoAnimatable> {
     public void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, int packedLight) {
         GeoModel<DummyGeoAnimatable> model = getGeoModel();
         BakedGeoModel bakedModel = model.getBakedModel(model.getModelResource(DUMMY, this));
-        ResourceLocation texture = model.getTextureResource(DUMMY, this);
+        Identifier texture = model.getTextureResource(DUMMY, this);
         RenderType renderType = RenderType.entityTranslucent(texture);
         VertexConsumer buffer = bufferSource.getBuffer(renderType);
 
@@ -196,7 +196,7 @@ public class GeoSideloader implements GeoRenderer<DummyGeoAnimatable> {
     }
 
     @Override
-    public @NotNull RenderType getRenderType(DummyGeoAnimatable animatable, ResourceLocation texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
+    public @NotNull RenderType getRenderType(DummyGeoAnimatable animatable, Identifier texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
         return RenderType.entityTranslucent(texture);
     }
 

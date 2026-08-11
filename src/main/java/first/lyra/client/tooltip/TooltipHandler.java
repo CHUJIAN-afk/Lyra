@@ -10,7 +10,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
@@ -39,7 +39,7 @@ public final class TooltipHandler {
     private static List<Component> getCustomTooltip(ItemStack itemStack, Player player) {
         List<Component> lines = new ArrayList<>();
         Item item = itemStack.getItem();
-        ResourceLocation registryName = BuiltInRegistries.ITEM.getKey(item);
+        Identifier registryName = BuiltInRegistries.ITEM.getKey(item);
         if (registryName.getNamespace().equals(Lyra.MODID)) {
             List<MutableComponent> lore = new ArrayList<>();
             String baseKey = "item" + "." + Lyra.MODID + "." + registryName.getPath() + "." + "tooltip" + ".";
@@ -82,7 +82,7 @@ public final class TooltipHandler {
             }
         }
         for (ArmorSet armorSet : target) {
-            ResourceLocation id = armorSet.id();
+            Identifier id = armorSet.id();
             lines.add(Component.empty());
             List<ItemLike> items = armorSet.items();
             MutableComponent set = Component.empty();

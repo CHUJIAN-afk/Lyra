@@ -1,7 +1,7 @@
 package first.lyra.common.creativeTab;
 
 import first.lyra.client.creativeTab.AnimBanner;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 
@@ -12,5 +12,5 @@ import net.minecraft.world.item.Item;
  * 无需在物品注册时指定。{@code order} 决定分段展示顺序，texture/animBanner 驱动横幅渲染。
  * </p>
  */
-public record Section(int order, ResourceLocation texture, AnimBanner animBanner, TagKey<Item> tag) {
+public record Section(int order, Identifier texture, AnimBanner animBanner, TagKey<Item> tag) {
 }

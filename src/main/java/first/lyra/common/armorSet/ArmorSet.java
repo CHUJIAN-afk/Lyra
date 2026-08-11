@@ -6,7 +6,7 @@ import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraRegistries;
 import first.lyra.utils.AttributeUtils;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -19,7 +19,7 @@ import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
 import java.util.*;
 import java.util.function.Consumer;
 
-public record ArmorSet(ResourceLocation id, List<ItemLike> items, Multimap<Holder<Attribute>, AttributeModifier> modifiers, Consumer<Player> onStart, Consumer<Player> onRemove) {
+public record ArmorSet(Identifier id, List<ItemLike> items, Multimap<Holder<Attribute>, AttributeModifier> modifiers, Consumer<Player> onStart, Consumer<Player> onRemove) {
 
     public static void handler(LivingEquipmentChangeEvent event) {
         LivingEntity living = event.getEntity();
@@ -56,7 +56,7 @@ public record ArmorSet(ResourceLocation id, List<ItemLike> items, Multimap<Holde
         }
     }
 
-    public static ArmorSetBuilder builder(ResourceLocation id) {
+    public static ArmorSetBuilder builder(Identifier id) {
         return new ArmorSetBuilder(id);
     }
 

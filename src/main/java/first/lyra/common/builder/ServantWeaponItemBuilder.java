@@ -8,7 +8,7 @@ import first.lyra.common.entity.PathNode;
 import first.lyra.common.item.IServantWeaponItem;
 import first.lyra.common.servant.Servant;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
@@ -199,7 +199,7 @@ public class ServantWeaponItemBuilder<T extends Servant> {
         }
 
         @Override
-        public Component getSummonTooltip(ItemStack itemStack, AttachmentEntityType<?> type, ResourceLocation location, Player player) {
+        public Component getSummonTooltip(ItemStack itemStack, AttachmentEntityType<?> type, Identifier location, Player player) {
             if (summonTooltip != null) {
                 return summonTooltip.apply(this, itemStack, type, location, player);
             }
@@ -219,6 +219,6 @@ public class ServantWeaponItemBuilder<T extends Servant> {
     /** 召唤 tooltip 自定义器:返回"召唤目标"文本。 */
     @FunctionalInterface
     public interface SummonTooltip<T extends Servant> {
-        Component apply(IServantWeaponItem<T> weapon, ItemStack itemStack, AttachmentEntityType<?> type, ResourceLocation location, Player player);
+        Component apply(IServantWeaponItem<T> weapon, ItemStack itemStack, AttachmentEntityType<?> type, Identifier location, Player player);
     }
 }

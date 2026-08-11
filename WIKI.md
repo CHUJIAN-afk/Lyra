@@ -240,10 +240,10 @@ Player p = helper.getPlayer();
 ```java
 import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.register.LyraRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 // 在任何初始化阶段（如 mod 构造器或 RegisterEvent）：
-ResourceLocation id = ResourceLocation.fromNamespaceAndPath("my_mod", "sword_servant");
+Identifier id = Identifier.fromNamespaceAndPath("my_mod", "sword_servant");
 LyraRegistries.ATTACHMENT_ENTITY_TYPES.register(id, new AttachmentEntityType<>(MyServant::new));
 ```
 
@@ -255,11 +255,11 @@ LyraRegistries.ATTACHMENT_ENTITY_TYPES.register(id, new AttachmentEntityType<>(M
 import first.lyra.common.armorSet.ArmorSet;
 import first.lyra.register.LyraRegistries;
 import first.lyra.common.builder.ArmorSetBuilder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 
-ArmorSet set = ArmorSet.builder(ResourceLocation.fromNamespaceAndPath("my_mod", "knight"))
+ArmorSet set = ArmorSet.builder(Identifier.fromNamespaceAndPath("my_mod", "knight"))
         .piece(MyItems.KNIGHT_HELMET)   // 收集整套部件
         .piece(MyItems.KNIGHT_CHESTPLATE)
         .piece(MyItems.KNIGHT_LEGGINGS)
@@ -271,7 +271,7 @@ ArmorSet set = ArmorSet.builder(ResourceLocation.fromNamespaceAndPath("my_mod", 
         .build();
 
 LyraRegistries.ARMOR_SETS.register(
-        ResourceLocation.fromNamespaceAndPath("my_mod", "knight"), set);
+        Identifier.fromNamespaceAndPath("my_mod", "knight"), set);
 ```
 
 > 生效判定：玩家 4 个护甲槽物品与 `piece` 列表完全匹配。生效回调与属性修饰由 Lyra 的 `ArmorSet.handler`（挂在 `LivingEquipmentChangeEvent`）自动维护，宿主无需监听。
@@ -346,7 +346,7 @@ DeferredRegister.Items items = DeferredRegister.createItems("my_mod");
 // 注册仆从类型
 AttachmentEntityType<MyServant> type = new AttachmentEntityType<>(MyServant::new);
 LyraRegistries.ATTACHMENT_ENTITY_TYPES.register(
-        ResourceLocation.fromNamespaceAndPath("my_mod", "my_servant"), type);
+        Identifier.fromNamespaceAndPath("my_mod", "my_servant"), type);
 
 // 构建武器
 ServantWeaponItemBuilder<MyServant> weaponBuilder = new ServantWeaponItemBuilder<>(() -> type)
@@ -594,15 +594,15 @@ Lyra 的分组 Tab 逻辑（横幅动画 + 按特征标签分组）：
 import first.lyra.common.creativeTab.CreativeTabDispatcher;
 import first.lyra.common.creativeTab.Section;
 import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.core.Holder;
 
 // 1) 注册分段：特征标签 + 顺序 + 横幅贴图
 Section section = new Section(0,
-        ResourceLocation.fromNamespaceAndPath("my_mod", "textures/banner.png"),
+        Identifier.fromNamespaceAndPath("my_mod", "textures/banner.png"),
         null,   // AnimBanner 可选（Gecko 动画横幅）
-        ItemTags.create(ResourceLocation.fromNamespaceAndPath("my_mod", "weapons")));
+        ItemTags.create(Identifier.fromNamespaceAndPath("my_mod", "weapons")));
 CreativeTabDispatcher.registerSection(section);
 
 // 2) 让宿主 Tab 接入 Lyra 分组逻辑
@@ -668,7 +668,7 @@ import first.lyra.utils.AttributeUtils;
 
 // 条件成立则添加（不存在或值/操作变化时更新），不成立则移除
 AttributeUtils.condition(player, Attributes.MOVEMENT_SPEED,
-        ResourceLocation.fromNamespaceAndPath("my_mod", "speed_buff"),
+        Identifier.fromNamespaceAndPath("my_mod", "speed_buff"),
         0.05, AttributeModifier.Operation.ADD_VALUE, true);
 
 // 直接增删（按修饰符 ID 幂等）

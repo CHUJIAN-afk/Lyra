@@ -6,7 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import first.lyra.common.damageInfo.DamageInfoStyle;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.GsonHelper;
@@ -36,19 +36,19 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
     @Nullable
     private DamageInfoStyle defaultStyle;
     /** 伤害类型 → 样式缓存 */
-    private Map<ResourceLocation, DamageInfoStyle> styleMap = new HashMap<>();
+    private Map<Identifier, DamageInfoStyle> styleMap = new HashMap<>();
 
     private DamageInfoStyleManager() {
         super(GSON, "damage_info");
     }
 
     @Override
-    protected void apply(Map<ResourceLocation, JsonElement> resources, ResourceManager resourceManager, ProfilerFiller profiler) {
-        Map<ResourceLocation, DamageInfoStyle> newMap = new HashMap<>();
+    protected void apply(Map<Identifier, JsonElement> resources, ResourceManager resourceManager, ProfilerFiller profiler) {
+        Map<Identifier, DamageInfoStyle> newMap = new HashMap<>();
         DamageInfoStyle newDefault = null;
 
-        for (Map.Entry<ResourceLocation, JsonElement> entry : resources.entrySet()) {
-            ResourceLocation fileId = entry.getKey();
+        for (Map.Entry<Identifier, JsonElement> entry : resources.entrySet()) {
+            Identifier fileId = entry.getKey();
             try {
                 JsonObject root = GsonHelper.convertToJsonObject(entry.getValue(), "damage_info");
 
@@ -66,7 +66,7 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
                         JsonObject obj = elem.getAsJsonObject();
                         DamageInfoStyle style = parseStyle(obj);
                         if (style != null) {
-                            ResourceLocation key = ResourceLocation.parse(style.damageType());
+                            Identifier key = Identifier.parse(style.damageType());
                             newMap.put(key, style);
                         }
                     }
@@ -129,7 +129,7 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
 
             return new DamageInfoStyle(
                     damageType,
-                    ResourceLocation.parse(textureStr),
+                    Identifier.parse(textureStr),
                     textureWidth,
                     textureHeight,
                     glyphSpacing,
@@ -152,7 +152,7 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
      * </p>
      */
     @Nullable
-    public DamageInfoStyle getStyle(ResourceLocation damageTypeId) {
+    public DamageInfoStyle getStyle(Identifier damageTypeId) {
         DamageInfoStyle exact = styleMap.get(damageTypeId);
         if (exact != null) return exact;
         return defaultStyle;

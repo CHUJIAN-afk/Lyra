@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableMultimap;
 import first.lyra.common.armorSet.ArmorSet;
 import first.lyra.dataGenerator.provider.LyraLanguageProvider;
 import net.minecraft.core.Holder;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.player.Player;
@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 
 public final class ArmorSetBuilder {
 
-    private final ResourceLocation id;
+    private final Identifier id;
     private final List<ItemLike> items = new java.util.ArrayList<>();
     private final ImmutableMultimap.Builder<Holder<Attribute>, AttributeModifier> modifiers = ImmutableMultimap.builder();
     private Consumer<Player> onStart = player -> {
@@ -23,7 +23,7 @@ public final class ArmorSetBuilder {
     private Consumer<Player> onRemove = player -> {
     };
 
-    public ArmorSetBuilder(ResourceLocation id) {
+    public ArmorSetBuilder(Identifier id) {
         this.id = id;
     }
 

@@ -1,6 +1,6 @@
 package first.lyra.common.damageInfo;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 /**
  * 伤害数字样式定义，由 JSON 数据包驱动。
@@ -21,7 +21,7 @@ import net.minecraft.resources.ResourceLocation;
  */
 public record DamageInfoStyle(
         String damageType,
-        ResourceLocation texture,
+        Identifier texture,
         int textureWidth,
         int textureHeight,
         int glyphSpacing,

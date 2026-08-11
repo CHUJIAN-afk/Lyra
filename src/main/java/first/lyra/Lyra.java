@@ -1,12 +1,10 @@
 package first.lyra;
 
 import first.lyra.client.config.ClientConfig;
-import first.lyra.dataGenerator.LyraDataGeneratorEvent;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
-import first.lyra.register.LyraNetworkPacketRegister;
 import first.lyra.register.LyraParticleRegister;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -20,8 +18,8 @@ public class Lyra {
 
     public static final String MODID = "lyra";
 
-    public static ResourceLocation rl(String path) {
-        return ResourceLocation.fromNamespaceAndPath(MODID, path.toLowerCase());
+    public static Identifier id(String path) {
+        return Identifier.fromNamespaceAndPath(MODID, path.toLowerCase());
     }
 
     public Lyra(IEventBus eventBus, Dist dist, ModContainer container) {

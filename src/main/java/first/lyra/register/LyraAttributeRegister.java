@@ -36,7 +36,7 @@ public class LyraAttributeRegister {
     public static final DeferredHolder<Attribute, Attribute> ServantSearchRange = register("servant_search_range", 1, 0, 10);
 
     private static DeferredHolder<Attribute, Attribute> register(String name, double defaultValue, double min, double max) {
-        return Register.register(name, () -> new RangedAttribute(Lyra.rl(name).toString(), defaultValue, min, max).setSyncable(true));
+        return Register.register(name, () -> new RangedAttribute(Lyra.id(name).toString(), defaultValue, min, max).setSyncable(true));
     }
 
     public static void register(IEventBus eventBus) {

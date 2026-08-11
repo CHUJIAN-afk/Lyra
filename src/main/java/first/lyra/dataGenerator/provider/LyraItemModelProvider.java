@@ -2,7 +2,7 @@ package first.lyra.dataGenerator.provider;
 
 import first.lyra.Lyra;
 import net.minecraft.data.PackOutput;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.neoforged.neoforge.client.model.generators.ItemModelProvider;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
 
@@ -15,7 +15,7 @@ import java.util.function.BiConsumer;
  */
 public class LyraItemModelProvider extends ItemModelProvider {
 
-    public static final Map<ResourceLocation, BiConsumer<ResourceLocation, LyraItemModelProvider>> ItemModelGenerate = new HashMap<>();
+    public static final Map<Identifier, BiConsumer<Identifier, LyraItemModelProvider>> ItemModelGenerate = new HashMap<>();
 
     public LyraItemModelProvider(PackOutput packOutput, ExistingFileHelper existingFileHelper) {
         this(packOutput, existingFileHelper, Lyra.MODID);
@@ -30,8 +30,8 @@ public class LyraItemModelProvider extends ItemModelProvider {
     protected void registerModels() {
         ItemModelGenerate.entrySet()
                 .removeIf(entry -> {
-                    ResourceLocation key = entry.getKey();
-                    BiConsumer<ResourceLocation, LyraItemModelProvider> consumer = entry.getValue();
+                    Identifier key = entry.getKey();
+                    BiConsumer<Identifier, LyraItemModelProvider> consumer = entry.getValue();
                     consumer.accept(key, this);
                     return true;
                 });

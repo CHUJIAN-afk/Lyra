@@ -8,7 +8,7 @@ import first.lyra.common.servant.Servant;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
@@ -60,7 +60,7 @@ public interface IServantWeaponItem<T extends Servant> {
      * 默认显示仆从类型名翻译；武器可覆写此方法以自定义目标（如剑鞘类武器显示存放的物品名）。
      * </p>
      */
-    default Component getSummonTooltip(ItemStack itemStack, AttachmentEntityType<?> type, ResourceLocation location, Player player) {
+    default Component getSummonTooltip(ItemStack itemStack, AttachmentEntityType<?> type, Identifier location, Player player) {
         String key = "servant." + location.getNamespace() + "." + location.getPath();
         return Component.translatable(key).withStyle(ChatFormatting.BLUE);
     }
@@ -68,7 +68,7 @@ public interface IServantWeaponItem<T extends Servant> {
     default List<Component> getTooltips(ItemStack itemStack, Player player) {
         List<Component> toolTips = new ArrayList<>();
         AttachmentEntityType<?> type = getType();
-        ResourceLocation location = LyraRegistries.ATTACHMENT_ENTITY_TYPES.getKey(type);
+        Identifier location = LyraRegistries.ATTACHMENT_ENTITY_TYPES.getKey(type);
         if (location != null) {
             float damage = getServantDamage(player, itemStack);
             if (damage > 0) {

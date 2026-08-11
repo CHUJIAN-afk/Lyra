@@ -7,7 +7,7 @@ import first.lyra.dataGenerator.provider.LyraItemTagsProvider;
 import first.lyra.dataGenerator.provider.LyraLanguageProvider;
 import first.lyra.dataGenerator.provider.LyraRecipeProvider;
 import net.minecraft.data.recipes.RecipeOutput;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.neoforged.fml.loading.FMLLoader;
@@ -36,7 +36,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
     }
 
     /** 使用宿主 mod 的 DeferredRegister 注册物品。 */
-    public static <T extends Item> LyraItemRegisterBuilder<T> build(DeferredRegister.Items register, String name, Function<ResourceLocation, T> function) {
+    public static <T extends Item> LyraItemRegisterBuilder<T> build(DeferredRegister.Items register, String name, Function<Identifier, T> function) {
         return new LyraItemRegisterBuilder<>(register.register(name, function));
     }
 
@@ -54,7 +54,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
 
     public LyraItemRegisterBuilder<T> itemLanguage(String en, String zh) {
         if (register != null) {
-            ResourceLocation id = register.getId();
+            Identifier id = register.getId();
             return language("item." + id.getNamespace() + "." + id.getPath(), en, zh);
         }
         return this;
@@ -62,7 +62,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
 
     public LyraItemRegisterBuilder<T> itemLanguageTooltip(int index, String en, String zh) {
         if (register != null) {
-            ResourceLocation id = register.getId();
+            Identifier id = register.getId();
             return language("item." + id.getNamespace() + "." + id.getPath() + ".tooltip." + index, en, zh);
         }
         return this;
@@ -70,14 +70,14 @@ public class LyraItemRegisterBuilder<T extends Item> {
 
     public LyraItemRegisterBuilder<T> blockLanguage(String en, String zh) {
         if (register != null) {
-            ResourceLocation id = register.getId();
+            Identifier id = register.getId();
             return language("block." + id.getNamespace() + "." + id.getPath(), en, zh);
         }
         return this;
     }
 
     public <A extends AttachmentEntity> LyraItemRegisterBuilder<T> servantLanguage(DeferredHolder<AttachmentEntityType<?>, AttachmentEntityType<A>> holder, String en, String zh) {
-        ResourceLocation servantId = holder.getId();
+        Identifier servantId = holder.getId();
         return language("servant." + servantId.getNamespace() + "." + servantId.getPath(), en, zh);
     }
 
@@ -98,18 +98,18 @@ public class LyraItemRegisterBuilder<T extends Item> {
     }
 
     /** 注册物品模型（runData 时输出）。 */
-    public LyraItemRegisterBuilder<T> itemModel(BiConsumer<ResourceLocation, LyraItemModelProvider> consumer) {
+    public LyraItemRegisterBuilder<T> itemModel(BiConsumer<Identifier, LyraItemModelProvider> consumer) {
         if (!FMLLoader.isProduction()) {
             LyraItemModelProvider.ItemModelGenerate.put(register.getId(), consumer);
         }
         return this;
     }
 
-    public static void basicModel(ResourceLocation location, LyraItemModelProvider provider) {
+    public static void basicModel(Identifier location, LyraItemModelProvider provider) {
         provider.basicItem(location);
     }
 
-    public static void handheldItem(ResourceLocation location, LyraItemModelProvider provider) {
+    public static void handheldItem(Identifier location, LyraItemModelProvider provider) {
         provider.handheldItem(location);
     }
 

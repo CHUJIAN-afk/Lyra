@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
@@ -154,7 +154,7 @@ public class GenericParticle extends TextureSheetParticle {
         public BufferBuilder begin(Tesselator tesselator, @NotNull TextureManager textureManager) {
             RenderSystem.depthMask(true);
             RenderSystem.setShader(GameRenderer::getRendertypeEntityTranslucentShader);
-            RenderSystem.setShaderTexture(0, ResourceLocation.withDefaultNamespace("textures/atlas/particles.png"));
+            RenderSystem.setShaderTexture(0, Identifier.withDefaultNamespace("textures/atlas/particles.png"));
             // entity translucent shader 需要 Sampler2 = 光照贴图，否则采样到残留纹理导致粒子闪烁变黑
             Minecraft.getInstance().gameRenderer.lightTexture().turnOnLightLayer();
             RenderSystem.enableBlend();

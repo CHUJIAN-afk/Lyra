@@ -4,7 +4,7 @@ import first.lyra.common.damageInfo.DamageInfo;
 import first.lyra.common.damageInfo.IDamageSourceCritical;
 import first.lyra.common.network.BatchedDamageInfoPayload;
 import first.lyra.register.LyraAttachmentRegister;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
@@ -65,7 +65,7 @@ public class DamageInfoData {
     /**
      * 客户端：持有活跃 DamageInfo 渲染列表
      */
-    private final Map<ResourceLocation, List<DamageInfo>> activeInfos = new HashMap<>();
+    private final Map<Identifier, List<DamageInfo>> activeInfos = new HashMap<>();
 
     public DamageInfoData() {}
 
@@ -105,7 +105,7 @@ public class DamageInfoData {
     }
 
     /** 获取当前活跃的渲染数据列表 */
-    public Map<ResourceLocation, List<DamageInfo>> getActiveInfos() {
+    public Map<Identifier, List<DamageInfo>> getActiveInfos() {
         return activeInfos;
     }
 

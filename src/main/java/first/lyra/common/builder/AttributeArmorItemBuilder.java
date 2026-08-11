@@ -40,7 +40,7 @@ public class AttributeArmorItemBuilder {
     }
 
     public AttributeArmorItemBuilder modifier(Holder<Attribute> attribute, double value, AttributeModifier.Operation operation) {
-        return modifier(attribute, new AttributeModifier(Lyra.rl("armor_" + type.getName()), value, operation));
+        return modifier(attribute, new AttributeModifier(Lyra.id("armor_" + type.getName()), value, operation));
     }
 
     public AttributeArmorItemBuilder properties(Consumer<Item.Properties> customizer) {

@@ -1,6 +1,6 @@
 package first.lyra.client.geo;
 
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animation.Animation;
@@ -26,7 +26,7 @@ import java.util.List;
  */
 public class GeoAnimationSampler {
 
-    private final ResourceLocation animationResource;
+    private final Identifier animationResource;
 
     /**
      * 缓存的动画解析结果（{@link Animation} 是不可变 record，安全复用）
@@ -35,7 +35,7 @@ public class GeoAnimationSampler {
     private String cachedAnimationName;
     private Animation cachedAnimation;
 
-    public GeoAnimationSampler(ResourceLocation animationResource) {
+    public GeoAnimationSampler(Identifier animationResource) {
         this.animationResource = animationResource;
     }
 
