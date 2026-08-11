@@ -6,6 +6,7 @@ import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.register.LyraRegistries;
 import first.lyra.common.servant.Servant;
 import first.lyra.register.LyraAttachmentRegister;
+import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.Identifier;
@@ -241,7 +242,8 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
             int entityCount = buf.readVarInt();
             for (int j = 0; j < entityCount; j++) {
                 Identifier typeId = buf.readIdentifier();
-                AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.get(typeId);
+                // 26.2: Registry.get 返回 Optional<Holder.Reference>
+                AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.get(typeId).map(Holder.Reference::value).orElse(null);
                 assert entityType != null;
                 List<AttachmentEntity> list = inner.computeIfAbsent(entityType, k -> new ArrayList<>());
                 int listSize = buf.readVarInt();

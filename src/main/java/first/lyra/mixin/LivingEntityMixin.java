@@ -53,8 +53,8 @@ public class LivingEntityMixin {
             ),
             index = 0
     )
-    private double knockback(double strength, @Local(argsOnly = true) DamageSource damageSource) {
-        if (damageSource instanceof ServantDamageSource servantDamageSource) {
+    private double knockback(double strength, @Local(argsOnly = true, name = "source") DamageSource source) {
+        if (source instanceof ServantDamageSource servantDamageSource) {
             Servant servant = servantDamageSource.getServant();
             Player owner = servant.getOwner();
             AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.ServantKnockback);

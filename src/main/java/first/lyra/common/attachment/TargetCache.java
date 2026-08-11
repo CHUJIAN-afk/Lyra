@@ -148,8 +148,8 @@ public class TargetCache {
         double tMaxZ = tDeltaZ * (stepZ > 0 ? 1.0 - Mth.frac(endZ) : Mth.frac(endZ));
 
         ServerLevel level = cachedLevel;
-        int minBuildHeight = level.getMinBuildHeight();
-        int maxBuildHeight = level.getMaxBuildHeight();
+        int minBuildHeight = level.getMinY();
+        int maxBuildHeight = level.getMaxY() + 1; // 26.2: getMaxY() 含上界,原 maxBuildHeight 为开区间上界
 
         // 局部缓存：同一条射线内复用 chunk/section 引用
         long lastChunkKey = Long.MIN_VALUE;
@@ -189,7 +189,7 @@ public class TargetCache {
             // 从缓存取 chunk，未命中则加载并写入缓存
             int chunkX = SectionPos.blockToSectionCoord(curX);
             int chunkZ = SectionPos.blockToSectionCoord(curZ);
-            long chunkKey = ChunkPos.asLong(chunkX, chunkZ);
+            long chunkKey = ChunkPos.pack(chunkX, chunkZ);
             if (chunkKey != lastChunkKey) {
                 chunk = chunkCache.get(chunkKey);
                 if (chunk == null) {

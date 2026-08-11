@@ -40,7 +40,7 @@ public class DamageInfoData {
             boolean critical = damageSource instanceof IDamageSourceCritical iDamageSourceCritical && iDamageSourceCritical.lyra$isCritical();
             DamageInfoData.build(level)
                     .damageType(damageSource.typeHolder().getRegisteredName())
-                    .damageAmount(event.getNewDamage())
+                    .damageAmount(event.getHealthDamage()) // 26.2: getNewDamage 移除
                     .pos(pos)
                     .velocity(velocity.scale(random.nextInt(50, 70) * 0.01f))
                     .critical(critical)

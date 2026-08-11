@@ -46,7 +46,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
     }
 
     public LyraItemRegisterBuilder<T> language(String key, String enDesc, String zhDesc) {
-        if (!FMLLoader.isProduction()) {
+        if (!FMLLoader.getCurrent().isProduction()) {
             LyraLanguageProvider.entry(key, enDesc, zhDesc);
         }
         return this;
@@ -83,7 +83,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
 
     /** 注册配方（runData 时输出）。 */
     public LyraItemRegisterBuilder<T> recipe(Consumer<RecipeOutput> outputConsumer) {
-        if (!FMLLoader.isProduction()) {
+        if (!FMLLoader.getCurrent().isProduction()) {
             LyraRecipeProvider.RecipeGenerate.add(outputConsumer);
         }
         return this;
@@ -91,7 +91,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
 
     /** 注册物品标签（runData 时输出，护甲自动细分到原版护甲分类标签）。 */
     public LyraItemRegisterBuilder<T> itemTag(TagKey<Item> tagKey) {
-        if (!FMLLoader.isProduction()) {
+        if (!FMLLoader.getCurrent().isProduction()) {
             LyraItemTagsProvider.ItemTagsGenerate.computeIfAbsent(tagKey, key -> new ArrayList<>()).add(register);
         }
         return this;
@@ -99,7 +99,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
 
     /** 注册物品模型（runData 时输出）。 */
     public LyraItemRegisterBuilder<T> itemModel(BiConsumer<Identifier, LyraItemModelProvider> consumer) {
-        if (!FMLLoader.isProduction()) {
+        if (!FMLLoader.getCurrent().isProduction()) {
             LyraItemModelProvider.ItemModelGenerate.put(register.getId(), consumer);
         }
         return this;

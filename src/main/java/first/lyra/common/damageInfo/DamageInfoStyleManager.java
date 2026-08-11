@@ -5,17 +5,21 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
-import first.lyra.common.damageInfo.DamageInfoStyle;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.resources.PreparableReloadListener;
+import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.GsonHelper;
-import net.minecraft.util.profiling.ProfilerFiller;
 import org.jetbrains.annotations.Nullable;
+import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 /**
  * 伤害数字样式管理器（客户端持有）。
@@ -25,7 +29,7 @@ import java.util.Map;
  * 若 JSON 未定义 default，则 defaultStyle 为 null，未匹配的伤害类型将被跳过不渲染。
  * </p>
  */
-public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
+public class DamageInfoStyleManager implements PreparableReloadListener {
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
@@ -39,11 +43,29 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
     private Map<Identifier, DamageInfoStyle> styleMap = new HashMap<>();
 
     private DamageInfoStyleManager() {
-        super(GSON, "damage_info");
     }
 
+    /**
+     * 26.2: SimpleJsonResourceReloadListener 泛型化且 apply 移除,改为直接实现 PreparableReloadListener,
+     * 手动读取 damage_info 目录 JSON。reload 签名改为 (SharedState, Executor, PreparationBarrier, Executor)。
+     */
     @Override
-    protected void apply(Map<Identifier, JsonElement> resources, ResourceManager resourceManager, ProfilerFiller profiler) {
+    public @NonNull CompletableFuture<Void> reload(PreparableReloadListener.SharedState sharedState, @NonNull Executor backgroundExecutor, PreparableReloadListener.PreparationBarrier barrier, @NonNull Executor gameExecutor) {
+        ResourceManager resourceManager = sharedState.resourceManager();
+        return CompletableFuture.supplyAsync(() -> {
+            Map<Identifier, JsonElement> resources = new HashMap<>();
+            for (Map.Entry<Identifier, Resource> entry : resourceManager.listResources("damage_info", path -> path.getPath().endsWith(".json")).entrySet()) {
+                try (BufferedReader reader = entry.getValue().openAsReader()) {
+                    resources.put(entry.getKey(), GSON.fromJson(reader, JsonElement.class));
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to read damage_info file {}: {}", entry.getKey(), e.getMessage());
+                }
+            }
+            return resources;
+        }, backgroundExecutor).thenCompose(barrier::wait).thenAcceptAsync(this::apply, gameExecutor);
+    }
+
+    protected void apply(Map<Identifier, JsonElement> resources) {
         Map<Identifier, DamageInfoStyle> newMap = new HashMap<>();
         DamageInfoStyle newDefault = null;
 

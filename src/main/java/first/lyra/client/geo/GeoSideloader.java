@@ -1,18 +1,21 @@
 package first.lyra.client.geo;
 
+import com.geckolib.animation.state.BoneSnapshot;
+import com.geckolib.cache.model.BakedGeoModel;
+import com.geckolib.cache.model.GeoBone;
+import com.geckolib.model.GeoModel;
+import com.geckolib.renderer.base.GeoRenderState;
+import com.geckolib.renderer.base.GeoRenderer;
+import com.geckolib.renderer.base.RenderPassInfo;
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.animation.state.BoneSnapshot;
-import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.cache.object.GeoBone;
-import software.bernie.geckolib.model.GeoModel;
-import software.bernie.geckolib.renderer.GeoRenderer;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -21,21 +24,24 @@ import java.util.Set;
 /**
  * Geo 外挂渲染器，独立于 GeckoLib 的 Entity/Item/BlockEntity 渲染体系。
  * <p>
- * 使用自定义 {@link GeoAnimationSampler} 直接采样关键帧写入 {@link GeoBone}，
+ * 使用自定义 {@link GeoAnimationSampler} 直接采样关键帧写入 {@link GeoBone#frameSnapshot}，
  * 完全绕开 GeckoLib 的 {@code AnimationController}/{@code handleAnimations} 管线。
  * <p>
  * 渲染器无跨帧状态，每帧创建新实例即可。动画进度由调用方精确注入，
  * 不同实例间互不污染。渲染前后均 reset 共享 bone 状态，防止交叉污染。
  * <p>
+ * 26.2: GeoRenderer 接口重构为 3 泛型 + GeoRenderState + SubmitNodeCollector 驱动;
+ * GeoBone 不可变,骨骼姿态写入 frameSnapshot。
+ * <p>
  * 使用方式：
  * <pre>{@code
  * // 每帧创建实例，设置动画与进度后渲染
- * GeoSideloader.create(Lyra.rl("laser_minigun"))
+ * GeoSideloader.create(Lyra.id("laser_minigun"))
  *     .setAnimation("shooting", tickProgress)
- *     .render(poseStack, bufferSource, partialTick, packedLight);
+ *     .render(poseStack, collector, cameraState, partialTick, packedLight);
  * }</pre>
  */
-public class GeoSideloader implements GeoRenderer<DummyGeoAnimatable> {
+public class GeoSideloader implements GeoRenderer<DummyGeoAnimatable, Void, GeoRenderState> {
 
     private static final DummyGeoAnimatable DUMMY = new DummyGeoAnimatable();
 
@@ -105,50 +111,46 @@ public class GeoSideloader implements GeoRenderer<DummyGeoAnimatable> {
     /**
      * 执行一帧渲染，流程：
      * <ol>
-     *   <li>Reset 所有 bone 到初始姿态（清除上一帧残留）</li>
-     *   <li>采样动画写入 bone（纯函数，无跨帧状态）</li>
+     *   <li>构建渲染状态并采样动画写入 frameSnapshot（纯函数，无跨帧状态）</li>
      *   <li>应用骨骼可见性</li>
-     *   <li>绘制模型</li>
-     *   <li>Reset 所有 bone 到初始姿态（防止交叉污染）</li>
+     *   <li>经 {@link #performRenderPass} 提交几何到 SubmitNodeCollector</li>
+     *   <li>Reset 所有 bone（防止交叉污染）</li>
      * </ol>
      */
     @SuppressWarnings("all")
-    public void render(PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, int packedLight) {
+    public void render(PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState cameraState, float partialTick, int packedLight) {
         GeoModel<DummyGeoAnimatable> model = getGeoModel();
-        BakedGeoModel bakedModel = model.getBakedModel(model.getModelResource(DUMMY, this));
-        Identifier texture = model.getTextureResource(DUMMY, this);
-        RenderType renderType = RenderType.entityTranslucent(texture);
-        VertexConsumer buffer = bufferSource.getBuffer(renderType);
+        GeoRenderState renderState = createRenderState(DUMMY, null);
+        fillRenderState(DUMMY, null, renderState, partialTick);
+        BakedGeoModel bakedModel = model.getBakedModel(model.getModelResource(renderState));
 
-        poseStack.pushPose();
-
-        // 1. Reset bone 到初始姿态（清除上一帧或其他渲染者残留的状态）
-        resetBones(bakedModel);
-
-        // 2. 采样动画写入 bone（纯函数，无跨帧状态）
+        // 1. 采样动画写入 bone.frameSnapshot
         if (currentAnimationName != null) {
             sampler.sample(currentAnimationName, progress, bakedModel);
         }
 
-        // 3. 应用骨骼可见性
+        // 2. 应用骨骼可见性
         for (String boneName : hiddenBones) {
-            model.getBone(boneName).ifPresent(bone -> bone.setHidden(true));
+            bakedModel.getBone(boneName).ifPresent(bone -> {
+                if (bone.frameSnapshot == null) {
+                    bone.frameSnapshot = BoneSnapshot.create(bone);
+                }
+                bone.frameSnapshot.skipRender(true);
+            });
         }
 
-        // 4. 绘制模型
-        GeoRenderer.super.actuallyRender(poseStack, DUMMY, bakedModel, renderType, bufferSource, buffer, false, partialTick, packedLight, OverlayTexture.NO_OVERLAY, 0xFFFFFFFF);
+        // 3. 提交几何（GeoRenderer 默认驱动链:submitRenderTasks 遍历骨骼渲染）
+        performRenderPass(renderState, poseStack, collector, cameraState);
 
-        // 5. Reset bone（防止共享的 GeoBone 脏状态影响下一个渲染者）
+        // 4. Reset bone（防止共享的 GeoBone 脏状态影响下一个渲染者）
         resetBones(bakedModel);
-
-        poseStack.popPose();
     }
 
     // ===================== Bone 重置 =====================
 
     /**
-     * 将 BakedGeoModel 中所有骨骼的 rot/pos/scale 恢复到 initialSnapshot 值，
-     * 并重置 hidden 状态，防止共享的 GeoBone 对象被不同渲染实例交叉污染。
+     * 将 BakedGeoModel 中所有骨骼的 frameSnapshot 置空，恢复默认姿态，
+     * 防止共享的 GeoBone 对象被不同渲染实例交叉污染。
      */
     private void resetBones(BakedGeoModel bakedModel) {
         for (GeoBone bone : bakedModel.topLevelBones()) {
@@ -157,33 +159,13 @@ public class GeoSideloader implements GeoRenderer<DummyGeoAnimatable> {
     }
 
     private void resetBoneRecursive(GeoBone bone) {
-        BoneSnapshot snapshot = bone.getInitialSnapshot();
-        if (snapshot != null) {
-            bone.setRotX(snapshot.getRotX());
-            bone.setRotY(snapshot.getRotY());
-            bone.setRotZ(snapshot.getRotZ());
-            bone.setPosX(snapshot.getOffsetX());
-            bone.setPosY(snapshot.getOffsetY());
-            bone.setPosZ(snapshot.getOffsetZ());
-            bone.setScaleX(snapshot.getScaleX());
-            bone.setScaleY(snapshot.getScaleY());
-            bone.setScaleZ(snapshot.getScaleZ());
-        }
-        bone.setHidden(bone.shouldNeverRender() == Boolean.TRUE);
-        bone.resetStateChanges();
-        for (GeoBone child : bone.getChildBones()) {
+        bone.frameSnapshot = null;
+        for (GeoBone child : bone.children()) {
             resetBoneRecursive(child);
         }
     }
 
     // ===================== GeoRenderer 接口实现 =====================
-
-    /**
-     * 禁用默认 actuallyRender，渲染逻辑由 {@link #render} 自行管理
-     */
-    @Override
-    public void actuallyRender(PoseStack poseStack, DummyGeoAnimatable animatable, BakedGeoModel model, @Nullable RenderType renderType, MultiBufferSource bufferSource, @Nullable VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, int colour) {
-    }
 
     @Override
     public GeoModel<DummyGeoAnimatable> getGeoModel() {
@@ -191,13 +173,26 @@ public class GeoSideloader implements GeoRenderer<DummyGeoAnimatable> {
     }
 
     @Override
-    public DummyGeoAnimatable getAnimatable() {
-        return DUMMY;
+    public int getRenderColor(DummyGeoAnimatable animatable, @Nullable Void relatedObject, float partialTick) {
+        return 0xFFFFFFFF;
     }
 
     @Override
-    public @NotNull RenderType getRenderType(DummyGeoAnimatable animatable, Identifier texture, @Nullable MultiBufferSource bufferSource, float partialTick) {
-        return RenderType.entityTranslucent(texture);
+    public int getPackedOverlay(DummyGeoAnimatable animatable, @Nullable Void relatedObject, float partialTick, float deltaTicks) {
+        return OverlayTexture.NO_OVERLAY;
+    }
+
+    @Override
+    public GeoRenderState createRenderState(DummyGeoAnimatable animatable, @Nullable Void relatedObject) {
+        return new GeoRenderState.Impl();
+    }
+
+    @Override
+    public void addRenderData(DummyGeoAnimatable animatable, @Nullable Void relatedObject, GeoRenderState renderState, float partialTick) {
+    }
+
+    @Override
+    public void setMolangQueryValues(DummyGeoAnimatable animatable, @Nullable Void relatedObject, GeoRenderState renderState, float partialTick) {
     }
 
     @Override
@@ -205,15 +200,16 @@ public class GeoSideloader implements GeoRenderer<DummyGeoAnimatable> {
     }
 
     @Override
-    public boolean firePreRenderEvent(PoseStack poseStack, BakedGeoModel model, MultiBufferSource bufferSource, float partialTick, int packedLight) {
+    public void fireCompileRenderStateEvent(DummyGeoAnimatable animatable, @Nullable Void relatedObject, GeoRenderState renderState, float partialTick) {
+    }
+
+    @Override
+    public boolean firePreRenderEvent(RenderPassInfo<GeoRenderState> renderPassInfo, SubmitNodeCollector renderTasks) {
         return true;
     }
 
     @Override
-    public void firePostRenderEvent(PoseStack poseStack, BakedGeoModel model, MultiBufferSource bufferSource, float partialTick, int packedLight) {
-    }
-
-    @Override
-    public void updateAnimatedTextureFrame(DummyGeoAnimatable animatable) {
+    public @NotNull RenderType getRenderType(GeoRenderState renderState, Identifier texture) {
+        return RenderTypes.entityTranslucent(texture);
     }
 }

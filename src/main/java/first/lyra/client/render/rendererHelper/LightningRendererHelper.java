@@ -3,10 +3,10 @@ package first.lyra.client.render.rendererHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.renderType.TrailRenderType;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.FastColor;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -192,90 +192,92 @@ public class LightningRendererHelper {
      * @param bufferSource 缓冲源
      * @param random       决定扭曲样式（分支位置/方向、各段垂直位移）。同种子实例产生确定性结果。
      */
-    public void render(PoseStack poseStack, MultiBufferSource bufferSource, RandomSource random) {
-        VertexConsumer consumer = bufferSource.getBuffer(TrailRenderType.getTrail());
-        Matrix4f pose = poseStack.last().pose();
+    // 26.2: MultiBufferSource 移除,渲染走 submitCustomGeometry
+    public void render(PoseStack poseStack, SubmitNodeCollector collector, RandomSource random) {
+        collector.submitCustomGeometry(poseStack, TrailRenderType.getTrail(), (pose, consumer) -> {
+            Matrix4f poseMatrix = poseStack.last().pose();
 
-        // 世界坐标 -> 相对 renderOrigin 的局部坐标
-        Vector3f sLocal = worldToLocal(start, renderOrigin);
-        Vector3f eLocal = worldToLocal(end, renderOrigin);
+            // 世界坐标 -> 相对 renderOrigin 的局部坐标
+            Vector3f sLocal = worldToLocal(start, renderOrigin);
+            Vector3f eLocal = worldToLocal(end, renderOrigin);
 
-        // 主链方向与长度
-        Vector3f dir = new Vector3f(eLocal).sub(sLocal);
-        float length = dir.length();
-        if (length < 1.0E-4f) {
-            return; // 两点重合，不绘制
-        }
-        dir.div(length); // 单位方向
+            // 主链方向与长度
+            Vector3f dir = new Vector3f(eLocal).sub(sLocal);
+            float length = dir.length();
+            if (length < 1.0E-4f) {
+                return; // 两点重合，不绘制
+            }
+            dir.div(length); // 单位方向
 
-        int baseR = FastColor.ARGB32.red(colorRGB);
-        int baseG = FastColor.ARGB32.green(colorRGB);
-        int baseB = FastColor.ARGB32.blue(colorRGB);
-        int baseA = Math.max(0, Math.min(255, Math.round(alpha * 255)));
+            int baseR = ARGB.red(colorRGB);
+            int baseG = ARGB.green(colorRGB);
+            int baseB = ARGB.blue(colorRGB);
+            int baseA = Math.max(0, Math.min(255, Math.round(alpha * 255)));
 
-        // 1) 采样主链扭曲点（消费一段随机序列）
-        Vector3f perpA = perpendicular(dir, random); // 主链垂直基 A（消费 random）
-        Vector3f perpB = new Vector3f();
-        dir.cross(perpA, perpB);
-        if (perpB.lengthSquared() < 1.0E-8f) {
-            perpB.set(0, 1, 0);
-        } else {
-            perpB.normalize();
-        }
-        Vector3f[] points = sampleBoltPoints(sLocal, dir, length, perpA, perpB, random);
-
-        // 2) 渲染主链多层壳
-        for (int layer = 0; layer < layers; layer++) {
-            float layerRatio = layers == 1 ? 0f : (float) layer / (layers - 1);
-            float radius = mix(radiusCore, radiusOuter, mix(innerRatio, 1.0f, layerRatio));
-            float layerAlpha = mix(1.0f, 0.15f, layerRatio);
-            int a = Math.max(0, Math.min(255, Math.round(baseA * layerAlpha)));
-            int vertexColor = FastColor.ARGB32.color(a, baseR, baseG, baseB);
-            renderLayer(consumer, pose, points, perpA, perpB, radius, vertexColor);
-        }
-
-        // 3) 渲染分支（消费后续随机序列），起点复用主链采样点
-        for (int b = 0; b < branches; b++) {
-            int idx = 1 + random.nextInt(points.length - 2); // 避开首尾端点
-            Vector3f branchStart = points[idx];
-            // 分支方向：以主链段方向为基底，叠加随机垂直偏转
-            Vector3f segDir = new Vector3f(points[idx + 1]).sub(points[idx - 1]);
-            if (segDir.lengthSquared() < 1.0E-8f) {
-                segDir.set(dir);
+            // 1) 采样主链扭曲点（消费一段随机序列）
+            Vector3f perpA = perpendicular(dir, random); // 主链垂直基 A（消费 random）
+            Vector3f perpB = new Vector3f();
+            dir.cross(perpA, perpB);
+            if (perpB.lengthSquared() < 1.0E-8f) {
+                perpB.set(0, 1, 0);
             } else {
-                segDir.normalize();
+                perpB.normalize();
             }
-            Vector3f bpa = perpendicular(segDir, random);
-            Vector3f bpb = new Vector3f();
-            segDir.cross(bpa, bpb);
-            if (bpb.lengthSquared() < 1.0E-8f) {
-                bpb.set(0, 1, 0);
-            } else {
-                bpb.normalize();
-            }
-            float along = (random.nextFloat() * 2f - 1f) * 0.3f; // 沿主链方向漂移
-            float orthoA = random.nextFloat() * 2f - 1f;
-            float orthoB = random.nextFloat() * 2f - 1f;
-            Vector3f branchDir = new Vector3f(segDir).mul(along)
-                    .add(new Vector3f(bpa).mul(orthoA))
-                    .add(new Vector3f(bpb).mul(orthoB));
-            if (branchDir.lengthSquared() < 1.0E-6f) {
-                continue;
-            }
-            branchDir.normalize();
-            float branchLen = length * branchLength;
+            Vector3f[] points = sampleBoltPoints(sLocal, dir, length, perpA, perpB, random);
 
-            // 分支自身扭曲采样（沿 branchDir，用 bpa/bpb 作垂直基）
-            Vector3f[] bPoints = sampleBoltPoints(branchStart, branchDir, branchLen, bpa, bpb, random);
+            // 2) 渲染主链多层壳
             for (int layer = 0; layer < layers; layer++) {
                 float layerRatio = layers == 1 ? 0f : (float) layer / (layers - 1);
-                float radius = mix(radiusCore, radiusOuter, mix(innerRatio, 1.0f, layerRatio)) * 0.6f; // 分支更细
+                float radius = mix(radiusCore, radiusOuter, mix(innerRatio, 1.0f, layerRatio));
                 float layerAlpha = mix(1.0f, 0.15f, layerRatio);
-                int a = Math.max(0, Math.min(255, Math.round(baseA * 0.7f * layerAlpha)));
-                int vertexColor = FastColor.ARGB32.color(a, baseR, baseG, baseB);
-                renderLayer(consumer, pose, bPoints, bpa, bpb, radius, vertexColor);
+                int a = Math.max(0, Math.min(255, Math.round(baseA * layerAlpha)));
+                int vertexColor = ARGB.color(a, baseR, baseG, baseB);
+                renderLayer(consumer, poseMatrix, points, perpA, perpB, radius, vertexColor);
             }
-        }
+
+            // 3) 渲染分支（消费后续随机序列），起点复用主链采样点
+            for (int b = 0; b < branches; b++) {
+                int idx = 1 + random.nextInt(points.length - 2); // 避开首尾端点
+                Vector3f branchStart = points[idx];
+                // 分支方向：以主链段方向为基底，叠加随机垂直偏转
+                Vector3f segDir = new Vector3f(points[idx + 1]).sub(points[idx - 1]);
+                if (segDir.lengthSquared() < 1.0E-8f) {
+                    segDir.set(dir);
+                } else {
+                    segDir.normalize();
+                }
+                Vector3f bpa = perpendicular(segDir, random);
+                Vector3f bpb = new Vector3f();
+                segDir.cross(bpa, bpb);
+                if (bpb.lengthSquared() < 1.0E-8f) {
+                    bpb.set(0, 1, 0);
+                } else {
+                    bpb.normalize();
+                }
+                float along = (random.nextFloat() * 2f - 1f) * 0.3f; // 沿主链方向漂移
+                float orthoA = random.nextFloat() * 2f - 1f;
+                float orthoB = random.nextFloat() * 2f - 1f;
+                Vector3f branchDir = new Vector3f(segDir).mul(along)
+                        .add(new Vector3f(bpa).mul(orthoA))
+                        .add(new Vector3f(bpb).mul(orthoB));
+                if (branchDir.lengthSquared() < 1.0E-6f) {
+                    continue;
+                }
+                branchDir.normalize();
+                float branchLen = length * branchLength;
+
+                // 分支自身扭曲采样（沿 branchDir，用 bpa/bpb 作垂直基）
+                Vector3f[] bPoints = sampleBoltPoints(branchStart, branchDir, branchLen, bpa, bpb, random);
+                for (int layer = 0; layer < layers; layer++) {
+                    float layerRatio = layers == 1 ? 0f : (float) layer / (layers - 1);
+                    float radius = mix(radiusCore, radiusOuter, mix(innerRatio, 1.0f, layerRatio)) * 0.6f; // 分支更细
+                    float layerAlpha = mix(1.0f, 0.15f, layerRatio);
+                    int a = Math.max(0, Math.min(255, Math.round(baseA * 0.7f * layerAlpha)));
+                    int vertexColor = ARGB.color(a, baseR, baseG, baseB);
+                    renderLayer(consumer, poseMatrix, bPoints, bpa, bpb, radius, vertexColor);
+                }
+            }
+        });
     }
 
     /**
@@ -377,7 +379,7 @@ public class LightningRendererHelper {
                 .setColor(color)
                 .setUv(u, vCoord)
                 .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT)
+                .setLight(LightCoordsUtil.FULL_BRIGHT)
                 .setNormal(normal.x, normal.y, normal.z);
     }
 

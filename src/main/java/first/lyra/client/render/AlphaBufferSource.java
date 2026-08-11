@@ -1,24 +1,20 @@
 package first.lyra.client.render;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormatElement;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * 带透明度调整的 MultiBufferSource 包装器。
+ * 透明度调整工具（26.2 重构）。
  * <p>
- * 所有通过此缓冲源获取的 VertexConsumer 都会应用指定的透明度。
+ * 26.2: MultiBufferSource 移除,不再存在缓冲源包装器。
+ * 改为包装 {@link VertexConsumer}：在 submitCustomGeometry 的渲染回调内调用 {@link #wrap}。
  * </p>
  */
-public class AlphaBufferSource implements MultiBufferSource {
+public class AlphaBufferSource {
 
-    private final MultiBufferSource inner;
     private float alpha = 1.0f;
 
-    public AlphaBufferSource(MultiBufferSource inner) {
-        this.inner = inner;
+    public AlphaBufferSource() {
     }
 
     /**
@@ -37,14 +33,21 @@ public class AlphaBufferSource implements MultiBufferSource {
         return alpha;
     }
 
-    @Override
-    public @NotNull VertexConsumer getBuffer(@NotNull RenderType renderType) {
-        VertexConsumer innerConsumer = inner.getBuffer(renderType);
+    /**
+     * 包装顶点消费者，应用当前透明度。
+     */
+    public @NotNull VertexConsumer wrap(VertexConsumer inner) {
+        return wrap(inner, alpha);
+    }
+
+    /**
+     * 包装顶点消费者，应用指定透明度。
+     */
+    public static @NotNull VertexConsumer wrap(VertexConsumer inner, float alpha) {
         if (alpha >= 1.0f) {
-            return innerConsumer;
+            return inner;
         }
-        // 返回一个包装的 VertexConsumer，在设置颜色时应用透明度
-        return new AlphaVertexConsumer(innerConsumer, alpha);
+        return new AlphaVertexConsumer(inner, alpha);
     }
 
     /**
@@ -62,6 +65,17 @@ public class AlphaBufferSource implements MultiBufferSource {
         public @NotNull VertexConsumer setColor(int r, int g, int b, int a) {
             // 应用透明度
             return inner.setColor(r, g, b, (int) (a * alpha));
+        }
+
+        // 26.2: VertexConsumer 接口新增抽象方法
+        @Override
+        public @NotNull VertexConsumer setColor(int color) {
+            return inner.setColor(color);
+        }
+
+        @Override
+        public @NotNull VertexConsumer setLineWidth(float width) {
+            return inner.setLineWidth(width);
         }
 
         @Override
@@ -85,12 +99,6 @@ public class AlphaBufferSource implements MultiBufferSource {
         @Override
         public @NotNull VertexConsumer setNormal(float x, float y, float z) {
             inner.setNormal(x, y, z);
-            return this;
-        }
-
-        @Override
-        public @NotNull VertexConsumer misc(@NotNull VertexFormatElement element, int @NotNull ... rawData) {
-            inner.misc(element, rawData);
             return this;
         }
     }

@@ -15,10 +15,10 @@ public class LyraDamageRegister {
 
     public static Holder<DamageType> getDamageTypeHolder(ResourceKey<DamageType> resourceKey, Level level) {
         Registry<DamageType> damageTypes = level.registryAccess()
-                .registry(Registries.DAMAGE_TYPE)
+                .lookup(Registries.DAMAGE_TYPE)
                 .orElse(null);
         if (damageTypes != null) {
-            Holder.Reference<DamageType> holder = damageTypes.getHolder(resourceKey)
+            Holder.Reference<DamageType> holder = damageTypes.get(resourceKey)
                     .orElse(null);
             if (holder != null) {
                 return holder;
@@ -31,10 +31,10 @@ public class LyraDamageRegister {
 
     public static DamageSource getDamageSource(ResourceKey<DamageType> resourceKey, Level level) {
         Registry<DamageType> damageTypes = level.registryAccess()
-                .registry(Registries.DAMAGE_TYPE)
+                .lookup(Registries.DAMAGE_TYPE)
                 .orElse(null);
         if (damageTypes != null) {
-            Holder.Reference<DamageType> holder = damageTypes.getHolder(resourceKey)
+            Holder.Reference<DamageType> holder = damageTypes.get(resourceKey)
                     .orElse(null);
             if (holder != null) {
                 return new DamageSource(holder, null, null, null);

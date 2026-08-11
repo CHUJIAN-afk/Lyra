@@ -5,8 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.render.RenderContext;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -52,14 +51,10 @@ public class RibbonTrailConfig<T extends AttachmentEntity> extends TrailConfig<T
     }
 
     @Override
-    public void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, PathNode visualNode, RenderType renderType) {
-        RenderSetup<T> setup = beginRender(entity, poseStack, bufferSource, partialTick, visualNode, renderType);
-        if (setup == null) {
-            return;
-        }
-
+    protected void renderBody(RenderSetup<T> setup) {
         VertexConsumer consumer = setup.consumer;
         Matrix4f matrix = setup.matrix;
+        T entity = setup.entity;
         Vec3 renderPos = setup.renderPos;
 
         int nodeCount = setup.nodeCount();

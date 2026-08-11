@@ -4,8 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -21,11 +20,7 @@ import org.joml.Vector3f;
 public class DropletTrailConfig<T extends AttachmentEntity> extends ConeTrailConfig<T> {
 
     @Override
-    public void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, PathNode visualNode, RenderType renderType) {
-        RenderSetup<T> setup = beginRender(entity, poseStack, bufferSource, partialTick, visualNode, renderType);
-        if (setup == null) {
-            return;
-        }
+    protected void renderBody(RenderSetup<T> setup) {
         // 圆锥主体（复用父类）
         renderConeBody(setup);
         // 头部半球

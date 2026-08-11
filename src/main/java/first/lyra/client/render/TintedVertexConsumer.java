@@ -16,6 +16,19 @@ public record TintedVertexConsumer(VertexConsumer base, int r, int g, int b, int
         return this;
     }
 
+    // 26.2: VertexConsumer 接口新增抽象方法
+    @Override
+    public @NotNull VertexConsumer setColor(int color) {
+        base.setColor(color);
+        return this;
+    }
+
+    @Override
+    public @NotNull VertexConsumer setLineWidth(float width) {
+        base.setLineWidth(width);
+        return this;
+    }
+
     @Override
     public @NotNull VertexConsumer setUv(float u, float v) {
         base.setUv(u, v);

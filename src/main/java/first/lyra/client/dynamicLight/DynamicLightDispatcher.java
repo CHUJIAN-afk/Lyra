@@ -3,13 +3,12 @@ package first.lyra.client.dynamicLight;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import first.lyra.common.entity.PathNode;
 import first.lyra.client.config.ClientConfig;
-import first.lyra.mixin.LevelRendererAccessor;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
-import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.BlockAndLightGetter;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -74,7 +73,9 @@ public class DynamicLightDispatcher {
         }
     }
 
-    public static void update(LevelRendererAccessor levelRenderer) {
+    // 26.2: LevelRenderer.setSectionDirty 已移除(区块渲染管线重构),不再触发区块重编译;
+    // 光照快照更新保留,实体路径(getDynamicLight(Vec3, int))不受影响。
+    public static void update() {
         Set<Long> updateSectionSet = new HashSet<>(LastUpdateSectionSet);
         LastUpdateSectionSet.clear();
         LightSources.forEach((lightPos, luminance) -> {
@@ -83,7 +84,7 @@ public class DynamicLightDispatcher {
             Direction dirX = (Mth.floor(lightPos.x) & 15) >= 8 ? Direction.EAST : Direction.WEST;
             Direction dirY = (Mth.floor(lightPos.y) & 15) >= 8 ? Direction.UP : Direction.DOWN;
             Direction dirZ = (Mth.floor(lightPos.z) & 15) >= 8 ? Direction.SOUTH : Direction.NORTH;
-            int cx = sectionPos.getX(), cy = sectionPos.getY(), cz = sectionPos.getZ();
+            int cx = sectionPos.x(), cy = sectionPos.y(), cz = sectionPos.z();
             for (int i = 0; i < 7; i++) {
                 switch (i % 4) {
                     case 0 -> cx += dirX.getStepX();
@@ -99,22 +100,21 @@ public class DynamicLightDispatcher {
         });
         SnapshotLightSources = new HashMap<>(LightSources);
         LightSources.clear();
-        updateSectionSet.forEach(key -> levelRenderer.callSetSectionDirty(SectionPos.x(key), SectionPos.y(key), SectionPos.z(key), false));
         LastUpdateSectionSet.addAll(updateSectionSet);
     }
 
     // ==================== 方块路径（BlockPos 级，GPU 顶点插值处理平滑） ====================
 
-    public static int getDynamicLight(BlockAndTintGetter level, BlockState state, BlockPos blockPos, Operation<Integer> original) {
+    public static int getDynamicLight(BlockAndLightGetter level, BlockState state, BlockPos blockPos, Operation<Integer> original) {
         Map<Vec3, Integer> lights = SnapshotLightSources;
         int originalLight = original.call(level, state, blockPos);
-        if (!lights.isEmpty() && !level.getBlockState(blockPos).isSolidRender(level, blockPos)) {
+        if (!lights.isEmpty() && !level.getBlockState(blockPos).isSolidRender()) {
             double maxLight = computeRawBlockLightAtBlockPos(blockPos);
             if (maxLight > 0) {
-                int blockLevel = LightTexture.block(originalLight);
+                int blockLevel = LightCoordsUtil.block(originalLight);
                 if (maxLight > blockLevel) {
                     int newBlockLight = Mth.clamp((int) Math.round(maxLight), 0, 15);
-                    return LightTexture.pack(newBlockLight, LightTexture.sky(originalLight));
+                    return LightCoordsUtil.pack(newBlockLight, LightCoordsUtil.sky(originalLight));
                 }
             }
         }
@@ -153,10 +153,10 @@ public class DynamicLightDispatcher {
             }
         }
         if (maxLight > 0) {
-            int blockLevel = LightTexture.block(originalLight);
+            int blockLevel = LightCoordsUtil.block(originalLight);
             if (maxLight > blockLevel) {
                 int newBlockLight = Mth.clamp((int) Math.round(maxLight), 0, 15);
-                return LightTexture.pack(newBlockLight, LightTexture.sky(originalLight));
+                return LightCoordsUtil.pack(newBlockLight, LightCoordsUtil.sky(originalLight));
             }
         }
         return originalLight;

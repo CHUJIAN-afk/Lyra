@@ -2,9 +2,9 @@ package first.lyra.common.damageInfo;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.utils.EasingCurve;
-import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
@@ -152,13 +152,13 @@ public class DamageInfo {
 
             // 4 个顶点，逐个变换后走 10 参数 fast path
             matrix.transformPosition(x0, -halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u0, 0f, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 0, 0, 1);
+            consumer.addVertex(v.x, v.y, v.z, color, u0, 0f, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 0, 0, 1);
             matrix.transformPosition(x0, halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u0, 1f, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 0, 0, 1);
+            consumer.addVertex(v.x, v.y, v.z, color, u0, 1f, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 0, 0, 1);
             matrix.transformPosition(x1, halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u1, 1f, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 0, 0, 1);
+            consumer.addVertex(v.x, v.y, v.z, color, u1, 1f, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 0, 0, 1);
             matrix.transformPosition(x1, -halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u1, 0f, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 0, 0, 1);
+            consumer.addVertex(v.x, v.y, v.z, color, u1, 0f, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 0, 0, 1);
         }
     }
 

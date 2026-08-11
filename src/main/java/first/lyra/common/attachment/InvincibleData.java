@@ -155,7 +155,8 @@ public class InvincibleData {
                     }
                     int invulnerableTime = target.invulnerableTime;
                     target.invulnerableTime = 0;
-                    boolean hurt = target.hurt(damageSource, damageAmount);
+                    // 26.2: hurt(DamageSource, float) 已移除(Entity.hurt 变 void),改用自动分发入口
+                    boolean hurt = target.hurtOrSimulate(damageSource, damageAmount);
                     target.invulnerableTime = invulnerableTime;
                     if (hurt) {
                         if (mobEffectInstance != null) {

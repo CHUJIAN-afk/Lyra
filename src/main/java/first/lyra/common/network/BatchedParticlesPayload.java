@@ -50,7 +50,8 @@ public record BatchedParticlesPayload(List<Entry> entries) implements CustomPack
             Player player = context.player();
             Level level = player.level();
             for (Entry entry : payload.entries()) {
-                level.addParticle(entry.options(), false, entry.x(), entry.y(), entry.z(), entry.vx(), entry.vy(), entry.vz());
+                // 26.2: addParticle 新增 alwaysShow 参数
+                level.addParticle(entry.options(), false, false, entry.x(), entry.y(), entry.z(), entry.vx(), entry.vy(), entry.vz());
             }
         });
     }

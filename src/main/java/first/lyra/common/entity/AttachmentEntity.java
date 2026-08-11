@@ -258,7 +258,8 @@ public abstract class AttachmentEntity {
      * @param buf 数据包缓冲区
      */
     public void writeBase(RegistryFriendlyByteBuf buf) {
-        buf.writeVec3(currentPathNode.pos());
+        // 26.2: writeVec3 移除,改用 Vec3.STREAM_CODEC
+        Vec3.STREAM_CODEC.encode(buf, currentPathNode.pos());
         buf.writeFloat(currentPathNode.yaw());
         buf.writeFloat(currentPathNode.pitch());
         buf.writeFloat(currentPathNode.roll());
@@ -273,7 +274,7 @@ public abstract class AttachmentEntity {
      * @param buf 数据包缓冲区
      */
     public void readBase(RegistryFriendlyByteBuf buf) {
-        this.clientTargetNode = new PathNode(buf.readVec3(), buf.readFloat(), buf.readFloat(), buf.readFloat());
+        this.clientTargetNode = new PathNode(Vec3.STREAM_CODEC.decode(buf), buf.readFloat(), buf.readFloat(), buf.readFloat());
         // 首次同步时初始化位置
         if (!clientInitialized) {
             clientInitialized = true;

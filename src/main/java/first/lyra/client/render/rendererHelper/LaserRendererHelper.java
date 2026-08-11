@@ -3,10 +3,10 @@ package first.lyra.client.render.rendererHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.renderType.TrailRenderType;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.FastColor;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
 import org.joml.Matrix4f;
 
 /**
@@ -126,28 +126,30 @@ public class LaserRendererHelper {
      * @param poseStack    姿态栈
      * @param bufferSource 缓冲源
      */
-    public void render(PoseStack poseStack, MultiBufferSource bufferSource) {
-        VertexConsumer consumer = bufferSource.getBuffer(TrailRenderType.getTrail());
-        Matrix4f pose = poseStack.last()
-                .pose();
+    // 26.2: MultiBufferSource 移除,渲染走 submitCustomGeometry
+    public void render(PoseStack poseStack, SubmitNodeCollector collector) {
+        collector.submitCustomGeometry(poseStack, TrailRenderType.getTrail(), (pose, consumer) -> {
+            Matrix4f poseMatrix = poseStack.last()
+                    .pose();
 
-        // 基础颜色分量：RGB 全层一致（保证圆柱连续，不压黑接缝），仅 alpha 按层渐变
-        int baseR = FastColor.ARGB32.red(colorRGB);
-        int baseG = FastColor.ARGB32.green(colorRGB);
-        int baseB = FastColor.ARGB32.blue(colorRGB);
-        int baseA = Math.max(0, Math.min(255, Math.round(alpha * 255)));
+            // 基础颜色分量：RGB 全层一致（保证圆柱连续，不压黑接缝），仅 alpha 按层渐变
+            int baseR = ARGB.red(colorRGB);
+            int baseG = ARGB.green(colorRGB);
+            int baseB = ARGB.blue(colorRGB);
+            int baseA = Math.max(0, Math.min(255, Math.round(alpha * 255)));
 
-        for (int layer = 0; layer < layers; layer++) {
-            // 层级比例: 0=最内层, 1=最外层
-            float layerRatio = layers == 1 ? 0f : (float) layer / (layers - 1);
-            // 该层半径系数: 内层(innerRatio) ~ 外层(1.0)
-            float radiusScale = mix(innerRatio, 1.0f, layerRatio);
-            // 层级 alpha：内层高（实核心），外层低（散边缘）—— alpha 梯度叠加出体积雾
-            // 内层 1.0，外层 0.15，多层标准半透明叠加即得到“实心核心 + 散开泛光边缘”
-            float layerAlpha = mix(1.0f, 0.15f, layerRatio);
+            for (int layer = 0; layer < layers; layer++) {
+                // 层级比例: 0=最内层, 1=最外层
+                float layerRatio = layers == 1 ? 0f : (float) layer / (layers - 1);
+                // 该层半径系数: 内层(innerRatio) ~ 外层(1.0)
+                float radiusScale = mix(innerRatio, 1.0f, layerRatio);
+                // 层级 alpha：内层高（实核心），外层低（散边缘）—— alpha 梯度叠加出体积雾
+                // 内层 1.0，外层 0.15，多层标准半透明叠加即得到“实心核心 + 散开泛光边缘”
+                float layerAlpha = mix(1.0f, 0.15f, layerRatio);
 
-            renderLayer(consumer, pose, radiusScale, layerAlpha, baseR, baseG, baseB, baseA);
-        }
+                renderLayer(consumer, poseMatrix, radiusScale, layerAlpha, baseR, baseG, baseB, baseA);
+            }
+        });
     }
 
     /**
@@ -165,7 +167,7 @@ public class LaserRendererHelper {
 
         // 该层统一顶点色：RGB 不衰减，alpha 按层渐变
         int a = Math.max(0, Math.min(255, Math.round(baseA * layerAlpha)));
-        int vertexColor = FastColor.ARGB32.color(a, baseR, baseG, baseB);
+        int vertexColor = ARGB.color(a, baseR, baseG, baseB);
 
         for (int j = 0; j < segments; j++) {
             float angle1 = (float) (j) / segments * (float) (Math.PI * 2.0);
@@ -196,7 +198,7 @@ public class LaserRendererHelper {
                 .setColor(color)
                 .setUv(u, v)
                 .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT)
+                .setLight(LightCoordsUtil.FULL_BRIGHT)
                 .setNormal(0, 0, 1);
     }
 

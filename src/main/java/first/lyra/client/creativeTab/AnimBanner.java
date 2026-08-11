@@ -1,6 +1,7 @@
 package first.lyra.client.creativeTab;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 
 import java.util.HashMap;
@@ -23,6 +24,7 @@ public record AnimBanner(int frameHeight, int frameTime, int totalFrames) {
     public static void blitAnimated(GuiGraphicsExtractor graphics, Identifier texture, AnimBanner info, int x, int y, int width, int mouseX, int mouseY, boolean hoverDriven) {
         boolean playing = !hoverDriven || mouseX >= x && mouseX <= x + width && mouseY >= y && mouseY <= y + info.frameHeight;
         int frame = currentFrame(info, texture, playing);
-        graphics.blit(texture, x, y, 0, frame * info.frameHeight, width, info.frameHeight, width, info.totalFrames * info.frameHeight);
+        // 26.2: 9 参 blit 语义改变,改用带 RenderPipeline 的重载
+        graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 0f, frame * info.frameHeight, width, info.frameHeight, width, info.totalFrames * info.frameHeight);
     }
 }

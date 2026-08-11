@@ -1,7 +1,9 @@
 package first.lyra.client.geo;
 
+import com.geckolib.model.GeoModel;
+import com.geckolib.renderer.base.GeoRenderState;
 import net.minecraft.resources.Identifier;
-import software.bernie.geckolib.model.GeoModel;
+import org.jspecify.annotations.NonNull;
 
 /**
  * Geo 附件模型定义，根据 Identifier 自动推导 geo/texture/animation 资源路径。
@@ -47,17 +49,18 @@ public class GeoAttachmentModel extends GeoModel<DummyGeoAnimatable> {
     }
 
     @Override
-    public Identifier getModelResource(DummyGeoAnimatable animatable) {
+    // 26.2: 参数从 animatable 改为 GeoRenderState
+    public @NonNull Identifier getModelResource(@NonNull GeoRenderState renderState) {
         return this.modelResource;
     }
 
     @Override
-    public Identifier getTextureResource(DummyGeoAnimatable animatable) {
+    public @NonNull Identifier getTextureResource(@NonNull GeoRenderState renderState) {
         return this.textureResource;
     }
 
     @Override
-    public Identifier getAnimationResource(DummyGeoAnimatable animatable) {
+    public @NonNull Identifier getAnimationResource(@NonNull DummyGeoAnimatable animatable) {
         return this.animationResource;
     }
 }

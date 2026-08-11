@@ -1,34 +1,22 @@
 package first.lyra.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.Sheets;
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.entity.ItemRenderer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.item.ItemModel;
+import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.BakedModel;
-import net.minecraft.client.resources.model.ModelManager;
-import net.minecraft.client.resources.model.ModelIdentifier;
-import net.minecraft.util.RandomSource;
+import net.minecraft.core.Holder;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.client.model.data.ModelData;
-import org.joml.Matrix3f;
-import org.joml.Matrix4f;
-import org.joml.Vector3f;
-
-import java.util.List;
+import net.minecraft.world.item.Items;
 
 /**
- * 模型渲染器，使用缓存的 BakedQuad + 内联顶点变换。
+ * 模型渲染器。
  * <p>
- * 相比每帧 getModel+getQuads+putBulkData：
- * <ul>
- *   <li>缓存 BakedQuad 列表，避免每帧重新查询</li>
- *   <li>内联顶点变换，跳过 putBulkData 内部的 color/sprite 分支判断</li>
- * </ul>
+ * 26.2: ItemRenderer 类移除,物品渲染改为 ItemModel → ItemStackRenderState → submit 管线。
  * </p>
  */
 public final class ModelRenderer {
@@ -36,10 +24,20 @@ public final class ModelRenderer {
     private ModelRenderer() {
     }
 
-    public static void renderModel(ModelIdentifier modelLocation, PoseStack poseStack, MultiBufferSource bufferSource) {
+    /**
+     * 渲染指定物品 id 的模型。
+     *
+     * @param itemId      物品注册 id
+     * @param poseStack   姿态栈
+     * @param collector   提交节点收集器
+     * @param packedLight 光照值
+     */
+    public static void renderModel(Identifier itemId, PoseStack poseStack, SubmitNodeCollector collector, int packedLight) {
         Minecraft minecraft = Minecraft.getInstance();
-        ItemRenderer renderer = minecraft.getItemRenderer();
-        ModelManager modelManager = minecraft.getModelManager();
-        renderer.renderModelLists(modelManager.getModel(modelLocation), ItemStack.EMPTY, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY, poseStack, bufferSource.getBuffer(Sheets.translucentItemSheet()));
+        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(itemId).map(Holder.Reference::value).orElse(Items.AIR));
+        ItemStackRenderState renderState = new ItemStackRenderState();
+        ItemModel model = minecraft.getModelManager().getItemModel(itemId);
+        model.update(renderState, stack, minecraft.getItemModelResolver(), ItemDisplayContext.NONE, minecraft.level, null, 0);
+        renderState.submit(poseStack, collector, packedLight, OverlayTexture.NO_OVERLAY, 0);
     }
 }

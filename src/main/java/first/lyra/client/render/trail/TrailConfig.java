@@ -5,11 +5,11 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.render.RenderContext;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.FastColor;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -135,33 +135,47 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
     // ===================== 渲染入口 =====================
 
     /**
-     * 渲染拖尾。
-     *
-     * @param entity       实体
-     * @param poseStack    姿态栈
-     * @param bufferSource 缓冲源
-     * @param partialTick  部分刻
-     * @param visualNode   视觉节点
-     * @param renderType   渲染类型
+     * 渲染拖尾。模板方法：提交自定义几何后委托 {@link #renderBody}。
+     * <p>
+     * 26.2: MultiBufferSource 移除,渲染走 {@link SubmitNodeCollector#submitCustomGeometry}。
+     * </p>
      */
-    public abstract void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, PathNode visualNode, RenderType renderType);
+    public final void render(T entity, PoseStack poseStack, SubmitNodeCollector collector, float partialTick, PathNode visualNode, RenderType renderType) {
+        render(entity, poseStack, collector, partialTick, visualNode, renderType, 1.0f);
+    }
+
+    /**
+     * 渲染拖尾（带透明度包装，1.0 = 不透明）。
+     */
+    public final void render(T entity, PoseStack poseStack, SubmitNodeCollector collector, float partialTick, PathNode visualNode, RenderType renderType, float alpha) {
+        RenderSetup<T> setup = beginRender(entity, poseStack, collector, partialTick, visualNode, renderType);
+        if (setup == null) {
+            return;
+        }
+        collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
+            setup.consumer = first.lyra.client.render.AlphaBufferSource.wrap(buffer, alpha);
+            renderBody(setup);
+        });
+    }
+
+    /** 子类实现的具体渲染逻辑（顶点写入 setup.consumer）。 */
+    protected abstract void renderBody(RenderSetup<T> setup);
 
     /**
      * 渲染样板：一次性算好子类所需的全部上下文。
      * <p>
-     * 子类 {@code render} 开头调用此方法，若返回 {@code null}（节点不足）则直接 return。
+     * 子类 {@code renderBody} 中直接用 {@link RenderSetup#consumer} 写顶点。
      * 直接从 PoseStack 取出 Matrix4f，绕过后续所有 PoseStack 操作。
      * </p>
      */
-    protected final RenderSetup<T> beginRender(T entity, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, PathNode visualNode, RenderType renderType) {
+    protected final RenderSetup<T> beginRender(T entity, PoseStack poseStack, SubmitNodeCollector collector, float partialTick, PathNode visualNode, RenderType renderType) {
         List<InterpolatedNode> smoothNodes = buildSmoothNodes(entity, visualNode, partialTick);
         if (smoothNodes.size() < 2) {
             return null;
         }
-        VertexConsumer consumer = bufferSource.getBuffer(renderType);
         Matrix4f matrix = new Matrix4f(poseStack.last().pose());
         Vec3 renderPos = visualNode.pos();
-        return new RenderSetup<>(entity, consumer, matrix, partialTick, renderPos, smoothNodes);
+        return new RenderSetup<>(entity, collector, poseStack, renderType, matrix, partialTick, renderPos, smoothNodes);
     }
 
     /**
@@ -169,15 +183,21 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
      */
     protected static final class RenderSetup<T extends AttachmentEntity> {
         public final T entity;
-        public final VertexConsumer consumer;
+        public final SubmitNodeCollector collector;
+        public final PoseStack poseStack;
+        public final RenderType renderType;
         public final Matrix4f matrix;
         public final float partialTick;
         public final Vec3 renderPos;
         public final List<InterpolatedNode> smoothNodes;
+        /** 当前提交的顶点消费者（由 submitCustomGeometry 回调写入） */
+        public VertexConsumer consumer;
 
-        RenderSetup(T entity, VertexConsumer consumer, Matrix4f matrix, float partialTick, Vec3 renderPos, List<InterpolatedNode> smoothNodes) {
+        RenderSetup(T entity, SubmitNodeCollector collector, PoseStack poseStack, RenderType renderType, Matrix4f matrix, float partialTick, Vec3 renderPos, List<InterpolatedNode> smoothNodes) {
             this.entity = entity;
-            this.consumer = consumer;
+            this.collector = collector;
+            this.poseStack = poseStack;
+            this.renderType = renderType;
             this.matrix = matrix;
             this.partialTick = partialTick;
             this.renderPos = renderPos;
@@ -197,7 +217,7 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
      */
     protected static int packColor(int rgb, float alpha) {
         int a = clampByte(alpha * 255f);
-        return FastColor.ARGB32.color(a, (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
+        return ARGB.color(a, (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
     }
 
     /**
@@ -208,7 +228,7 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
         int r = Math.min(255, Math.round(((rgb >> 16) & 0xFF) * brightness));
         int g = Math.min(255, Math.round(((rgb >> 8) & 0xFF) * brightness));
         int b = Math.min(255, Math.round((rgb & 0xFF) * brightness));
-        return FastColor.ARGB32.color(a, r, g, b);
+        return ARGB.color(a, r, g, b);
     }
 
     // ===================== 平滑节点构建 =====================
@@ -288,13 +308,13 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
                             float x4, float y4, float z4, int c4) {
         Vector3f v = new Vector3f();
         matrix.transformPosition(x1, y1, z1, v);
-        consumer.addVertex(v.x, v.y, v.z, c1, 0, 0, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 1, 0, 0);
+        consumer.addVertex(v.x, v.y, v.z, c1, 0, 0, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 1, 0, 0);
         matrix.transformPosition(x2, y2, z2, v);
-        consumer.addVertex(v.x, v.y, v.z, c2, 1, 0, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 1, 0, 0);
+        consumer.addVertex(v.x, v.y, v.z, c2, 1, 0, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 1, 0, 0);
         matrix.transformPosition(x3, y3, z3, v);
-        consumer.addVertex(v.x, v.y, v.z, c3, 1, 1, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 1, 0, 0);
+        consumer.addVertex(v.x, v.y, v.z, c3, 1, 1, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 1, 0, 0);
         matrix.transformPosition(x4, y4, z4, v);
-        consumer.addVertex(v.x, v.y, v.z, c4, 0, 1, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 1, 0, 0);
+        consumer.addVertex(v.x, v.y, v.z, c4, 0, 1, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 1, 0, 0);
     }
 
     // ===================== 插值节点记录 =====================

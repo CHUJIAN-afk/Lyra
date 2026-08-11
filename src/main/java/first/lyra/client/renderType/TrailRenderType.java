@@ -1,25 +1,25 @@
 package first.lyra.client.renderType;
 
-import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import first.lyra.Lyra;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
 
-public class TrailRenderType extends RenderType {
+/**
+ * 拖尾渲染类型。
+ * <p>
+ * 26.2: RenderType 不可继承、CompositeState 体系删除,改为 RenderSetup.builder(RenderPipelines) 工厂。
+ * </p>
+ */
+public class TrailRenderType {
 
-    private TrailRenderType(String name, VertexFormat fmt, VertexFormat.Mode mode, int bufSize, boolean affectsCrumbling, boolean sort, Runnable setup, Runnable clear) {
-        super(name, fmt, mode, bufSize, affectsCrumbling, sort, setup, clear);
-    }
-
-    private static final RenderType TRAIL = create("lyra_trail", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, true, CompositeState.builder()
-            .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_EMISSIVE_SHADER)
-            .setTextureState(new TextureStateShard(Lyra.id("textures/trail.png"), false, false))
-            .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
-            .setCullState(NO_CULL)
-            .setLightmapState(LIGHTMAP)
-            .setWriteMaskState(COLOR_DEPTH_WRITE)
-            .setOverlayState(OVERLAY)
-            .createCompositeState(false));
+    private static final RenderType TRAIL = RenderType.create("lyra_trail",
+            RenderSetup.builder(RenderPipelines.ENTITY_TRANSLUCENT_EMISSIVE)
+                    .withTexture("Sampler0", Lyra.id("textures/trail.png"))
+                    .useLightmap()
+                    .useOverlay()
+                    .sortOnUpload()
+                    .createRenderSetup());
 
     public static RenderType getTrail() {
         return TRAIL;

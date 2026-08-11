@@ -8,7 +8,7 @@ import first.lyra.register.LyraParticleRegister;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
@@ -21,8 +21,8 @@ public class ClientEvent {
     }
 
     @SubscribeEvent
-    public static void registerClientReloadListeners(RegisterClientReloadListenersEvent event) {
-        event.registerReloadListener(DamageInfoStyleManager.INSTANCE);
+    public static void registerClientReloadListeners(AddClientReloadListenersEvent event) {
+        event.addListener(Lyra.id("damage_info_style"), DamageInfoStyleManager.INSTANCE);
     }
 
     @SubscribeEvent

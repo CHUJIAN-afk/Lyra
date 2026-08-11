@@ -3,10 +3,10 @@ package first.lyra.client.render.rendererHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.renderType.TrailRenderType;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.FastColor;
+import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
 import org.joml.Matrix4f;
 
 /**
@@ -116,27 +116,29 @@ public class SphereRendererHelper {
      * @param poseStack    姿态栈，原点为球心
      * @param bufferSource 缓冲源
      */
-    public void render(PoseStack poseStack, MultiBufferSource bufferSource) {
-        VertexConsumer consumer = bufferSource.getBuffer(TrailRenderType.getTrail());
-        Matrix4f pose = poseStack.last().pose();
+    // 26.2: MultiBufferSource 移除,渲染走 submitCustomGeometry
+    public void render(PoseStack poseStack, SubmitNodeCollector collector) {
+        collector.submitCustomGeometry(poseStack, TrailRenderType.getTrail(), (pose, consumer) -> {
+            Matrix4f poseMatrix = poseStack.last().pose();
 
-        // 基础颜色分量：RGB 全层一致，仅 alpha 按层渐变
-        int baseR = FastColor.ARGB32.red(colorRGB);
-        int baseG = FastColor.ARGB32.green(colorRGB);
-        int baseB = FastColor.ARGB32.blue(colorRGB);
-        int baseA = Math.max(0, Math.min(255, Math.round(alpha * 255)));
+            // 基础颜色分量：RGB 全层一致，仅 alpha 按层渐变
+            int baseR = ARGB.red(colorRGB);
+            int baseG = ARGB.green(colorRGB);
+            int baseB = ARGB.blue(colorRGB);
+            int baseA = Math.max(0, Math.min(255, Math.round(alpha * 255)));
 
-        for (int layer = 0; layer < layers; layer++) {
-            // 层级比例: 0=最内层, 1=最外层
-            float layerRatio = layers == 1 ? 0f : (float) layer / (layers - 1);
-            // 该层半径系数: 内层(innerRatio) ~ 外层(1.0)
-            float radiusScale = mix(innerRatio, 1.0f, layerRatio);
-            // 层级 alpha：内层高（实核心），外层低（散边缘）—— alpha 梯度叠加出体积发光
-            float layerAlpha = mix(1.0f, 0.15f, layerRatio);
-            float r = radius * radiusScale;
+            for (int layer = 0; layer < layers; layer++) {
+                // 层级比例: 0=最内层, 1=最外层
+                float layerRatio = layers == 1 ? 0f : (float) layer / (layers - 1);
+                // 该层半径系数: 内层(innerRatio) ~ 外层(1.0)
+                float radiusScale = mix(innerRatio, 1.0f, layerRatio);
+                // 层级 alpha：内层高（实核心），外层低（散边缘）—— alpha 梯度叠加出体积发光
+                float layerAlpha = mix(1.0f, 0.15f, layerRatio);
+                float r = radius * radiusScale;
 
-            renderLayer(consumer, pose, r, layerAlpha, baseR, baseG, baseB, baseA, sides);
-        }
+                renderLayer(consumer, poseMatrix, r, layerAlpha, baseR, baseG, baseB, baseA, sides);
+            }
+        });
     }
 
     /**
@@ -150,7 +152,7 @@ public class SphereRendererHelper {
     private void renderLayer(VertexConsumer consumer, Matrix4f pose, float r,
                              float layerAlpha, int baseR, int baseG, int baseB, int baseA, int sides) {
         int a = Math.max(0, Math.min(255, Math.round(baseA * layerAlpha)));
-        int vertexColor = FastColor.ARGB32.color(a, baseR, baseG, baseB);
+        int vertexColor = ARGB.color(a, baseR, baseG, baseB);
 
         int slices = sides;
         int stacks = Math.max(2, sides / 2);
@@ -197,7 +199,7 @@ public class SphereRendererHelper {
                 .setColor(color)
                 .setUv(u, v)
                 .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT)
+                .setLight(LightCoordsUtil.FULL_BRIGHT)
                 .setNormal(nx, ny, nz);
     }
 

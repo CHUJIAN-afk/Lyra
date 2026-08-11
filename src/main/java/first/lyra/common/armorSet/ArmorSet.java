@@ -7,6 +7,7 @@ import first.lyra.register.LyraRegistries;
 import first.lyra.utils.AttributeUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
@@ -63,15 +64,17 @@ public record ArmorSet(Identifier id, List<ItemLike> items, Multimap<Holder<Attr
     public boolean full(Player player) {
         return player.getData(LyraAttachmentRegister.ArmorSetData).activeSets
                 .computeIfAbsent(this, set -> {
-                    Iterable<ItemStack> armorSlots = player.getArmorSlots();
                     List<Item> target = new ArrayList<>();
-                    for (ItemLike item : items) {
+                    for (ItemLike item : set.items) {
                         target.add(item.asItem());
                     }
-                    for (ItemStack armor : armorSlots) {
-                        target.remove(armor.getItem());
-                        if (target.isEmpty()) {
-                            return true;
+                    // 26.2: getArmorSlots() 已移除,遍历护甲槽
+                    for (EquipmentSlot slot : EquipmentSlot.values()) {
+                        if (slot.isArmor()) {
+                            target.remove(player.getItemBySlot(slot).getItem());
+                            if (target.isEmpty()) {
+                                return true;
+                            }
                         }
                     }
                     return false;

@@ -3,6 +3,7 @@ package first.lyra.register;
 import first.lyra.Lyra;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
@@ -17,12 +18,12 @@ public class LyraAttributeRegister {
         for (EntityType<? extends LivingEntity> type : event.getTypes()) {
             event.add(type, LyraAttributeRegister.HealthRegen);
         }
-        event.add(EntityType.PLAYER, LyraAttributeRegister.ServantMaxCount);
-        event.add(EntityType.PLAYER, LyraAttributeRegister.SentryServantMaxCount);
-        event.add(EntityType.PLAYER, LyraAttributeRegister.ServantDamage);
-        event.add(EntityType.PLAYER, LyraAttributeRegister.ServantKnockback);
-        event.add(EntityType.PLAYER, LyraAttributeRegister.ServantArmorPierce);
-        event.add(EntityType.PLAYER, LyraAttributeRegister.ServantSearchRange);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.ServantMaxCount);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.SentryServantMaxCount);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.ServantDamage);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.ServantKnockback);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.ServantArmorPierce);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.ServantSearchRange);
     }
 
     private static final DeferredRegister<Attribute> Register = DeferredRegister.create(Registries.ATTRIBUTE, Lyra.MODID);

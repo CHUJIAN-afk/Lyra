@@ -36,8 +36,9 @@ public class ServantWeaponItemBuilder<T extends Servant> {
         Player player = event.getEntity();
         Level level = player.level();
         ItemCooldowns cooldowns = player.getCooldowns();
-        if (event.getHand() == InteractionHand.MAIN_HAND && !cooldowns.isOnCooldown(itemStack.getItem()) && itemStack.getItem() instanceof IServantWeaponItem<?> iServantWeaponItem) {
-            cooldowns.addCooldown(itemStack.getItem(), 4);
+        if (event.getHand() == InteractionHand.MAIN_HAND && !cooldowns.isOnCooldown(itemStack) && itemStack.getItem() instanceof IServantWeaponItem<?> iServantWeaponItem) {
+            // 26.2: isOnCooldown/addCooldown 参数从 Item 改为 ItemStack
+            cooldowns.addCooldown(itemStack, 4);
             player.swing(InteractionHand.MAIN_HAND, true);
             if (!level.isClientSide()) {
                 if (!player.isShiftKeyDown()) {

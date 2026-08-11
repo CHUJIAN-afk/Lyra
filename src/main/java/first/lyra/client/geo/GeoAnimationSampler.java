@@ -3,16 +3,17 @@ package first.lyra.client.geo;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import org.jetbrains.annotations.Nullable;
-import software.bernie.geckolib.animation.Animation;
-import software.bernie.geckolib.animation.EasingType;
-import software.bernie.geckolib.animation.keyframe.BoneAnimation;
-import software.bernie.geckolib.animation.keyframe.Keyframe;
-import software.bernie.geckolib.animation.keyframe.KeyframeStack;
-import software.bernie.geckolib.cache.GeckoLibCache;
-import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.cache.object.GeoBone;
-import software.bernie.geckolib.loading.math.MathValue;
-import software.bernie.geckolib.loading.object.BakedAnimations;
+import com.geckolib.animation.object.EasingType;
+import com.geckolib.animation.object.LoopType;
+import com.geckolib.animation.state.BoneSnapshot;
+import com.geckolib.cache.GeckoLibResources;
+import com.geckolib.cache.animation.Animation;
+import com.geckolib.cache.animation.BakedAnimations;
+import com.geckolib.cache.animation.BoneAnimation;
+import com.geckolib.cache.animation.Keyframe;
+import com.geckolib.cache.animation.KeyframeStack;
+import com.geckolib.cache.model.BakedGeoModel;
+import com.geckolib.cache.model.GeoBone;
 
 import java.util.List;
 
@@ -50,7 +51,7 @@ public class GeoAnimationSampler {
      */
     public void sample(String animName, double tick, BakedGeoModel bakedModel) {
         Animation anim = resolveAnimation(animName);
-        if (anim == null || anim.boneAnimations() == null)
+        if (anim == null)
             return;
 
         double elapsed = computeElapsed(anim, tick);
@@ -84,15 +85,16 @@ public class GeoAnimationSampler {
      * GeckoLib 的 LoopType 是函数式接口，我们只检查常见的内置类型。
      */
     private boolean isLooping(Animation anim) {
-        // GeckoLib 内置 LoopType 通过 == 比较引用即可
-        return anim.loopType() == Animation.LoopType.LOOP;
+        // 26.2: LoopType 移到 com.geckolib.animation.object
+        return anim.loopType() == LoopType.LOOP;
     }
 
     // ===================== 动画解析 =====================
 
     @Nullable
     private Animation resolveAnimation(String animName) {
-        BakedAnimations baked = GeckoLibCache.getBakedAnimations().get(this.animationResource);
+        // 26.2: GeckoLibCache 拆分为 GeckoLibResources.getBakedAnimations() (BakedAnimationCache record)
+        BakedAnimations baked = GeckoLibResources.getBakedAnimations().cache().get(this.animationResource);
         if (baked == null)
             return null;
 
@@ -120,9 +122,10 @@ public class GeoAnimationSampler {
 
     @Nullable
     private GeoBone findBoneRecursive(GeoBone bone, String name) {
-        if (bone.getName().equals(name))
+        // 26.2: getName→name()、getChildBones→children()(数组)
+        if (bone.name().equals(name))
             return bone;
-        for (GeoBone child : bone.getChildBones()) {
+        for (GeoBone child : bone.children()) {
             GeoBone found = findBoneRecursive(child, name);
             if (found != null)
                 return found;
@@ -132,33 +135,41 @@ public class GeoAnimationSampler {
 
     // ===================== 通道采样 =====================
 
-    private void sampleRotation(KeyframeStack<Keyframe<MathValue>> stack, double elapsed, GeoBone bone) {
+    // 26.2: GeoBone 不可变,骨骼姿态写入 frameSnapshot(BoneSnapshot)
+    private BoneSnapshot ensureSnapshot(GeoBone bone) {
+        if (bone.frameSnapshot == null) {
+            bone.frameSnapshot = BoneSnapshot.create(bone);
+        }
+        return bone.frameSnapshot;
+    }
+
+    private void sampleRotation(KeyframeStack stack, double elapsed, GeoBone bone) {
         // 空列表 = 该通道无动画，保持 bone 初始值不动
-        if (stack.xKeyframes().isEmpty() && stack.yKeyframes().isEmpty() && stack.zKeyframes().isEmpty())
+        if (stack.xKeyframes().length == 0 && stack.yKeyframes().length == 0 && stack.zKeyframes().length == 0)
             return;
         float x = sampleAxis(stack.xKeyframes(), elapsed);
         float y = sampleAxis(stack.yKeyframes(), elapsed);
         float z = sampleAxis(stack.zKeyframes(), elapsed);
-        bone.updateRotation(x, y, z);
+        ensureSnapshot(bone).setRotation(x, y, z);
     }
 
-    private void samplePosition(KeyframeStack<Keyframe<MathValue>> stack, double elapsed, GeoBone bone) {
-        if (stack.xKeyframes().isEmpty() && stack.yKeyframes().isEmpty() && stack.zKeyframes().isEmpty())
+    private void samplePosition(KeyframeStack stack, double elapsed, GeoBone bone) {
+        if (stack.xKeyframes().length == 0 && stack.yKeyframes().length == 0 && stack.zKeyframes().length == 0)
             return;
         float x = sampleAxis(stack.xKeyframes(), elapsed);
         float y = sampleAxis(stack.yKeyframes(), elapsed);
         float z = sampleAxis(stack.zKeyframes(), elapsed);
-        bone.updatePosition(x, y, z);
+        ensureSnapshot(bone).setTranslation(x, y, z);
     }
 
-    private void sampleScale(KeyframeStack<Keyframe<MathValue>> stack, double elapsed, GeoBone bone) {
+    private void sampleScale(KeyframeStack stack, double elapsed, GeoBone bone) {
         // scale 空列表时不写 bone——GeoBone 默认 scaleX/Y/Z = 1，写 0 会导致骨骼不可见
-        if (stack.xKeyframes().isEmpty() && stack.yKeyframes().isEmpty() && stack.zKeyframes().isEmpty())
+        if (stack.xKeyframes().length == 0 && stack.yKeyframes().length == 0 && stack.zKeyframes().length == 0)
             return;
         float x = sampleAxis(stack.xKeyframes(), elapsed);
         float y = sampleAxis(stack.yKeyframes(), elapsed);
         float z = sampleAxis(stack.zKeyframes(), elapsed);
-        bone.updateScale(x, y, z);
+        ensureSnapshot(bone).setScale(x, y, z);
     }
 
     /**
@@ -167,43 +178,44 @@ public class GeoAnimationSampler {
      * 关键帧按时间顺序排列，每个 keyframe 的 {@code length} 是该帧持续时间（tick），
      * 时间从 0 开始累加。
      */
-    private float sampleAxis(List<Keyframe<MathValue>> keyframes, double elapsed) {
-        if (keyframes.isEmpty())
+    private float sampleAxis(Keyframe[] keyframes, double elapsed) {
+        if (keyframes.length == 0)
             return 0f;
 
         double accumulatedStart = 0;
 
-        for (int i = 0; i < keyframes.size(); i++) {
-            Keyframe<MathValue> kf = keyframes.get(i);
+        for (int i = 0; i < keyframes.length; i++) {
+            Keyframe kf = keyframes[i];
             double kfEnd = accumulatedStart + kf.length();
 
-            if (elapsed < kfEnd || i == keyframes.size() - 1) {
+            if (elapsed < kfEnd || i == keyframes.length - 1) {
                 // 找到了所在区间（或在最后一个 keyframe 之后）
                 double currentTick = elapsed - accumulatedStart;
                 double transitionLength = kf.length();
 
                 if (transitionLength <= 0 || currentTick >= transitionLength) {
-                    return (float) kf.endValue().get();
+                    // 26.2: MathValue.get 需要 ControllerState 参数(模组绕过控制器,传 null)
+                    return (float) kf.endValue().get(null);
                 }
 
                 double lerpValue = currentTick / transitionLength;
                 double easedLerp = applyEasing(kf, lerpValue);
-                return (float) Mth.lerp(easedLerp, kf.startValue().get(), kf.endValue().get());
+                return (float) Mth.lerp(easedLerp, kf.startValue().get(null), kf.endValue().get(null));
             }
 
             accumulatedStart = kfEnd;
         }
 
         // 理论上不会到达，但保险取末帧值
-        return (float) keyframes.getLast().endValue().get();
+        return (float) keyframes[keyframes.length - 1].endValue().get(null);
     }
 
     /**
      * 应用 keyframe 的 easing 类型。
      */
-    private double applyEasing(Keyframe<MathValue> kf, double lerpValue) {
+    private double applyEasing(Keyframe kf, double lerpValue) {
         EasingType easingType = kf.easingType();
-        Double easingArg = kf.easingArgs().isEmpty() ? null : kf.easingArgs().getFirst().get();
+        Double easingArg = kf.easingArgs().length == 0 ? null : kf.easingArgs()[0].get(null);
         return easingType.buildTransformer(easingArg).apply(lerpValue);
     }
 }

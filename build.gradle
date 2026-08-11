@@ -10,12 +10,14 @@ group = mod_group_id
 
 repositories {
     mavenLocal()
-    maven {
-        name = 'GeckoLib'
-        url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
-        content {
-            includeGroup("software.bernie.geckolib")
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'GeckoLib'
+                url = 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/'
+            }
         }
+        filter { includeGroupAndSubgroups('com.geckolib') }
     }
 }
 
@@ -70,15 +72,13 @@ neoForge {
 
         // applies to all the run configs above
         configureEach {
-            // 通过 JetBrains Runtime + HotswapAgent 启用增强型热重载 (DCEVM)。
-            // 要求 Gradle/IDE JVM 为 jbr-21 (JetBrains Runtime)，请参阅：https://github.com/HotswapProjects/HotswapAgent
-            jvmArgument('-XX:+AllowEnhancedClassRedefinition')
-            jvmArgument('-XX:HotswapAgent=fatjar')
-            // 禁用在 Minecraft 类加载下中断的框架插件
-            jvmArgument('-Dhotswapagent.disablePlugin=Log4j2,Proxy')
-            // JBR 21 热插拔性能适用于 Minecraft 等重型应用程序 (JetBrains Runtime#422)
-            jvmArgument('-XX:-SegmentedCodeCache')
-            jvmArgument('-XX:ReservedCodeCacheSize=96m')
+            // 26.2: DCEVM/HotswapAgent 参数为 JetBrains Runtime 专属,普通 JDK 25 无法识别。
+            // 如需热重载,请改用 JBR 25 作为运行 JVM 后取消以下注释。
+            // jvmArgument('-XX:+AllowEnhancedClassRedefinition')
+            // jvmArgument('-XX:HotswapAgent=fatjar')
+            // jvmArgument('-Dhotswapagent.disablePlugin=Log4j2,Proxy')
+            // jvmArgument('-XX:-SegmentedCodeCache')
+            // jvmArgument('-XX:ReservedCodeCacheSize=96m')
             // Recommended logging data for a userdev environment
             // The markers can be added/remove as needed separated by commas.
             // "SCAN": For mods scan.
@@ -110,7 +110,7 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 
 dependencies {
-    compileOnly("software.bernie.geckolib:geckolib-neoforge-1.21.1:4.8.4")
+    compileOnly("com.geckolib:geckolib-neoforge-26.2:${geckolibVersion}")
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

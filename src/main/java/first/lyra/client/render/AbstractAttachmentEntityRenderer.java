@@ -9,7 +9,7 @@ import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
 import first.lyra.client.config.ClientConfig;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix3f;
@@ -35,27 +35,23 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
     protected abstract RenderContext<T> createContext(T entity);
 
     /** 渲染附件实体本体 */
-    protected abstract void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick);
+    protected abstract void render(T entity, PoseStack poseStack, SubmitNodeCollector collector, PathNode visualNode, RenderContext<T> context, float partialTick, float alpha);
 
     @Override
-    public void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, int packedLight, PathNode visualNode) {
+    public void render(T entity, PoseStack poseStack, SubmitNodeCollector collector, float partialTick, int packedLight, PathNode visualNode) {
         RenderContext<T> context = createContext(entity);
         if (context != null) {
             poseStack.pushPose();
-            if (ClientConfig.AlphaModify.isTrue()) {
-                AlphaBufferSource alphaBufferSource = new AlphaBufferSource(bufferSource);
-                alphaBufferSource.setAlpha(getAlphaModify(context, visualNode, partialTick));
-                bufferSource = alphaBufferSource;
-            }
+            float alpha = ClientConfig.AlphaModify.isTrue() ? getAlphaModify(context, visualNode, partialTick) : 1.0f;
             if (context.hasTrail()) {
-                context.trail.render(entity, poseStack, bufferSource, partialTick, visualNode, TrailRenderType.getTrail());
+                context.trail.render(entity, poseStack, collector, partialTick, visualNode, TrailRenderType.getTrail(), alpha);
             }
-            modelModify(entity, poseStack, bufferSource, visualNode, context, partialTick);
+            modelModify(entity, poseStack, collector, visualNode, context, partialTick, alpha);
             poseStack.popPose();
         }
     }
 
-    protected void modelModify(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick) {
+    protected void modelModify(T entity, PoseStack poseStack, SubmitNodeCollector collector, PathNode visualNode, RenderContext<T> context, float partialTick, float alpha) {
         ModelConfig<T> model = context.model;
 
         // 绕过 PoseStack 的 6 次 mulPose + scale + translate，
@@ -92,7 +88,7 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
         poseStack.last().pose().mul(transform);
         poseStack.last().normal().mul(new Matrix3f().rotation(rotation));
 
-        render(entity, poseStack, bufferSource, visualNode, context, partialTick);
+        render(entity, poseStack, collector, visualNode, context, partialTick, alpha);
         poseStack.popPose();
     }
 

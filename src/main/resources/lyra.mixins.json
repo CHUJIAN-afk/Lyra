@@ -7,14 +7,12 @@
     "CombatRulesMixin",
     "CreativeModeTabMixin",
     "DamageSourceMixin",
-    "LevelRendererAccessor",
     "LivingEntityMixin",
     "PlayerMixin"
   ],
   "client": [
     "CreativeModeInventoryScreenMixin",
-    "EntityRendererMixin",
-    "LevelRendererMixin"
+    "EntityRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1
