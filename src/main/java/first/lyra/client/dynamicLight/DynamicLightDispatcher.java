@@ -1,8 +1,8 @@
 package first.lyra.client.dynamicLight;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import first.lyra.common.entity.PathNode;
 import first.lyra.client.config.ClientConfig;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
@@ -73,14 +73,16 @@ public class DynamicLightDispatcher {
         }
     }
 
-    // 26.2: LevelRenderer.setSectionDirty 已移除(区块渲染管线重构),不再触发区块重编译;
-    // 光照快照更新保留,实体路径(getDynamicLight(Vec3, int))不受影响。
+    /**
+     * 26.2: LevelRenderer.setSectionDirty 移入 {@link net.minecraft.client.renderer.extract.LevelExtractor},
+     * 通过 Minecraft.levelExtractor.setSectionDirty 触发区块重编译。
+     */
     public static void update() {
-        Set<Long> updateSectionSet = new HashSet<>(LastUpdateSectionSet);
-        LastUpdateSectionSet.clear();
+        // 本帧光源所在区块（含 7 邻居扩展）
+        Set<Long> currentSectionSet = new HashSet<>();
         LightSources.forEach((lightPos, luminance) -> {
             SectionPos sectionPos = SectionPos.of(lightPos);
-            updateSectionSet.add(sectionPos.asLong());
+            currentSectionSet.add(sectionPos.asLong());
             Direction dirX = (Mth.floor(lightPos.x) & 15) >= 8 ? Direction.EAST : Direction.WEST;
             Direction dirY = (Mth.floor(lightPos.y) & 15) >= 8 ? Direction.UP : Direction.DOWN;
             Direction dirZ = (Mth.floor(lightPos.z) & 15) >= 8 ? Direction.SOUTH : Direction.NORTH;
@@ -95,20 +97,29 @@ public class DynamicLightDispatcher {
                         cy += dirY.getStepY();
                     }
                 }
-                updateSectionSet.add(SectionPos.asLong(cx, cy, cz));
+                currentSectionSet.add(SectionPos.asLong(cx, cy, cz));
             }
         });
+        // 刷新上一帧光源区块（光源移走后恢复原光照）+ 本帧光源区块（点亮）
+        Set<Long> updateSectionSet = new HashSet<>(LastUpdateSectionSet);
+        updateSectionSet.addAll(currentSectionSet);
         SnapshotLightSources = new HashMap<>(LightSources);
         LightSources.clear();
-        LastUpdateSectionSet.addAll(updateSectionSet);
+        updateSectionSet.forEach(key -> Minecraft.getInstance().levelExtractor.setSectionDirty(SectionPos.x(key), SectionPos.y(key), SectionPos.z(key)));
+        // 下一帧的"上一帧区块" = 本帧光源所在区块（不能累积历史）
+        LastUpdateSectionSet.clear();
+        LastUpdateSectionSet.addAll(currentSectionSet);
     }
 
     // ==================== 方块路径（BlockPos 级，GPU 顶点插值处理平滑） ====================
 
-    public static int getDynamicLight(BlockAndLightGetter level, BlockState state, BlockPos blockPos, Operation<Integer> original) {
+    /**
+     * 方块路径（26.2 重构）:由 {@code BlockModelLighterMixin} 在区块编译阶段调用,
+     * 返回提升后的 packed light。
+     */
+    public static int getDynamicLight(BlockAndLightGetter level, BlockState state, BlockPos blockPos, int originalLight) {
         Map<Vec3, Integer> lights = SnapshotLightSources;
-        int originalLight = original.call(level, state, blockPos);
-        if (!lights.isEmpty() && !level.getBlockState(blockPos).isSolidRender()) {
+        if (!lights.isEmpty() && !state.isSolidRender()) {
             double maxLight = computeRawBlockLightAtBlockPos(blockPos);
             if (maxLight > 0) {
                 int blockLevel = LightCoordsUtil.block(originalLight);

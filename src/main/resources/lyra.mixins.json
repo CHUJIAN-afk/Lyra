@@ -12,7 +12,8 @@
   ],
   "client": [
     "CreativeModeInventoryScreenMixin",
-    "EntityRendererMixin"
+    "EntityRendererMixin",
+    "LightCoordsUtilMixin"
   ],
   "injectors": {
     "defaultRequire": 1

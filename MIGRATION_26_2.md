@@ -1,5 +1,17 @@
 # Lyra → NeoForge 26.2 迁移计划
 
+## 待修复 Bug 清单(迁移完成后处理)
+
+### 🔴 1.21.1 分支:DynamicLightDispatcher.update() 区块累积 bug
+- **位置**:1.21.1 分支(旧版本)的 `DynamicLightDispatcher.update()`
+- **症状**:光源持续移动时,`LastUpdateSectionSet` 每帧累积历史区块,导致每帧刷新整个移动轨迹的区块,性能随移动距离劣化
+- **根因**:`updateSectionSet` 从 `LastUpdateSectionSet` 拷贝后,末尾又 `addAll(updateSectionSet)` 写回——"上一帧区块"语义被破坏为"所有历史区块"
+- **修复参考**:26.2 分支已修复(2026-08-12),`LastUpdateSectionSet` 改为只保存本帧光源所在区块;1.21.1 分支应用相同修复(当前 26.2 的修复见 `DynamicLightDispatcher.update()`)
+
+### ✅ 26.2 动态光源方块路径挂载点(已解决)
+- `BlockModelLighter.getLightCoords` 仅无 AO 分支调用,非实际入口
+- 正确挂载:`LightCoordsUtil.BrightnessGetter.DEFAULT`(`lambda$static$0` @WrapMethod,参考 LambDynamicLights 26.2),所有方块光照(含 AO)都经过它且保留 vanilla 亮度缓存
+
 > 源码从 NeoForge 21.1(MC 1.21.1)迁移到 NeoForge 26.2(MC 1.26.2.0)。
 > 本文件是迁移期间的总纲:环境基线、迁移顺序、API 差异清单(由三份子系统探索报告整合)。
 > 每完成一个阶段,在本文件顶部勾选。
