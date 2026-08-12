@@ -1,5 +1,29 @@
 # Lyra → NeoForge 26.2 迁移计划
 
+## 动态光源空间分组优化(26.2 已实现,向后迁移参照)
+
+### 设计意图
+方块路径获取亮度时,旧实现遍历**全部光源**(O(N))计算距离贡献。
+光源数量多(仆从+玩家)时开销随光源数线性增长。
+
+### 方案:三维区块网格分组
+- **数据结构**:`Map<Long, Map<Vec3, Integer>>`(区块坐标 → 该区块内光源 位置→亮度)
+  - 当前帧累积 `LightSourceGroups` + 编译线程快照 `SnapshotLightSourceGroups`(volatile 深拷贝)
+- **写入**(`addLightSources`):按光源所在区块分组,`merge(pos, light, Math::max)` 保留最高亮度,O(1)
+- **查询**(方块/实体路径):只遍历 **3×3×3 临近区块分组**,O(27 × 组内光源数,通常 0-3)
+- **正确性依据**:`MAX_RADIUS = 7.75 < 区块边长 16`,光源影响不会跨越 2 个区块,3×3×3 严格覆盖
+
+### 实现位置
+- `DynamicLightDispatcher`:分组结构、addLightSources 分组写入、update 快照/区块刷新
+- 区块 key:`SectionPos.asLong(blockToSectionCoord(x), blockToSectionCoord(y), blockToSectionCoord(z))`(double 重载)
+- 查询区块遍历:`sx±1, sy±1, sz±1` 循环,`SnapshotLightSourceGroups.get(SectionPos.asLong(...))`
+
+### 向后迁移注意事项
+1. 未来版本若改变 `MAX_RADIUS`,须保证 `2×MAX_RADIUS ≤ 区块边长`,否则需扩大查询范围(如 5×5×5)
+2. 快照必须深拷贝分组(编译线程只读,累积 Map 不能被异步读取)
+3. 区块刷新集合来自分组 key + 7 邻居扩展,`LastUpdateSectionSet` 只保存本帧光源区块(不累积历史)
+4. `ClientConfig.DynamicLight` 配置项已移除(默认启用);若恢复开关,在 addLightSources 加回判断
+
 ## 待修复 Bug 清单(迁移完成后处理)
 
 ### 🔴 1.21.1 分支:DynamicLightDispatcher.update() 区块累积 bug
