@@ -6,11 +6,7 @@ public class ClientConfig {
 
     private static final ModConfigSpec.Builder Builder = new ModConfigSpec.Builder();
 
-    public static final ModConfigSpec.BooleanValue DynamicLight = Builder.define("dynamic_light", true);
-
     public static final ModConfigSpec.BooleanValue AlphaModify = Builder.define("alpha_modify", true);
-
-    public static final ModConfigSpec.BooleanValue DamageInfo = Builder.define("damage_info", true);
 
     public static final ModConfigSpec.BooleanValue DebugMode = Builder.define("debug_mode", false);
 

@@ -80,9 +80,6 @@ public final class DynamicLightDispatcher {
 
     /** 放置沿 PathNode 路径分布的多个点光源(局部 AABB → 世界旋转) */
     public static void addLightSources(PathNode pathNode, AABB aabb, int light) {
-        if (!ClientConfig.DynamicLight.isTrue()) {
-            return;
-        }
         Vec3 pos = pathNode.pos();
         double minX = aabb.minX, maxX = aabb.maxX;
         double minY = aabb.minY, maxY = aabb.maxY;
@@ -117,7 +114,7 @@ public final class DynamicLightDispatcher {
 
     /** 写入点光源:O(1) 追加,写入时计算身份哈希(跨帧跟踪用)与分组区块 key */
     public static void addLightSources(Vec3 pos, int light) {
-        if (!ClientConfig.DynamicLight.isTrue() || light <= 0) {
+        if (light <= 0) {
             return;
         }
         int x = Mth.floor(pos.x), y = Mth.floor(pos.y), z = Mth.floor(pos.z);
@@ -223,7 +220,7 @@ public final class DynamicLightDispatcher {
         if (state.isSolidRender(level, blockPos)) {
             return originalLight;
         }
-        double dynamicLight = getDynamicLightLevel(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+        double dynamicLight = getDynamicLightLevel(blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5);
         if (dynamicLight > 0) {
             int blockLevel = LightTexture.block(originalLight);
             if (dynamicLight > blockLevel) {
@@ -237,14 +234,14 @@ public final class DynamicLightDispatcher {
 
     /**
      * 实体路径:由 {@code EntityRendererMixin} 在 getPackedLightCoords 调用,
-     * 直接查询实体所在方块(floor)的动态光照贡献。
+     * 用实体眼睛的精确连续坐标查询动态光照——贡献随实体移动连续变化,无方块级跳变。
      *
      * @param eyePos       实体眼睛的连续世界坐标
      * @param originalLight vanilla 原始 packed light
      * @return 提升后的 packed light(仅 block 位可能提升,sky 位保持不变)
      */
     public static int getDynamicLight(Vec3 eyePos, int originalLight) {
-        double dynamicLight = getDynamicLightLevel(Mth.floor(eyePos.x), Mth.floor(eyePos.y), Mth.floor(eyePos.z));
+        double dynamicLight = getDynamicLightLevel(eyePos.x, eyePos.y, eyePos.z);
         if (dynamicLight > 0) {
             int blockLevel = LightTexture.block(originalLight);
             if (dynamicLight > blockLevel) {
@@ -255,20 +252,22 @@ public final class DynamicLightDispatcher {
     }
 
     /**
-     * 查询 (x, y, z) 方块中心的动态光照。
+     * 查询 (x, y, z) 连续坐标处的动态光照(方块路径传方块中心,实体路径传 eyePos 精确位置)。
      * <p>
-     * 只查查询点所在区块 + 按块内位置确定的溢出方向邻居(MAX_RADIUS 7.75 < 16:
-     * 块内偏移 ≤6 查西/下/北邻居,≥9 查东/上/南邻居,[7,8] 只查自身),最多 9 个分组,平均 1-8 个。
+     * 区块裁剪用 floor 后的块内偏移:偏移 ≤6 查西/下/北邻居,≥9 查东/上/南邻居,[7,8] 只查自身
+     * (MAX_RADIUS 7.75 < 16,边界距离决定溢出方向),最多 9 个分组,平均 1-8 个。
+     * 距离计算用连续坐标,贡献随查询点移动连续变化。
      * </p>
      */
-    private static double getDynamicLightLevel(int x, int y, int z) {
+    private static double getDynamicLightLevel(double x, double y, double z) {
         Snapshot snap = SnapshotLightSources;
         if (snap.sources.length == 0) {
             return 0;
         }
         double result = 0;
-        int cx = x >> SECTION_BITS, cy = y >> SECTION_BITS, cz = z >> SECTION_BITS;
-        int ox = x & 15, oy = y & 15, oz = z & 15;
+        int fx = Mth.floor(x), fy = Mth.floor(y), fz = Mth.floor(z);
+        int cx = fx >> SECTION_BITS, cy = fy >> SECTION_BITS, cz = fz >> SECTION_BITS;
+        int ox = fx & 15, oy = fy & 15, oz = fz & 15;
         int x0 = ox <= 6 ? cx - 1 : cx;
         int x1 = ox >= 9 ? cx + 1 : cx;
         int y0 = oy <= 6 ? cy - 1 : cy;
@@ -286,9 +285,9 @@ public final class DynamicLightDispatcher {
                     long key = sources[start].sectionKey();
                     for (int i = start; i < sources.length && sources[i].sectionKey() == key; i++) {
                         LightSource s = sources[i];
-                        double ddx = x + 0.5 - s.x;
-                        double ddy = y + 0.5 - s.y;
-                        double ddz = z + 0.5 - s.z;
+                        double ddx = x - s.x;
+                        double ddy = y - s.y;
+                        double ddz = z - s.z;
                         double distSq = ddx * ddx + ddy * ddy + ddz * ddz;
                         if (distSq <= MAX_RADIUS_SQUARED) {
                             double light = s.luminance - Math.sqrt(distSq) * FALLOFF;

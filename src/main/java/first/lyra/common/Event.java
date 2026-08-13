@@ -43,6 +43,5 @@ public class Event {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void handler(LivingDamageEvent.Post event) {
         InvincibleData.handler(event);
-        DamageInfoData.handler(event);
     }
 }
