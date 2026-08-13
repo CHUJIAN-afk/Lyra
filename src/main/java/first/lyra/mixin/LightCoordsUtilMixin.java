@@ -8,7 +8,7 @@ import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.level.BlockAndLightGetter;
 import org.spongepowered.asm.mixin.Mixin;
 
-@Mixin(value = LightCoordsUtil.BrightnessGetter.class, priority = 900)
+@Mixin(value = LightCoordsUtil.BrightnessGetter.class)
 public interface LightCoordsUtilMixin {
 
     @WrapMethod(method = "lambda$static$0")

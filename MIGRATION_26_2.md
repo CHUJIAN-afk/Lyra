@@ -1,28 +1,45 @@
 # Lyra → NeoForge 26.2 迁移计划
 
-## 动态光源空间分组优化(26.2 已实现,向后迁移参照)
+## 动态光源空间查找 + 跨帧跟踪(26.2 已实现,向后迁移参照)
 
 ### 设计意图
-方块路径获取亮度时,旧实现遍历**全部光源**(O(N))计算距离贡献。
-光源数量多(仆从+玩家)时开销随光源数线性增长。
+旧实现按光源影响半径**预烘焙**(每光源写 ~3375 个 BlockPos,写入 O(半径³)),
+或按区块分组(嵌套 Map + Vec3 装箱 + 每帧深拷贝快照),均导致写入/拷贝热点。
+26.2 参考 LambDynamicLights 4.x 引擎改为**空间查找**:写入 O(1),查询 O(1) 定位邻居分组内光源实时算衰减;
+区块刷新用**身份哈希跨帧跟踪**(O(1) 匹配,替代位移阈值判定)。
 
-### 方案:三维区块网格分组
-- **数据结构**:`Map<Long, Map<Vec3, Integer>>`(区块坐标 → 该区块内光源 位置→亮度)
-  - 当前帧累积 `LightSourceGroups` + 编译线程快照 `SnapshotLightSourceGroups`(volatile 深拷贝)
-- **写入**(`addLightSources`):按光源所在区块分组,`merge(pos, light, Math::max)` 保留最高亮度,O(1)
-- **查询**(方块/实体路径):只遍历 **3×3×3 临近区块分组**,O(27 × 组内光源数,通常 0-3)
-- **正确性依据**:`MAX_RADIUS = 7.75 < 区块边长 16`,光源影响不会跨越 2 个区块,3×3×3 严格覆盖
-
-### 实现位置
-- `DynamicLightDispatcher`:分组结构、addLightSources 分组写入、update 快照/区块刷新
-- 区块 key:`SectionPos.asLong(blockToSectionCoord(x), blockToSectionCoord(y), blockToSectionCoord(z))`(double 重载)
-- 查询区块遍历:`sx±1, sy±1, sz±1` 循环,`SnapshotLightSourceGroups.get(SectionPos.asLong(...))`
+### 方案:16×16×16 三维区块分组 + 身份哈希跨帧跟踪
+- **数据结构**:`LightSource[]` 按 sectionKey 排序 + `Long2IntOpenHashMap<sectionKey → 起始索引>`
+  - `LightSource` record:id(身份哈希)+ sectionKey + (x, y, z) + luminance,原始类型无装箱
+  - 当前帧累积 `ArrayList<LightSource>`(addLightSources 追加,update 消费后 clear 复用)
+  - 编译线程快照 `Snapshot`(volatile **引用替换**,零拷贝,数组不可变)
+- **写入**(`addLightSources(Vec3, int)`):O(1) 追加 1 条 record,**写入时计算身份哈希**
+  `lightId = 位置(double 位模式)× 亮度混合(64-bit,碰撞走"位置不同→刷新"分支,安全)`
+- **分组 key**:`SectionPos.asLong`(21 bit/轴:x<<42 | y<<21 | z,世界 ±30M 格 = 区块 ±1.9M < 2^21,无碰撞)
+- **查询**(方块/实体路径):按查询点**块内位置裁剪邻居区块**——偏移 ≤6 查西/下/北邻居,≥9 查东/上/南邻居,
+  [7,8] 只查自身(MAX_RADIUS 7.75 < 16,边界距离决定溢出方向),最多 9 个分组,平均 1-8 个(替代固定 27 cell);
+  对分组内光源实时算 `luminance - sqrt(distSq) * (15/7.75)`,取最大,double 精度
+- **区块刷新**(`update()`):跨帧对比 `Long2ObjectOpenHashMap<id → 上一帧光源>`:
+  - 未命中(新增/大幅移动)→ 刷新
+  - 命中但位置或亮度不同(移动)→ 刷新
+  - 命中且相同(静止)→ 跳过
+  - 旧缓存未被命中的(移除)→ 刷新
+  - 区块编译频率**不做限制**(每帧执行差集;静止光源零刷新)
+- **精度**(边缘过渡):提升时位运算 `(originalLight & 0xfff00000) | ((int)(level*16.0) & 0xfffff)`
+  (Lamb 同款)——4-bit 读取等效 floor 安全,smooth(8-bit)读取保留 16 倍精度
+- **挂载点**:方块路径注入 `LightCoordsUtil.BrightnessGetter.DEFAULT`(`lambda$static$0`,@WrapMethod **remap=false**),
+  借助 BlockModelLighter.Cache 的 LRU(每方块每编译最多一次查询);
+  实体路径注入 `EntityRenderer.getPackedLightCoords`(getDynamicLight(Vec3, int))
 
 ### 向后迁移注意事项
-1. 未来版本若改变 `MAX_RADIUS`,须保证 `2×MAX_RADIUS ≤ 区块边长`,否则需扩大查询范围(如 5×5×5)
-2. 快照必须深拷贝分组(编译线程只读,累积 Map 不能被异步读取)
-3. 区块刷新集合来自分组 key + 7 邻居扩展,`LastUpdateSectionSet` 只保存本帧光源区块(不累积历史)
-4. `ClientConfig.DynamicLight` 配置项已移除(默认启用);若恢复开关,在 addLightSources 加回判断
+1. 分组边长必须满足 `MAX_RADIUS < 分组边长`,否则邻居裁剪覆盖不全(需扩大裁剪范围)
+2. `SectionPos.asLong` 21 bit/轴在 26.2 无碰撞(旧版本布局不同,迁移时核对)
+3. 快照必须整表重建 + 引用替换(编译线程只读,不可原地写)
+4. 静止判定演进史(2026-08-13):位移大阈值(0.5 格)→ 帧间位移远小于 tick 间位移,
+   持续移动光源永远"匹配"→ 永不刷新(踩坑);精确匹配 + 20Hz 节流 → 可行但结构冗余;
+   最终:身份哈希跨帧跟踪(O(1) 匹配,任何位置/亮度变化必刷,静止必跳)
+5. 若未来调用方引入光源 ID,可直接用 ID 替代位置哈希(当前位置哈希已可完全跟踪)
+6. 无配置开关(默认启用);若恢复开关,在 addLightSources 加回判断
 
 ## 待修复 Bug 清单(迁移完成后处理)
 
@@ -34,7 +51,7 @@
 
 ### ✅ 26.2 动态光源方块路径挂载点(已解决)
 - `BlockModelLighter.getLightCoords` 仅无 AO 分支调用,非实际入口
-- 正确挂载:`LightCoordsUtil.BrightnessGetter.DEFAULT`(`lambda$static$0` @WrapMethod,参考 LambDynamicLights 26.2),所有方块光照(含 AO)都经过它且保留 vanilla 亮度缓存
+- 正确挂载:`LightCoordsUtil.BrightnessGetter.DEFAULT`(`lambda$static$0` @WrapMethod remap=false,参考 LambDynamicLights 26.2),所有方块光照(含 AO)都经过它且保留 vanilla 亮度缓存(LRU)
 
 > 源码从 NeoForge 21.1(MC 1.21.1)迁移到 NeoForge 26.2(MC 1.26.2.0)。
 > 本文件是迁移期间的总纲:环境基线、迁移顺序、API 差异清单(由三份子系统探索报告整合)。
