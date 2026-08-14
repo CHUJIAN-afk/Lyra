@@ -1,4 +1,4 @@
-package first.lyra.common.servant;
+package first.lyra.common.minion;
 
 import first.lyra.common.entity.PathNode;
 import first.lyra.common.entity.PlannedPath;
@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * 基于动量物理的仆从抽象基类。
  */
-public abstract class MomentumServant extends Servant {
+public abstract class MomentumMinion extends Minion {
 
     // ===================== 动量状态 =====================
 
@@ -26,7 +26,7 @@ public abstract class MomentumServant extends Servant {
     private float desiredRoll;
     private float rotationSpeed = 1f;
 
-    public MomentumServant() {
+    public MomentumMinion() {
         super();
     }
 

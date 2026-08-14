@@ -1,11 +1,11 @@
-package first.lyra.common.servant;
+package first.lyra.common.minion;
 
-public abstract class ServantGoal<T extends Servant> {
+public abstract class MinionGoal<T extends Minion> {
 
-    protected final T servant;
+    protected final T minion;
 
-    public ServantGoal(T servant) {
-        this.servant = servant;
+    public MinionGoal(T minion) {
+        this.minion = minion;
     }
 
     public abstract boolean canUse();

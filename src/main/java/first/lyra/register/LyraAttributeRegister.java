@@ -18,23 +18,23 @@ public class LyraAttributeRegister {
         for (EntityType<? extends LivingEntity> type : event.getTypes()) {
             event.add(type, LyraAttributeRegister.HealthRegen);
         }
-        event.add(EntityTypes.PLAYER, LyraAttributeRegister.ServantMaxCount);
-        event.add(EntityTypes.PLAYER, LyraAttributeRegister.SentryServantMaxCount);
-        event.add(EntityTypes.PLAYER, LyraAttributeRegister.ServantDamage);
-        event.add(EntityTypes.PLAYER, LyraAttributeRegister.ServantKnockback);
-        event.add(EntityTypes.PLAYER, LyraAttributeRegister.ServantArmorPierce);
-        event.add(EntityTypes.PLAYER, LyraAttributeRegister.ServantSearchRange);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.MinionMaxCount);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.SentryMaxCount);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.MinionDamage);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.MinionKnockback);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.MinionArmorPierce);
+        event.add(EntityTypes.PLAYER, LyraAttributeRegister.MinionSearchRange);
     }
 
     private static final DeferredRegister<Attribute> Register = DeferredRegister.create(Registries.ATTRIBUTE, Lyra.MODID);
 
     public static final DeferredHolder<Attribute, Attribute> HealthRegen = register("health_regen", 0, -1000000, 1000000);
-    public static final DeferredHolder<Attribute, Attribute> ServantMaxCount = register("servant_max_count", 1, 0, 1000);
-    public static final DeferredHolder<Attribute, Attribute> SentryServantMaxCount = register("sentry_servant_max_count", 1, 0, 1000);
-    public static final DeferredHolder<Attribute, Attribute> ServantDamage = register("servant_damage", 1, 0, 1000000);
-    public static final DeferredHolder<Attribute, Attribute> ServantKnockback = register("servant_knockback", 1, 0, 10);
-    public static final DeferredHolder<Attribute, Attribute> ServantArmorPierce = register("servant_armor_pierce", 1, 0, 1000000);
-    public static final DeferredHolder<Attribute, Attribute> ServantSearchRange = register("servant_search_range", 1, 0, 10);
+    public static final DeferredHolder<Attribute, Attribute> MinionMaxCount = register("minion_max_count", 1, 0, 1000);
+    public static final DeferredHolder<Attribute, Attribute> SentryMaxCount = register("sentry__max_count", 1, 0, 1000);
+    public static final DeferredHolder<Attribute, Attribute> MinionDamage = register("minion_damage", 1, 0, 1000000);
+    public static final DeferredHolder<Attribute, Attribute> MinionKnockback = register("minion_knockback", 1, 0, 10);
+    public static final DeferredHolder<Attribute, Attribute> MinionArmorPierce = register("minion_armor_pierce", 1, 0, 1000000);
+    public static final DeferredHolder<Attribute, Attribute> MinionSearchRange = register("minion_search_range", 1, 0, 10);
 
     private static DeferredHolder<Attribute, Attribute> register(String name, double defaultValue, double min, double max) {
         return Register.register(name, () -> new RangedAttribute(Lyra.id(name).toString(), defaultValue, min, max).setSyncable(true));

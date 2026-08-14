@@ -2,7 +2,7 @@ package first.lyra.client.tooltip;
 
 import first.lyra.Lyra;
 import first.lyra.common.armorSet.ArmorSet;
-import first.lyra.common.item.IServantWeaponItem;
+import first.lyra.common.item.IMinionWeaponItem;
 import first.lyra.register.LyraRegistries;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -32,7 +32,7 @@ public final class TooltipHandler {
         Player player = event.getEntity();
         ItemStack itemStack = event.getItemStack();
         List<Component> toolTip = event.getToolTip();
-        toolTip.addAll(getServantWeaponItemTooltip(itemStack, player));
+        toolTip.addAll(getMinionWeaponItemTooltip(itemStack, player));
         toolTip.addAll(getArmorSetTooltip(itemStack, player));
         toolTip.addAll(getCustomTooltip(itemStack, player));
     }
@@ -124,10 +124,10 @@ public final class TooltipHandler {
         return lines;
     }
 
-    private static List<Component> getServantWeaponItemTooltip(ItemStack itemStack, Player player) {
+    private static List<Component> getMinionWeaponItemTooltip(ItemStack itemStack, Player player) {
         List<Component> lines = new ArrayList<>();
-        if (itemStack.getItem() instanceof IServantWeaponItem<?> iServantWeaponItem && player != null) {
-            lines.addAll(iServantWeaponItem.getTooltips(itemStack, player));
+        if (itemStack.getItem() instanceof IMinionWeaponItem<?> iMinionWeaponItem && player != null) {
+            lines.addAll(iMinionWeaponItem.getTooltips(itemStack, player));
         }
         return lines;
     }

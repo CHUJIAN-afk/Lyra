@@ -1,4 +1,4 @@
-package first.lyra.common.servant;
+package first.lyra.common.minion;
 
 import first.lyra.utils.GroundPathHelper;
 import net.minecraft.core.BlockPos;

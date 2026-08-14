@@ -1,4 +1,4 @@
-package first.lyra.common.servant;
+package first.lyra.common.minion;
 
 import net.minecraft.core.Holder;
 import net.minecraft.world.damagesource.DamageSource;
@@ -8,17 +8,17 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class ServantDamageSource extends DamageSource {
+public class MinionDamageSource extends DamageSource {
 
-    private final Servant servant;
+    private final Minion minion;
 
-    public ServantDamageSource(Holder<DamageType> type, @Nullable Entity directEntity, @Nullable Entity causingEntity, @Nullable Vec3 damageSourcePosition, @NotNull Servant servant) {
+    public MinionDamageSource(Holder<DamageType> type, @Nullable Entity directEntity, @Nullable Entity causingEntity, @Nullable Vec3 damageSourcePosition, @NotNull Minion minion) {
         super(type, directEntity, causingEntity, damageSourcePosition);
-        this.servant = servant;
+        this.minion = minion;
     }
 
     @NotNull
-    public Servant getServant() {
-        return servant;
+    public Minion getMinion() {
+        return minion;
     }
 }

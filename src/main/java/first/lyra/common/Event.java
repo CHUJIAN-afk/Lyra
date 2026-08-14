@@ -2,7 +2,7 @@ package first.lyra.common;
 
 import first.lyra.Lyra;
 import first.lyra.common.armorSet.ArmorSet;
-import first.lyra.common.builder.ServantWeaponItemBuilder;
+import first.lyra.common.builder.MinionWeaponItemBuilder;
 import first.lyra.common.attachment.ParticlesData;
 import first.lyra.common.attachment.DamageInfoData;
 import first.lyra.common.attachment.InvincibleData;
@@ -32,7 +32,7 @@ public class Event {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void handler(PlayerInteractEvent.RightClickItem event) {
-        ServantWeaponItemBuilder.handler(event);
+        MinionWeaponItemBuilder.handler(event);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)

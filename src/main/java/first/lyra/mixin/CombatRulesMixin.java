@@ -2,8 +2,8 @@ package first.lyra.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import first.lyra.common.servant.Servant;
-import first.lyra.common.servant.ServantDamageSource;
+import first.lyra.common.minion.Minion;
+import first.lyra.common.minion.MinionDamageSource;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.world.damagesource.CombatRules;
 import net.minecraft.world.damagesource.DamageSource;
@@ -19,11 +19,11 @@ public class CombatRulesMixin {
 
     @WrapMethod(method = "getDamageAfterAbsorb")
     private static float modifyArmorValue(LivingEntity victim, float damage, DamageSource source, float totalArmor, float armorToughness, Operation<Float> original) {
-        if (source instanceof ServantDamageSource servantDamageSource) {
-            Servant servant = servantDamageSource.getServant();
-            totalArmor -= servant.getArmorPierce();
-            Player owner = servant.getOwner();
-            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.ServantArmorPierce);
+        if (source instanceof MinionDamageSource minionDamageSource) {
+            Minion minion = minionDamageSource.getMinion();
+            totalArmor -= minion.getArmorPierce();
+            Player owner = minion.getOwner();
+            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.MinionArmorPierce);
             if (instance != null) {
                 totalArmor -= (float) instance.getValue();
             }

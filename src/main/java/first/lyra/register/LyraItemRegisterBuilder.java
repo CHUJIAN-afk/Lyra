@@ -76,9 +76,9 @@ public class LyraItemRegisterBuilder<T extends Item> {
         return this;
     }
 
-    public <A extends AttachmentEntity> LyraItemRegisterBuilder<T> servantLanguage(DeferredHolder<AttachmentEntityType<?>, AttachmentEntityType<A>> holder, String en, String zh) {
-        Identifier servantId = holder.getId();
-        return language("servant." + servantId.getNamespace() + "." + servantId.getPath(), en, zh);
+    public <A extends AttachmentEntity> LyraItemRegisterBuilder<T> summonLanguage(DeferredHolder<AttachmentEntityType<?>, AttachmentEntityType<A>> holder, String en, String zh) {
+        Identifier minionId = holder.getId();
+        return language("summon." + minionId.getNamespace() + "." + minionId.getPath(), en, zh);
     }
 
     /** 注册配方（runData 时输出）。 */

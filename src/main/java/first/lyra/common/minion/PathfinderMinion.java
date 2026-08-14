@@ -1,4 +1,4 @@
-package first.lyra.common.servant;
+package first.lyra.common.minion;
 
 import first.lyra.common.entity.IBlockCollision;
 import net.minecraft.core.BlockPos;
@@ -14,14 +14,14 @@ import java.util.List;
  * 具有地面寻路能力、动能物理与方块碰撞的仆从基类。
  * <p>
  * 通过组合 {@link PathNavigator}（A* 寻路）实现和正常实体一样的地面寻路：
- * 行走、绕障、跳过1格高障碍、追踪目标。物理与碰撞由 {@link MomentumServant} 和
+ * 行走、绕障、跳过1格高障碍、追踪目标。物理与碰撞由 {@link MomentumMinion} 和
  * {@link IBlockCollision} 基类处理，本类只决定"往哪走"。
  * </p>
  * <p>
  * 该仆从无视任何伤害——子类不应处理受击逻辑。
  * </p>
  */
-public abstract class PathfinderServant extends MomentumServant implements IBlockCollision<PathfinderServant> {
+public abstract class PathfinderMinion extends MomentumMinion implements IBlockCollision<PathfinderMinion> {
 
     private final PathNavigator navigator = new PathNavigator();
     private List<BlockPos> currentPath = new ArrayList<>();
@@ -33,7 +33,7 @@ public abstract class PathfinderServant extends MomentumServant implements IBloc
     /** 是否处于落地状态（用于判断可否起跳） */
     private boolean onGround = false;
 
-    public PathfinderServant() {
+    public PathfinderMinion() {
         setGravity(-0.08f);  // 略大于哨兵，更接近原版实体重力
         setDrag(0.5f);       // 地面阻力较大，避免滑行
         setRotationSpeed(12f);

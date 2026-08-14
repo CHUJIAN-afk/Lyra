@@ -2,7 +2,7 @@ package first.lyra.common.projectile;
 
 import first.lyra.api.LyraHelper;
 import first.lyra.common.attachment.AttachmentEntityData;
-import first.lyra.common.servant.ServantDamageSource;
+import first.lyra.common.minion.MinionDamageSource;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -225,8 +225,8 @@ public abstract class Projectile extends AttachmentEntity {
 
     public void setDamageSource(DamageSource damageSource) {
         this.damageSource = damageSource;
-        if (damageSource instanceof ServantDamageSource servantDamageSource) {
-            AttachmentEntity entity = servantDamageSource.getServant();
+        if (damageSource instanceof MinionDamageSource minionDamageSource) {
+            AttachmentEntity entity = minionDamageSource.getMinion();
             setDamage(entity.getDamage());
             setKnockback(entity.getKnockback());
             setArmorPierce(entity.getArmorPierce());

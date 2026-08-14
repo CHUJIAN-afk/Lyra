@@ -2,7 +2,7 @@ package first.lyra.common.attachment;
 
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.AttachmentEntityType;
-import first.lyra.common.servant.Servant;
+import first.lyra.common.minion.Minion;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
@@ -54,20 +54,20 @@ public class TargetCache {
     private final Long2ObjectOpenHashMap<LevelChunk> chunkCache = new Long2ObjectOpenHashMap<>();
     private final BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
-    public LivingEntity getNewTarget(Servant servant, List<LivingEntity> targets, float ownerWarningDistance, boolean selfCenter) {
-        Player owner = servant.getOwner();
-        LivingEntity currentTarget = servant.getTarget();
+    public LivingEntity getNewTarget(Minion minion, List<LivingEntity> targets, float ownerWarningDistance, boolean selfCenter) {
+        Player owner = minion.getOwner();
+        LivingEntity currentTarget = minion.getTarget();
         LivingEntity newTarget = null;
         double bestScore = Double.MAX_VALUE;
         for (LivingEntity entity : targets) {
-            double score = selfCenter ? getDistance(servant, entity) : getDistance(owner, entity);
+            double score = selfCenter ? getDistance(minion, entity) : getDistance(owner, entity);
             if (ownerWarningDistance > 0 && getDistance(owner, entity) < ownerWarningDistance) {
                 score -= 10000.0;
             }
             if (entity == currentTarget) {
                 score -= 1000.0;
             }
-            score += ((entity.getId() * 31 + servant.hashCode() * 17) % 5) * 40;
+            score += ((entity.getId() * 31 + minion.hashCode() * 17) % 5) * 40;
             if (score < bestScore) {
                 bestScore = score;
                 newTarget = entity;
@@ -76,9 +76,9 @@ public class TargetCache {
         return newTarget;
     }
 
-    public float getDistance(Servant servant, LivingEntity living) {
-        int key = servant.getUuid().hashCode() + living.getUUID().hashCode();
-        return distanceCache.computeIfAbsent(key,  (IntToDoubleFunction)(k -> (float) servant.getPos().distanceTo(living.getBoundingBox().getCenter())));
+    public float getDistance(Minion minion, LivingEntity living) {
+        int key = minion.getUuid().hashCode() + living.getUUID().hashCode();
+        return distanceCache.computeIfAbsent(key,  (IntToDoubleFunction)(k -> (float) minion.getPos().distanceTo(living.getBoundingBox().getCenter())));
     }
 
     public float getDistance(Player player, LivingEntity living) {
@@ -86,8 +86,8 @@ public class TargetCache {
         return distanceCache.computeIfAbsent(key, (IntToDoubleFunction)(k -> (float) player.getEyePosition().distanceTo(living.getBoundingBox().getCenter())));
     }
 
-    public float getServantSearchRange(Player player, float distance) {
-        AttributeInstance instance = player.getAttribute(LyraAttributeRegister.ServantSearchRange);
+    public float getMinionSearchRange(Player player, float distance) {
+        AttributeInstance instance = player.getAttribute(LyraAttributeRegister.MinionSearchRange);
         if (instance != null) {
             distance *= (float) instance.getValue();
         }
@@ -95,9 +95,9 @@ public class TargetCache {
     }
 
     //此缓存不能被共享，极易卡顿
-    public boolean isVisibility(Servant servant, LivingEntity living) {
-        Integer key = servant.getUuid().hashCode() + living.getUUID().hashCode();
-        return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(servant.getPos(), living.getBoundingBox().getCenter()));
+    public boolean isVisibility(Minion minion, LivingEntity living) {
+        Integer key = minion.getUuid().hashCode() + living.getUUID().hashCode();
+        return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(minion.getPos(), living.getBoundingBox().getCenter()));
     }
 
     public boolean isVisibility(Player player, LivingEntity living) {
@@ -280,9 +280,9 @@ public class TargetCache {
             }
             double distance;
             if (maxVec3 != null) {
-                distance = getServantSearchRange(player, Math.max(32, (float) maxVec3.distanceTo(center) + 4));
+                distance = getMinionSearchRange(player, Math.max(32, (float) maxVec3.distanceTo(center) + 4));
             } else {
-                distance = getServantSearchRange(player, 32);
+                distance = getMinionSearchRange(player, 32);
             }
             List<LivingEntity> result = new ArrayList<>();
             List<LivingEntity> livingEntityList = level.getEntitiesOfClass(LivingEntity.class, box.inflate(distance));

@@ -7,6 +7,7 @@ import net.minecraft.data.DataGenerator;
 import net.minecraft.data.PackOutput;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
 
 import java.util.concurrent.CompletableFuture;
@@ -30,11 +31,10 @@ public class LyraDataGeneratorEvent {
     public static void gatherDataClient(GatherDataEvent.Client event) {
         DataGenerator generator = event.getGenerator();
         PackOutput packOutput = generator.getPackOutput();
-        // 语言（init 静态条目 + 宿主动态条目）
-        generator.addProvider(event.includeDev(), new LyraLanguageProvider(packOutput, Lyra.MODID, "en_us"));
-        generator.addProvider(event.includeDev(), new LyraLanguageProvider(packOutput, Lyra.MODID, "zh_cn"));
-        // 物品模型
-        generator.addProvider(event.includeDev(), new LyraItemModelProvider(packOutput));
+        boolean production = !FMLLoader.getCurrent().isProduction();
+        generator.addProvider(production, new LyraLanguageProvider(packOutput, Lyra.MODID, "en_us"));
+        generator.addProvider(production, new LyraLanguageProvider(packOutput, Lyra.MODID, "zh_cn"));
+        generator.addProvider(production, new LyraItemModelProvider(packOutput));
     }
 
     @SubscribeEvent
@@ -42,11 +42,10 @@ public class LyraDataGeneratorEvent {
         DataGenerator generator = event.getGenerator();
         PackOutput packOutput = generator.getPackOutput();
         CompletableFuture<HolderLookup.Provider> lookupProvider = event.getLookupProvider();
-        // 合成表
-        generator.addProvider(event.includeDev(), new LyraRecipeProvider.Runner(packOutput, lookupProvider));
-        // 物品标签（依赖空方块标签 provider）
+        boolean production = !FMLLoader.getCurrent().isProduction();
+        generator.addProvider(production, new LyraRecipeProvider.Runner(packOutput, lookupProvider));
         LyraBlockTagsProvider blockTagsProvider = new LyraBlockTagsProvider(packOutput, lookupProvider);
-        generator.addProvider(event.includeDev(), blockTagsProvider);
-        generator.addProvider(event.includeDev(), new LyraItemTagsProvider(packOutput, lookupProvider));
+        generator.addProvider(production, blockTagsProvider);
+        generator.addProvider(production, new LyraItemTagsProvider(packOutput, lookupProvider));
     }
 }

@@ -1,12 +1,12 @@
 {
-  "death.attack.lyra.servant": "%1$s 被仆从撕碎",
-  "death.attack.lyra.servant.player": "%1$s 在与 %2$s 战斗时被仆从撕碎",
+  "death.attack.lyra.summon": "%1$s 被仆从撕碎",
+  "death.attack.lyra.summon.player": "%1$s 在与 %2$s 战斗时被仆从撕碎",
   "item.lyra.tooltip.armor_pierce": "护甲穿透",
   "item.lyra.tooltip.damage": "仆从伤害",
   "item.lyra.tooltip.knockback": "击退强度",
+  "item.lyra.tooltip.minion_slots": "仆从栏位: %s / %s",
   "item.lyra.tooltip.remove_all": "潜行右键以遣散该类型仆从",
-  "item.lyra.tooltip.sentry_servant_slots": "哨戒仆从栏位: %s / %s",
-  "item.lyra.tooltip.servant_slots": "仆从栏位: %s / %s",
+  "item.lyra.tooltip.sentry__slots": "哨兵栏位: %s / %s",
   "item.lyra.tooltip.set_bonus_title": "套装奖励:",
   "item.lyra.tooltip.summon": "召唤 %s 为你而战",
   "lyra.configuration.alpha_modify": "透明度修正",
@@ -21,10 +21,10 @@
   "lyra.configuration.section.lyra.client.toml.title": "客户端配置",
   "lyra.configuration.title": "Lyra 配置",
   "lyra:health_regen": "生命再生",
-  "lyra:sentry_servant_max_count": "哨戒仆从栏",
-  "lyra:servant_armor_pierce": "仆从护甲穿透",
-  "lyra:servant_damage": "仆从伤害",
-  "lyra:servant_knockback": "仆从击退",
-  "lyra:servant_max_count": "仆从栏",
-  "lyra:servant_search_range": "仆从索敌范围"
+  "lyra:minion_armor_pierce": "仆从护甲穿透",
+  "lyra:minion_damage": "仆从伤害",
+  "lyra:minion_knockback": "仆从击退",
+  "lyra:minion_max_count": "仆从栏",
+  "lyra:minion_search_range": "仆从索敌范围",
+  "lyra:sentry__max_count": "哨兵栏"
 }
