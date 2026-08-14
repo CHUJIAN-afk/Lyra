@@ -35,7 +35,7 @@ public class CreativeModeInventoryScreenMixin {
     private void simulated$render(final GuiGraphics guiGraphics, final int mouseX, final int mouseY, final float partialTick, final CallbackInfo ci) {
         if (CreativeTabDispatcher.isManaged(selectedTab)) {
             CreativeModeInventoryScreen screen = (CreativeModeInventoryScreen) (Object) this;
-            List<Section> sections = CreativeTabDispatcher.sortedSections();
+            List<Section> sections = CreativeTabDispatcher.getSections(selectedTab);
 
             int totalRows = 0;
             for (Section section : sections) {

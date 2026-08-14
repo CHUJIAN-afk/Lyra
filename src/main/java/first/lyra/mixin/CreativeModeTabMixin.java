@@ -26,7 +26,8 @@ public class CreativeModeTabMixin {
         if (CreativeTabDispatcher.isManaged(tab)) {
             List<ItemStack> displayItems = new LinkedList<>();
             Set<ItemStack> searchItems = new LinkedHashSet<>();
-            for (Section section : CreativeTabDispatcher.sortedSections()) {
+            List<Section> sections = CreativeTabDispatcher.getSections(tab);
+            for (Section section : sections) {
                 List<ItemStack> stacks = new ArrayList<>(CreativeTabDispatcher.itemsOf(section));
                 for (int i = 0; i < 9; i++) {
                     stacks.addFirst(ItemStack.EMPTY);
