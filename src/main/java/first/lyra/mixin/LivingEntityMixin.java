@@ -36,7 +36,7 @@ public class LivingEntityMixin {
         if (source instanceof MinionDamageSource minionDamageSource) {
             Minion minion = minionDamageSource.getMinion();
             Player owner = minion.getOwner();
-            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.MinionDamage);
+            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonDamage);
             float scale = instance != null ? (float) instance.getValue() : 1;
             amount *= scale;
             amount *= 0.85f + owner.getRandom().nextFloat() * 0.3f;
@@ -57,7 +57,7 @@ public class LivingEntityMixin {
         if (source instanceof MinionDamageSource minionDamageSource) {
             Minion minion = minionDamageSource.getMinion();
             Player owner = minion.getOwner();
-            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.MinionKnockback);
+            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonKnockback);
             double scale = instance != null ? instance.getValue() : 1;
             scale *= 0.8 + (0.4 * owner.getRandom().nextDouble());
             return minion.getKnockback() * scale;

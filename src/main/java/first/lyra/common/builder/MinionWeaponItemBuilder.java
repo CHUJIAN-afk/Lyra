@@ -84,7 +84,7 @@ public class MinionWeaponItemBuilder<T extends Minion> {
     }
 
     /**
-     * 设置仆从伤害值。
+     * 设置召唤伤害值。
      */
     public MinionWeaponItemBuilder<T> damage(float damage) {
         this.damage = damage;
@@ -92,7 +92,7 @@ public class MinionWeaponItemBuilder<T extends Minion> {
     }
 
     /**
-     * 设置仆从击退力度。
+     * 设置召唤击退力度。
      */
     public MinionWeaponItemBuilder<T> knockback(float knockback) {
         this.knockback = knockback;
@@ -100,7 +100,7 @@ public class MinionWeaponItemBuilder<T extends Minion> {
     }
 
     /**
-     * 设置仆从护甲穿透。
+     * 设置召唤护甲穿透。
      */
     public MinionWeaponItemBuilder<T> armorPierce(float armorPierce) {
         this.armorPierce = armorPierce;
@@ -185,17 +185,17 @@ public class MinionWeaponItemBuilder<T extends Minion> {
         }
 
         @Override
-        public float getMinionDamage(@Nullable Player player,@Nullable ItemStack itemStack) {
+        public float getSummonDamage(@Nullable Player player,@Nullable ItemStack itemStack) {
             return damage;
         }
 
         @Override
-        public float getMinionKnockback(@Nullable Player player,@Nullable ItemStack itemStack) {
+        public float getSummonKnockback(@Nullable Player player,@Nullable ItemStack itemStack) {
             return knockback;
         }
 
         @Override
-        public float getMinionArmorPierce(@Nullable Player player, @Nullable ItemStack itemStack) {
+        public float getSummonArmorPierce(@Nullable Player player, @Nullable ItemStack itemStack) {
             return armorPierce;
         }
 

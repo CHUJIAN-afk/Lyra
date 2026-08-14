@@ -41,21 +41,19 @@ public final class TooltipHandler {
         List<Component> lines = new ArrayList<>();
         Item item = itemStack.getItem();
         Identifier registryName = BuiltInRegistries.ITEM.getKey(item);
-        if (registryName.getNamespace().equals(Lyra.MODID)) {
-            List<MutableComponent> lore = new ArrayList<>();
-            String baseKey = "item" + "." + Lyra.MODID + "." + registryName.getPath() + "." + "tooltip" + ".";
-            int index = 1;
-            while (Language.getInstance().has(baseKey + index)) {
-                lore.add(Component.translatable(baseKey + index));
-                index++;
+        List<MutableComponent> lore = new ArrayList<>();
+        String baseKey = "item" + "." + registryName.getNamespace() + "." + registryName.getPath() + "." + "tooltip" + ".";
+        int index = 1;
+        while (Language.getInstance().has(baseKey + index)) {
+            lore.add(Component.translatable(baseKey + index));
+            index++;
+        }
+        if (!lore.isEmpty()) {
+            if (player != null) {
+                lines.add(Component.empty());
             }
-            if (!lore.isEmpty()) {
-                if (player != null) {
-                    lines.add(Component.empty());
-                }
-                for (MutableComponent component : lore) {
-                    lines.add(component.withStyle(ChatFormatting.DARK_GRAY));
-                }
+            for (MutableComponent component : lore) {
+                lines.add(component.withStyle(ChatFormatting.DARK_GRAY));
             }
         }
         return lines;

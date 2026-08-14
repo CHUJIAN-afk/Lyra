@@ -14,33 +14,24 @@ public class LyraDamageRegister {
     public static final ResourceKey<DamageType> Summon = ResourceKey.create(Registries.DAMAGE_TYPE, Lyra.id("summon"));
 
     public static Holder<DamageType> getDamageTypeHolder(ResourceKey<DamageType> resourceKey, Level level) {
-        Registry<DamageType> damageTypes = level.registryAccess()
-                .lookup(Registries.DAMAGE_TYPE)
-                .orElse(null);
+        Registry<DamageType> damageTypes = level.registryAccess().lookup(Registries.DAMAGE_TYPE).orElse(null);
         if (damageTypes != null) {
-            Holder.Reference<DamageType> holder = damageTypes.get(resourceKey)
-                    .orElse(null);
+            Holder.Reference<DamageType> holder = damageTypes.get(resourceKey).orElse(null);
             if (holder != null) {
                 return holder;
             }
         }
-        return level.damageSources()
-                .generic()
-                .typeHolder();
+        return level.damageSources().generic().typeHolder();
     }
 
     public static DamageSource getDamageSource(ResourceKey<DamageType> resourceKey, Level level) {
-        Registry<DamageType> damageTypes = level.registryAccess()
-                .lookup(Registries.DAMAGE_TYPE)
-                .orElse(null);
+        Registry<DamageType> damageTypes = level.registryAccess().lookup(Registries.DAMAGE_TYPE).orElse(null);
         if (damageTypes != null) {
-            Holder.Reference<DamageType> holder = damageTypes.get(resourceKey)
-                    .orElse(null);
+            Holder.Reference<DamageType> holder = damageTypes.get(resourceKey).orElse(null);
             if (holder != null) {
                 return new DamageSource(holder, null, null, null);
             }
         }
-        return level.damageSources()
-                .generic();
+        return level.damageSources().generic();
     }
 }

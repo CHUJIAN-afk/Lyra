@@ -86,8 +86,8 @@ public class TargetCache {
         return distanceCache.computeIfAbsent(key, (IntToDoubleFunction)(k -> (float) player.getEyePosition().distanceTo(living.getBoundingBox().getCenter())));
     }
 
-    public float getMinionSearchRange(Player player, float distance) {
-        AttributeInstance instance = player.getAttribute(LyraAttributeRegister.MinionSearchRange);
+    public float getSummonSearchRange(Player player, float distance) {
+        AttributeInstance instance = player.getAttribute(LyraAttributeRegister.SummonSearchRange);
         if (instance != null) {
             distance *= (float) instance.getValue();
         }
@@ -280,9 +280,9 @@ public class TargetCache {
             }
             double distance;
             if (maxVec3 != null) {
-                distance = getMinionSearchRange(player, Math.max(32, (float) maxVec3.distanceTo(center) + 4));
+                distance = getSummonSearchRange(player, Math.max(32, (float) maxVec3.distanceTo(center) + 4));
             } else {
-                distance = getMinionSearchRange(player, 32);
+                distance = getSummonSearchRange(player, 32);
             }
             List<LivingEntity> result = new ArrayList<>();
             List<LivingEntity> livingEntityList = level.getEntitiesOfClass(LivingEntity.class, box.inflate(distance));

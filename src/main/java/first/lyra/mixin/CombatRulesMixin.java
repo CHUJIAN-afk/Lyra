@@ -23,7 +23,7 @@ public class CombatRulesMixin {
             Minion minion = minionDamageSource.getMinion();
             totalArmor -= minion.getArmorPierce();
             Player owner = minion.getOwner();
-            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.MinionArmorPierce);
+            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonArmorPierce);
             if (instance != null) {
                 totalArmor -= (float) instance.getValue();
             }
