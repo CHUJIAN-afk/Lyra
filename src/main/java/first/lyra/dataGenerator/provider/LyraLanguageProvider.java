@@ -41,8 +41,9 @@ public class LyraLanguageProvider extends LanguageProvider {
         entry(LyraAttributeRegister.ServantArmorPierce.get().getDescriptionId(), "Servant Armor Pierce", "仆从护甲穿透");
         entry(LyraAttributeRegister.ServantSearchRange.get().getDescriptionId(), "Servant Search Range", "仆从索敌范围");
         // ================= 死亡消息 =================
-        entry("death.attack.lyra.servant", "%1$s was torn apart by a servant", "%1$s 被仆从撕碎");
-        entry("death.attack.lyra.servant.player", "%1$s was torn apart by a servant whilst fighting %2$s", "%1$s 在与 %2$s 战斗时被仆从撕碎");
+        // %2$s = 仆从翻译名称(servant.<namespace>.<path>,宿主 mod 语言文件提供)
+        entry("death.attack.lyra.servant", "%1$s was torn apart by %2$s", "%1$s 被 %2$s 撕碎");
+        entry("death.attack.lyra.servant.player", "%1$s was torn apart by a servant whilst fighting %2$s", "%1$s 在与 %2$s 战斗时被撕碎");
         // ================= 客户端配置 =================
         entry("lyra.configuration.title", "Lyra Configuration", "Lyra 配置");
         entry("lyra.configuration.section.lyra.client.toml", "Client", "客户端");
