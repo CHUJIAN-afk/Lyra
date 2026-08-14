@@ -4,7 +4,7 @@ import first.lyra.api.LyraHelper;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.register.LyraRegistries;
-import first.lyra.common.servant.Servant;
+import first.lyra.common.minion.Minion;
 import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
@@ -36,7 +36,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     public void tick(Player player) {
         if (isRunning()) {
             updateLevel(player);
-            updateServantSlot(player);
+            updateMinionSlot(player);
             tickEntity(player);
             syncToClient(player);
         }
@@ -84,7 +84,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
         }
     }
 
-    private void updateServantSlot(Player player) {
+    private void updateMinionSlot(Player player) {
         if (!player.level().isClientSide()) {
             // 将待添加队列合并到主分组
             if (!pendingAdd.isEmpty()) {
@@ -96,9 +96,9 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                                     .computeIfAbsent(attachmentEntity.getType(), key -> new ArrayList<>());
                             entities.add(attachmentEntity);
                             for (AttachmentEntity entity : entities) {
-                                if (entity instanceof Servant servant) {
-                                    servant.setOrder(servant.getOrder());
-                                    servant.setSameSize(servant.getSameSize());
+                                if (entity instanceof Minion minion) {
+                                    minion.setOrder(minion.getOrder());
+                                    minion.setSameSize(minion.getSameSize());
                                 }
                             }
                         }
@@ -108,21 +108,21 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                 changed = true;
             }
             // 标记溢出实体
-            Type[] types = new Type[]{Type.Servant, Type.SentryServant};
+            Type[] types = new Type[]{Type.Minion, Type.Sentry};
             LyraHelper helper = LyraHelper.get(player);
             for (Type type : types) {
-                List<Servant> servants = get(type, Servant.class);
+                List<Minion> minions = get(type, Minion.class);
                 while (true) {
-                    if (servants.isEmpty()) {
+                    if (minions.isEmpty()) {
                         break;
                     }
-                    if (servants.stream().allMatch(AttachmentEntity::isRemove)) {
+                    if (minions.stream().allMatch(AttachmentEntity::isRemove)) {
                         break;
                     }
                     if (!helper.canSummon(type, 0)) {
-                        Servant first = servants.getFirst();
+                        Minion first = minions.getFirst();
                         first.setRemove();
-                        servants.remove(first);
+                        minions.remove(first);
                         changed = true;
                     } else {
                         break;
@@ -271,9 +271,9 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     }
 
     public enum Type {
-        Servant,
-        SentryServant,
-        ExtraServant,
+        Minion,
+        Sentry,
+        ExtraMinion,
         Projectile
     }
 }

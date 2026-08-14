@@ -3,7 +3,7 @@ package first.lyra.api;
 import first.lyra.common.attachment.AttachmentEntityData;
 import first.lyra.common.attachment.TargetCache;
 import first.lyra.common.entity.AttachmentEntity;
-import first.lyra.common.servant.Servant;
+import first.lyra.common.minion.Minion;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -45,12 +45,12 @@ public final class LyraHelper {
 
     public int getMaxCount(AttachmentEntityData.Type type) {
         return switch (type) {
-            case Servant -> {
-                AttributeInstance attributeInstance = player.getAttribute(LyraAttributeRegister.ServantMaxCount);
+            case Minion -> {
+                AttributeInstance attributeInstance = player.getAttribute(LyraAttributeRegister.MinionMaxCount);
                 yield attributeInstance != null ? (int) attributeInstance.getValue() : 0;
             }
-            case SentryServant -> {
-                AttributeInstance attributeInstance = player.getAttribute(LyraAttributeRegister.SentryServantMaxCount);
+            case Sentry -> {
+                AttributeInstance attributeInstance = player.getAttribute(LyraAttributeRegister.SentryMaxCount);
                 yield attributeInstance != null ? (int) attributeInstance.getValue() : 0;
             }
             default -> 0;
@@ -64,10 +64,10 @@ public final class LyraHelper {
                 .values()
                 .stream()
                 .flatMap(Collection::stream)
-                .filter(entity -> entity instanceof Servant)
-                .map(entity -> (Servant) entity)
-                .filter(servant -> !servant.isRemove())
-                .mapToInt(Servant::getSlotCost)
+                .filter(entity -> entity instanceof Minion)
+                .map(entity -> (Minion) entity)
+                .filter(minion -> !minion.isRemove())
+                .mapToInt(Minion::getSlotCost)
                 .sum();
     }
 

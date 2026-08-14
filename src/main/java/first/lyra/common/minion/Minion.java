@@ -1,4 +1,4 @@
-package first.lyra.common.servant;
+package first.lyra.common.minion;
 
 import first.lyra.api.LyraHelper;
 import first.lyra.common.attachment.AttachmentEntityData;
@@ -20,18 +20,18 @@ import java.util.List;
 /**
  * 仆从实体抽象基类，代表由玩家拥有、AI驱动、自主行动的战斗单位。
  */
-public abstract class Servant extends AttachmentEntity {
+public abstract class Minion extends AttachmentEntity {
 
     // ===================== AI系统 =====================
 
-    private final ServantGoalSelector goalSelector = new ServantGoalSelector();
+    private final MinionGoalSelector goalSelector = new MinionGoalSelector();
     private LivingEntity target = null;
     private int slotCost = 1;
     private boolean targetChange = false;
     private int order = 0;
     private int sameSize = 1;
 
-    public Servant() {
+    public Minion() {
         super();
         registerGoals(goalSelector);
     }
@@ -41,7 +41,7 @@ public abstract class Servant extends AttachmentEntity {
     /**
      * 注册AI目标
      */
-    public void registerGoals(ServantGoalSelector goalSelector) {
+    public void registerGoals(MinionGoalSelector goalSelector) {
     }
 
     /**
@@ -78,7 +78,7 @@ public abstract class Servant extends AttachmentEntity {
             LyraHelper helper = LyraHelper.get(owner);
             TargetCache targetCache = helper.getTargetCache();
             if (!targetCache.isEmpty()) {
-                float searchRange = targetCache.getServantSearchRange(this.getOwner(), distance);
+                float searchRange = targetCache.getSummonSearchRange(this.getOwner(), distance);
                 List<LivingEntity> targets = new ArrayList<>();
                 List<LivingEntity> entities = targetCache.getEntities();
                 for (LivingEntity living : entities) {
@@ -132,9 +132,9 @@ public abstract class Servant extends AttachmentEntity {
     /**
      * 构造仆从专属伤害来源
      */
-    public ServantDamageSource getDamageSource() {
-        Holder<DamageType> holder = LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Servant, owner.level());
-        return new ServantDamageSource(holder, null, owner, getCurrentPathNode().pos(), this);
+    public MinionDamageSource getDamageSource() {
+        Holder<DamageType> holder = LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, owner.level());
+        return new MinionDamageSource(holder, null, owner, getCurrentPathNode().pos(), this);
     }
 
     // ===================== 排序 =====================
@@ -152,7 +152,7 @@ public abstract class Servant extends AttachmentEntity {
     public int getOrder() {
         return LyraHelper.get(owner)
                 .getEntityData()
-                .get(AttachmentEntityData.Type.Servant, getType())
+                .get(AttachmentEntityData.Type.Minion, getType())
                 .indexOf(this);
     }
 
@@ -169,7 +169,7 @@ public abstract class Servant extends AttachmentEntity {
     public int getSameSize() {
         return LyraHelper.get(owner)
                 .getEntityData()
-                .get(AttachmentEntityData.Type.Servant, getType())
+                .get(AttachmentEntityData.Type.Minion, getType())
                 .size();
     }
 
@@ -208,7 +208,7 @@ public abstract class Servant extends AttachmentEntity {
         this.targetChange = targetChange;
     }
 
-    public ServantGoalSelector getGoalSelector() { return goalSelector; }
+    public MinionGoalSelector getGoalSelector() { return goalSelector; }
 
     public void setOrder(int order) {
         this.order = order;

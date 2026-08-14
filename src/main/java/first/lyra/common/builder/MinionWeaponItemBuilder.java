@@ -5,8 +5,8 @@ import first.lyra.common.attachment.AttachmentEntityData;
 import first.lyra.common.sound.Playable;
 import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.common.entity.PathNode;
-import first.lyra.common.item.IServantWeaponItem;
-import first.lyra.common.servant.Servant;
+import first.lyra.common.item.IMinionWeaponItem;
+import first.lyra.common.minion.Minion;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
@@ -29,79 +29,79 @@ import java.util.function.Supplier;
 /**
  * 仆从武器构建器，通过链式配置创建武器物品。
  */
-public class ServantWeaponItemBuilder<T extends Servant> {
+public class MinionWeaponItemBuilder<T extends Minion> {
 
     public static void handler(PlayerInteractEvent.RightClickItem event) {
         ItemStack itemStack = event.getItemStack();
         Player player = event.getEntity();
         Level level = player.level();
         ItemCooldowns cooldowns = player.getCooldowns();
-        if (event.getHand() == InteractionHand.MAIN_HAND && !cooldowns.isOnCooldown(itemStack.getItem()) && itemStack.getItem() instanceof IServantWeaponItem<?> iServantWeaponItem) {
+        if (event.getHand() == InteractionHand.MAIN_HAND && !cooldowns.isOnCooldown(itemStack.getItem()) && itemStack.getItem() instanceof IMinionWeaponItem<?> iMinionWeaponItem) {
             cooldowns.addCooldown(itemStack.getItem(), 4);
             player.swing(InteractionHand.MAIN_HAND, true);
             if (!level.isClientSide()) {
                 if (!player.isShiftKeyDown()) {
-                    iServantWeaponItem.summon(player, itemStack);
+                    iMinionWeaponItem.summon(player, itemStack);
                 } else {
-                    iServantWeaponItem.remove(player);
+                    iMinionWeaponItem.remove(player);
                 }
-                Playable.play(iServantWeaponItem.getSoundEvent(), level, player.position(), player.getSoundSource());
+                Playable.play(iMinionWeaponItem.getSoundEvent(), level, player.position(), player.getSoundSource());
             }
         }
     }
 
     private final Supplier<AttachmentEntityType<T>> typeSupplier;
-    private boolean sentryServant = false;
+    private boolean sentry = false;
     private float damage = 0;
     private float knockback = 0;
     private float armorPierce = 0;
     private Supplier<SoundEvent> soundEventSupplier = () -> null;
     private SummonTooltip<T> summonTooltip = null;
-    private TriConsumer<@NotNull IServantWeaponItem<T>, @NotNull Player, @Nullable ItemStack> summonAction = (weapon, player, itemStack) -> {
-        T servant = weapon.createServant(player, itemStack);
+    private TriConsumer<@NotNull IMinionWeaponItem<T>, @NotNull Player, @Nullable ItemStack> summonAction = (weapon, player, itemStack) -> {
+        T minion = weapon.createMinion(player, itemStack);
         LyraHelper lyraHelper = LyraHelper.get(player);
-        if (lyraHelper.canSummon(AttachmentEntityData.Type.Servant, 1)) {
+        if (lyraHelper.canSummon(AttachmentEntityData.Type.Minion, 1)) {
             AABB box = player.getBoundingBox();
             Vec3 pos = box.getCenter();
-            servant.init(new PathNode(pos.offsetRandom(player.getRandom(), 2), 0, 0, 0));
-            lyraHelper.add(AttachmentEntityData.Type.Servant, servant);
+            minion.init(new PathNode(pos.offsetRandom(player.getRandom(), 2), 0, 0, 0));
+            lyraHelper.add(AttachmentEntityData.Type.Minion, minion);
         }
     };
     private Consumer<Player> onRemove = null;
     private Consumer<Item.Properties> properties = null;
 
-    public ServantWeaponItemBuilder(@NotNull Supplier<AttachmentEntityType<T>> typeSupplier) {
+    public MinionWeaponItemBuilder(@NotNull Supplier<AttachmentEntityType<T>> typeSupplier) {
         this.typeSupplier = typeSupplier;
     }
 
     /**
      * 设置为哨兵。
      */
-    public ServantWeaponItemBuilder<T> sentryServant() {
-        this.sentryServant = true;
+    public MinionWeaponItemBuilder<T> sentry() {
+        this.sentry = true;
         return this;
     }
 
     /**
-     * 设置仆从伤害值。
+     * 设置召唤伤害值。
      */
-    public ServantWeaponItemBuilder<T> damage(float damage) {
+    public MinionWeaponItemBuilder<T> damage(float damage) {
         this.damage = damage;
         return this;
     }
 
     /**
-     * 设置仆从击退力度。
+     * 设置召唤击退力度。
      */
-    public ServantWeaponItemBuilder<T> knockback(float knockback) {
+    public MinionWeaponItemBuilder<T> knockback(float knockback) {
         this.knockback = knockback;
         return this;
     }
 
     /**
-     * 设置仆从护甲穿透。
+     * 设置召唤护甲穿透。
      */
-    public ServantWeaponItemBuilder<T> armorPierce(float armorPierce) {
+    public MinionWeaponItemBuilder<T> armorPierce(float armorPierce) {
         this.armorPierce = armorPierce;
         return this;
     }
@@ -109,15 +109,15 @@ public class ServantWeaponItemBuilder<T extends Servant> {
     /**
      * 设置召唤时播放的音效。
      */
-    public ServantWeaponItemBuilder<T> sound(Supplier<SoundEvent> soundEventSupplier) {
+    public MinionWeaponItemBuilder<T> sound(Supplier<SoundEvent> soundEventSupplier) {
         this.soundEventSupplier = soundEventSupplier;
         return this;
     }
 
     /**
-     * 完整重写召唤逻辑，weapon 可调用 createServant 构建实例。
+     * 完整重写召唤逻辑，weapon 可调用 createMinion 构建实例。
      */
-    public ServantWeaponItemBuilder<T> summon(TriConsumer<IServantWeaponItem<T>, Player, ItemStack> action) {
+    public MinionWeaponItemBuilder<T> summon(TriConsumer<IMinionWeaponItem<T>, Player, ItemStack> action) {
         this.summonAction = action;
         return this;
     }
@@ -125,23 +125,23 @@ public class ServantWeaponItemBuilder<T extends Servant> {
     /**
      * 设置仆从移除回调。
      */
-    public ServantWeaponItemBuilder<T> onRemove(Consumer<Player> action) {
+    public MinionWeaponItemBuilder<T> onRemove(Consumer<Player> action) {
         this.onRemove = action;
         return this;
     }
 
-    public ServantWeaponItemBuilder<T> properties(Consumer<Item.Properties> properties) {
+    public MinionWeaponItemBuilder<T> properties(Consumer<Item.Properties> properties) {
         this.properties = properties;
         return this;
     }
 
     /**
-     * 自定义召唤 tooltip 中"召唤目标"文本(覆写 {@link IServantWeaponItem#getSummonTooltip} 默认行为)。
+     * 自定义召唤 tooltip 中"召唤目标"文本(覆写 {@link IMinionWeaponItem#getSummonTooltip} 默认行为)。
      * <p>
      * 默认显示仆从类型名翻译;剑鞘类武器可借此显示存放的物品名。
      * </p>
      */
-    public ServantWeaponItemBuilder<T> summonTooltip(SummonTooltip<T> summonTooltip) {
+    public MinionWeaponItemBuilder<T> summonTooltip(SummonTooltip<T> summonTooltip) {
         this.summonTooltip = summonTooltip;
         return this;
     }
@@ -149,17 +149,17 @@ public class ServantWeaponItemBuilder<T extends Servant> {
     /**
      * 构建武器物品。
      */
-    public ServantWeaponItem build() {
+    public MinionWeaponItem build() {
         Item.Properties proper = new Item.Properties().stacksTo(1);
         if (properties != null) {
             properties.accept(proper);
         }
-        return new ServantWeaponItem(proper);
+        return new MinionWeaponItem(proper);
     }
 
-    public class ServantWeaponItem extends Item implements IServantWeaponItem<T> {
+    public class MinionWeaponItem extends Item implements IMinionWeaponItem<T> {
 
-        public ServantWeaponItem(Properties properties) {
+        public MinionWeaponItem(Properties properties) {
             super(properties);
         }
 
@@ -169,8 +169,8 @@ public class ServantWeaponItemBuilder<T extends Servant> {
         }
 
         @Override
-        public boolean isSentryServant() {
-            return sentryServant;
+        public boolean isSentry() {
+            return sentry;
         }
 
         @Override
@@ -184,17 +184,17 @@ public class ServantWeaponItemBuilder<T extends Servant> {
         }
 
         @Override
-        public float getServantDamage(@Nullable Player player,@Nullable ItemStack itemStack) {
+        public float getSummonDamage(@Nullable Player player,@Nullable ItemStack itemStack) {
             return damage;
         }
 
         @Override
-        public float getServantKnockback(@Nullable Player player,@Nullable ItemStack itemStack) {
+        public float getSummonKnockback(@Nullable Player player,@Nullable ItemStack itemStack) {
             return knockback;
         }
 
         @Override
-        public float getServantArmorPierce(@Nullable Player player, @Nullable ItemStack itemStack) {
+        public float getSummonArmorPierce(@Nullable Player player, @Nullable ItemStack itemStack) {
             return armorPierce;
         }
 
@@ -203,7 +203,7 @@ public class ServantWeaponItemBuilder<T extends Servant> {
             if (summonTooltip != null) {
                 return summonTooltip.apply(this, itemStack, type, location, player);
             }
-            return IServantWeaponItem.super.getSummonTooltip(itemStack, type, location, player);
+            return IMinionWeaponItem.super.getSummonTooltip(itemStack, type, location, player);
         }
 
         @Override
@@ -211,14 +211,14 @@ public class ServantWeaponItemBuilder<T extends Servant> {
             if (onRemove != null) {
                 onRemove.accept(player);
             } else {
-                IServantWeaponItem.super.remove(player);
+                IMinionWeaponItem.super.remove(player);
             }
         }
     }
 
     /** 召唤 tooltip 自定义器:返回"召唤目标"文本。 */
     @FunctionalInterface
-    public interface SummonTooltip<T extends Servant> {
-        Component apply(IServantWeaponItem<T> weapon, ItemStack itemStack, AttachmentEntityType<?> type, ResourceLocation location, Player player);
+    public interface SummonTooltip<T extends Minion> {
+        Component apply(IMinionWeaponItem<T> weapon, ItemStack itemStack, AttachmentEntityType<?> type, ResourceLocation location, Player player);
     }
 }

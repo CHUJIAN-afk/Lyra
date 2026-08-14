@@ -2,7 +2,7 @@ package first.lyra.client.tooltip;
 
 import first.lyra.Lyra;
 import first.lyra.common.armorSet.ArmorSet;
-import first.lyra.common.item.IServantWeaponItem;
+import first.lyra.common.item.IMinionWeaponItem;
 import first.lyra.register.LyraRegistries;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.resources.language.I18n;
@@ -31,7 +31,7 @@ public final class TooltipHandler {
         Player player = event.getEntity();
         ItemStack itemStack = event.getItemStack();
         List<Component> toolTip = event.getToolTip();
-        toolTip.addAll(getServantWeaponItemTooltip(itemStack, player));
+        toolTip.addAll(getMinionWeaponItemTooltip(itemStack, player));
         toolTip.addAll(getArmorSetTooltip(itemStack, player));
         toolTip.addAll(getCustomTooltip(itemStack, player));
     }
@@ -40,21 +40,19 @@ public final class TooltipHandler {
         List<Component> lines = new ArrayList<>();
         Item item = itemStack.getItem();
         ResourceLocation registryName = BuiltInRegistries.ITEM.getKey(item);
-        if (registryName.getNamespace().equals(Lyra.MODID)) {
-            List<MutableComponent> lore = new ArrayList<>();
-            String baseKey = "item" + "." + Lyra.MODID + "." + registryName.getPath() + "." + "tooltip" + ".";
-            int index = 1;
-            while (I18n.exists(baseKey + index)) {
-                lore.add(Component.translatable(baseKey + index));
-                index++;
+        List<MutableComponent> lore = new ArrayList<>();
+        String baseKey = "item" + "." + registryName.getNamespace() + "." + registryName.getPath() + "." + "tooltip" + ".";
+        int index = 1;
+        while (I18n.exists(baseKey + index)) {
+            lore.add(Component.translatable(baseKey + index));
+            index++;
+        }
+        if (!lore.isEmpty()) {
+            if (player != null) {
+                lines.add(Component.empty());
             }
-            if (!lore.isEmpty()) {
-                if (player != null) {
-                    lines.add(Component.empty());
-                }
-                for (MutableComponent component : lore) {
-                    lines.add(component.withStyle(ChatFormatting.DARK_GRAY));
-                }
+            for (MutableComponent component : lore) {
+                lines.add(component.withStyle(ChatFormatting.DARK_GRAY));
             }
         }
         return lines;
@@ -118,10 +116,10 @@ public final class TooltipHandler {
         return lines;
     }
 
-    private static List<Component> getServantWeaponItemTooltip(ItemStack itemStack, Player player) {
+    private static List<Component> getMinionWeaponItemTooltip(ItemStack itemStack, Player player) {
         List<Component> lines = new ArrayList<>();
-        if (itemStack.getItem() instanceof IServantWeaponItem<?> iServantWeaponItem && player != null) {
-            lines.addAll(iServantWeaponItem.getTooltips(itemStack, player));
+        if (itemStack.getItem() instanceof IMinionWeaponItem<?> iMinionWeaponItem && player != null) {
+            lines.addAll(iMinionWeaponItem.getTooltips(itemStack, player));
         }
         return lines;
     }

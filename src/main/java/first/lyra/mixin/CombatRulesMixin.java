@@ -1,7 +1,7 @@
 package first.lyra.mixin;
 
-import first.lyra.common.servant.Servant;
-import first.lyra.common.servant.ServantDamageSource;
+import first.lyra.common.minion.Minion;
+import first.lyra.common.minion.MinionDamageSource;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.world.damagesource.CombatRules;
 import net.minecraft.world.damagesource.DamageSource;
@@ -22,11 +22,11 @@ public class CombatRulesMixin {
             ordinal = 1
     )
     private static float modifyArmorValue(float armorValue, LivingEntity entity, float damage, DamageSource damageSource, float armorToughness) {
-        if (damageSource instanceof ServantDamageSource servantDamageSource) {
-            Servant servant = servantDamageSource.getServant();
-            armorValue -= servant.getArmorPierce();
-            Player owner = servant.getOwner();
-            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.ServantArmorPierce);
+        if (damageSource instanceof MinionDamageSource MinionDamageSource) {
+            Minion minion = MinionDamageSource.getMinion();
+            armorValue -= minion.getArmorPierce();
+            Player owner = minion.getOwner();
+            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonArmorPierce);
             if (instance != null) {
                 armorValue -= (float) instance.getValue();
             }

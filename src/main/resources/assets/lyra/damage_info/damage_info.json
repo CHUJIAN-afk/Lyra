@@ -12,7 +12,7 @@
   },
   "entries": [
     {
-      "damage_type": "lyra:servant",
+      "damage_type": "lyra:minion",
       "texture": "lyra:textures/damage_font.png",
       "texture_width": 55,
       "texture_height": 7,

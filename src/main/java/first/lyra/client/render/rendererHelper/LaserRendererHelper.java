@@ -10,7 +10,7 @@ import net.minecraft.util.FastColor;
 import org.joml.Matrix4f;
 
 /**
- * 激光/光柱渲染器（链式 ServantWeaponItemBuilder）。
+ * 激光/光柱渲染器（链式 MinionWeaponItemBuilder）。
  * <p>
  * 在两点之间绘制多层同心圆柱壳，通过 <b>alpha 梯度叠加</b>实现体积雾感：
  * 内层窄而实（高 alpha，构成锐利核心），外层宽而散（低 alpha，构成泛光边缘）。
@@ -53,7 +53,7 @@ public class LaserRendererHelper {
     }
 
     /**
-     * 创建 ServantWeaponItemBuilder 实例。
+     * 创建 MinionWeaponItemBuilder 实例。
      */
     public static LaserRendererHelper builder() {
         return new LaserRendererHelper();

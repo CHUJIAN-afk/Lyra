@@ -1,21 +1,21 @@
-package first.lyra.common.servant;
+package first.lyra.common.minion;
 
 import java.util.TreeSet;
 
-public class ServantGoalSelector {
+public class MinionGoalSelector {
 
     private final TreeSet<PrioritizedGoal> availableGoals = new TreeSet<>();
     private PrioritizedGoal currentGoal;
 
-    public ServantGoal<?> getCurrentGoal() {
+    public MinionGoal<?> getCurrentGoal() {
         return currentGoal != null ? currentGoal.goal : null;
     }
 
-    public void addGoal(int priority, ServantGoal<?> goal) {
+    public void addGoal(int priority, MinionGoal<?> goal) {
         availableGoals.add(new PrioritizedGoal(priority, goal));
     }
 
-    public void removeGoal(ServantGoal<?> goal) {
+    public void removeGoal(MinionGoal<?> goal) {
         availableGoals.removeIf(p -> p.goal == goal);
         if (currentGoal != null && currentGoal.goal == goal) {
             currentGoal.goal.stop();
@@ -48,7 +48,7 @@ public class ServantGoalSelector {
         }
     }
 
-    private record PrioritizedGoal(int priority, ServantGoal<?> goal) implements Comparable<PrioritizedGoal> {
+    private record PrioritizedGoal(int priority, MinionGoal<?> goal) implements Comparable<PrioritizedGoal> {
 
         @Override
         public int compareTo(PrioritizedGoal o) {

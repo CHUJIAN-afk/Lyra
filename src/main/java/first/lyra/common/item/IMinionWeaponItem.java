@@ -4,7 +4,7 @@ import first.lyra.api.LyraHelper;
 import first.lyra.common.attachment.AttachmentEntityData;
 import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.register.LyraRegistries;
-import first.lyra.common.servant.Servant;
+import first.lyra.common.minion.Minion;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -22,7 +22,7 @@ import java.util.List;
 /**
  * 仆从武器接口，定义可召唤仆从的武器物品行为。
  */
-public interface IServantWeaponItem<T extends Servant> {
+public interface IMinionWeaponItem<T extends Minion> {
 
     /**
      * 获取此武器对应的仆从类型。
@@ -32,7 +32,7 @@ public interface IServantWeaponItem<T extends Servant> {
     /**
      * 是否是哨兵。
      */
-    boolean isSentryServant();
+    boolean isSentry();
 
     /**
      * 处理仆从召唤逻辑。
@@ -40,19 +40,19 @@ public interface IServantWeaponItem<T extends Servant> {
     void summon(@NotNull Player player, @Nullable ItemStack itemStack);
 
     /**
-     * 获取仆从伤害值。
+     * 获取召唤伤害值。
      */
-    float getServantDamage(@Nullable Player player, @Nullable ItemStack itemStack);
+    float getSummonDamage(@Nullable Player player, @Nullable ItemStack itemStack);
 
     /**
-     * 获取仆从击退力度。
+     * 获取召唤击退力度。
      */
-    float getServantKnockback(@Nullable Player player, @Nullable ItemStack itemStack);
+    float getSummonKnockback(@Nullable Player player, @Nullable ItemStack itemStack);
 
     /**
-     * 获取仆从护甲穿透。
+     * 获取召唤护甲穿透。
      */
-    float getServantArmorPierce(@Nullable Player player, @Nullable ItemStack itemStack);
+    float getSummonArmorPierce(@Nullable Player player, @Nullable ItemStack itemStack);
 
     /**
      * 获取召唤 tooltip 中的召唤目标文本。
@@ -61,7 +61,7 @@ public interface IServantWeaponItem<T extends Servant> {
      * </p>
      */
     default Component getSummonTooltip(ItemStack itemStack, AttachmentEntityType<?> type, ResourceLocation location, Player player) {
-        String key = "servant." + location.getNamespace() + "." + location.getPath();
+        String key = "summon." + location.getNamespace() + "." + location.getPath();
         return Component.translatable(key).withStyle(ChatFormatting.BLUE);
     }
 
@@ -70,28 +70,28 @@ public interface IServantWeaponItem<T extends Servant> {
         AttachmentEntityType<?> type = getType();
         ResourceLocation location = LyraRegistries.ATTACHMENT_ENTITY_TYPES.getKey(type);
         if (location != null) {
-            float damage = getServantDamage(player, itemStack);
+            float damage = getSummonDamage(player, itemStack);
             if (damage > 0) {
-                AttributeInstance attribute = player.getAttribute(LyraAttributeRegister.ServantDamage);
+                AttributeInstance attribute = player.getAttribute(LyraAttributeRegister.SummonDamage);
                 damage = attribute != null ? (float) (damage * attribute.getValue()) : damage;
                 toolTips.add(Component.literal(String.format("%.1f ", damage)).withStyle(ChatFormatting.BLUE).append(Component.translatable("item.lyra.tooltip.damage").withStyle(ChatFormatting.GRAY)));
             }
-            float knockback = getServantKnockback(player, itemStack);
+            float knockback = getSummonKnockback(player, itemStack);
             if (knockback > 0) {
-                AttributeInstance attribute = player.getAttribute(LyraAttributeRegister.ServantKnockback);
+                AttributeInstance attribute = player.getAttribute(LyraAttributeRegister.SummonKnockback);
                 knockback = attribute != null ? (float) (knockback * attribute.getValue()) : knockback;
                 toolTips.add(Component.literal(String.format("%.1f ", knockback)).withStyle(ChatFormatting.BLUE).append(Component.translatable("item.lyra.tooltip.knockback").withStyle(ChatFormatting.GRAY)));
             }
-            float armor_pierce = getServantArmorPierce(player, itemStack);
+            float armor_pierce = getSummonArmorPierce(player, itemStack);
             if (armor_pierce > 0) {
                 toolTips.add(Component.literal(String.format("%.1f ", armor_pierce)).withStyle(ChatFormatting.BLUE).append(Component.translatable("item.lyra.tooltip.armor_pierce").withStyle(ChatFormatting.GRAY)));
             }
             toolTips.add(Component.translatable("item.lyra.tooltip.summon", getSummonTooltip(itemStack, type, location, player)).withStyle(ChatFormatting.GRAY));
             LyraHelper lyraHelper = LyraHelper.get(player);
-            if (!isSentryServant()){
-                toolTips.add(Component.translatable("item.lyra.tooltip.servant_slots", Component.literal(String.valueOf(lyraHelper.getUsedSlots(AttachmentEntityData.Type.Servant))).withStyle(ChatFormatting.BLUE), Component.literal(String.valueOf(lyraHelper.getMaxCount(AttachmentEntityData.Type.Servant))).withStyle(ChatFormatting.BLUE)).withStyle(ChatFormatting.GRAY));
+            if (!isSentry()){
+                toolTips.add(Component.translatable("item.lyra.tooltip.minion_slots", Component.literal(String.valueOf(lyraHelper.getUsedSlots(AttachmentEntityData.Type.Minion))).withStyle(ChatFormatting.BLUE), Component.literal(String.valueOf(lyraHelper.getMaxCount(AttachmentEntityData.Type.Minion))).withStyle(ChatFormatting.BLUE)).withStyle(ChatFormatting.GRAY));
             } else {
-                toolTips.add(Component.translatable("item.lyra.tooltip.sentry_servant_slots", Component.literal(String.valueOf(lyraHelper.getUsedSlots(AttachmentEntityData.Type.SentryServant))).withStyle(ChatFormatting.BLUE), Component.literal(String.valueOf(lyraHelper.getMaxCount(AttachmentEntityData.Type.SentryServant))).withStyle(ChatFormatting.BLUE)).withStyle(ChatFormatting.GRAY));
+                toolTips.add(Component.translatable("item.lyra.tooltip.sentry_slots", Component.literal(String.valueOf(lyraHelper.getUsedSlots(AttachmentEntityData.Type.Sentry))).withStyle(ChatFormatting.BLUE), Component.literal(String.valueOf(lyraHelper.getMaxCount(AttachmentEntityData.Type.Sentry))).withStyle(ChatFormatting.BLUE)).withStyle(ChatFormatting.GRAY));
             }
             toolTips.add(Component.translatable("item.lyra.tooltip.remove_all").withStyle(ChatFormatting.GRAY));
         }
@@ -106,13 +106,13 @@ public interface IServantWeaponItem<T extends Servant> {
     /**
      * 构建一个已初始化属性的仆从实例。
      */
-    default T createServant(@NotNull Player player, @Nullable ItemStack itemStack) {
-        T servant = getType().factory().get();
-        servant.setOwner(player);
-        servant.setDamage(getServantDamage(player, itemStack));
-        servant.setKnockback(getServantKnockback(player, itemStack));
-        servant.setArmorPierce(getServantArmorPierce(player, itemStack));
-        return servant;
+    default T createMinion(@NotNull Player player, @Nullable ItemStack itemStack) {
+        T minion = getType().factory().get();
+        minion.setOwner(player);
+        minion.setDamage(getSummonDamage(player, itemStack));
+        minion.setKnockback(getSummonKnockback(player, itemStack));
+        minion.setArmorPierce(getSummonArmorPierce(player, itemStack));
+        return minion;
     }
 
     /**
@@ -120,6 +120,6 @@ public interface IServantWeaponItem<T extends Servant> {
      */
     default void remove(@NotNull Player player) {
         AttachmentEntityData attachmentEntityData = LyraHelper.get(player).getEntityData();
-        attachmentEntityData.remove(isSentryServant() ? AttachmentEntityData.Type.SentryServant : AttachmentEntityData.Type.Servant, getType());
+        attachmentEntityData.remove(isSentry() ? AttachmentEntityData.Type.Sentry : AttachmentEntityData.Type.Minion, getType());
     }
 }

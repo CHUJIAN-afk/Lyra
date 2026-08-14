@@ -11,7 +11,7 @@ import net.minecraft.world.level.Level;
 
 public class LyraDamageRegister {
 
-    public static final ResourceKey<DamageType> Servant = ResourceKey.create(Registries.DAMAGE_TYPE, Lyra.rl("servant"));
+    public static final ResourceKey<DamageType> Summon = ResourceKey.create(Registries.DAMAGE_TYPE, Lyra.rl("summon"));
 
     public static Holder<DamageType> getDamageTypeHolder(ResourceKey<DamageType> resourceKey, Level level) {
         Registry<DamageType> damageTypes = level.registryAccess()

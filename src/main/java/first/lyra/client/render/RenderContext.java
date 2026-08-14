@@ -34,7 +34,7 @@ public class RenderContext<T extends AttachmentEntity> {
         this.model = model;
     }
 
-    /** 创建 ServantWeaponItemBuilder 实例 */
+    /** 创建 MinionWeaponItemBuilder 实例 */
     public static <T extends AttachmentEntity> Builder<T> builder() {
         return new Builder<>();
     }

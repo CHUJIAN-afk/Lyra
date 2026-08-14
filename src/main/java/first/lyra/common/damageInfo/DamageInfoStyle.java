@@ -9,7 +9,7 @@ import net.minecraft.resources.ResourceLocation;
  * UV = glyphIndex / GLYPH_COUNT。
  * </p>
  *
- * @param damageType    伤害类型 ID（如 "lyra:servant"）
+ * @param damageType    伤害类型 ID（如 "lyra:minion"）
  * @param texture       贴图资源路径
  * @param textureWidth  完整贴图像素宽
  * @param textureHeight 完整贴图像素高

@@ -3,8 +3,8 @@ package first.lyra.mixin;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.sugar.Local;
-import first.lyra.common.servant.Servant;
-import first.lyra.common.servant.ServantDamageSource;
+import first.lyra.common.minion.Minion;
+import first.lyra.common.minion.MinionDamageSource;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.world.damagesource.DamageSource;
@@ -31,10 +31,10 @@ public class LivingEntityMixin {
 
     @WrapMethod(method = "hurt")
     public boolean hurt(DamageSource source, float amount, Operation<Boolean> original) {
-        if (source instanceof ServantDamageSource servantDamageSource) {
-            Servant servant = servantDamageSource.getServant();
-            Player owner = servant.getOwner();
-            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.ServantDamage);
+        if (source instanceof MinionDamageSource MinionDamageSource) {
+            Minion minion = MinionDamageSource.getMinion();
+            Player owner = minion.getOwner();
+            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonDamage);
             float scale = instance != null ? (float) instance.getValue() : 1;
             amount *= scale;
             amount *= 0.85f + owner.getRandom().nextFloat() * 0.3f;
@@ -51,13 +51,13 @@ public class LivingEntityMixin {
             index = 0
     )
     private double knockback(double strength, @Local(argsOnly = true) DamageSource damageSource) {
-        if (damageSource instanceof ServantDamageSource servantDamageSource) {
-            Servant servant = servantDamageSource.getServant();
-            Player owner = servant.getOwner();
-            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.ServantKnockback);
+        if (damageSource instanceof MinionDamageSource MinionDamageSource) {
+            Minion minion = MinionDamageSource.getMinion();
+            Player owner = minion.getOwner();
+            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonKnockback);
             double scale = instance != null ? instance.getValue() : 1;
             scale *= 0.8 + (0.4 * owner.getRandom().nextDouble());
-            return servant.getKnockback() * scale;
+            return minion.getKnockback() * scale;
         }
         return strength;
     }
