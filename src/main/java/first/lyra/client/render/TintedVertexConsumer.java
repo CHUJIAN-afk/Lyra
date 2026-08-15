@@ -16,10 +16,11 @@ public record TintedVertexConsumer(VertexConsumer base, int r, int g, int b, int
         return this;
     }
 
-    // 26.2: VertexConsumer 接口新增抽象方法
+    // 26.2: VertexConsumer 接口新增抽象方法;putBakedQuad 走 11 参 addVertex → setColor(int),
+    // 必须同样应用固定染色,否则染色失效
     @Override
     public @NotNull VertexConsumer setColor(int color) {
-        base.setColor(color);
+        base.setColor(this.r, this.g, this.b, this.a);
         return this;
     }
 

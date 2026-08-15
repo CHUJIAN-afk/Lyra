@@ -7,8 +7,10 @@ import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.common.entity.PathNode;
 import first.lyra.common.item.IMinionWeaponItem;
 import first.lyra.common.minion.Minion;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
@@ -151,7 +153,17 @@ public class MinionWeaponItemBuilder<T extends Minion> {
      * 构建武器物品。
      */
     public MinionWeaponItem build() {
+        return build(null);
+    }
+
+    /**
+     * 26.2: 注册时显式注入物品 id(Item.Properties 构造即需要)。
+     */
+    public MinionWeaponItem build(Identifier id) {
         Item.Properties proper = new Item.Properties().stacksTo(1);
+        if (id != null) {
+            proper.setId(ResourceKey.create(Registries.ITEM, id));
+        }
         if (properties != null) {
             properties.accept(proper);
         }

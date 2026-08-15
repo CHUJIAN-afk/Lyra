@@ -4,11 +4,11 @@ import first.lyra.Lyra;
 import net.minecraft.client.data.models.BlockModelGenerators;
 import net.minecraft.client.data.models.ItemModelGenerators;
 import net.minecraft.client.data.models.ModelProvider;
-import net.minecraft.client.data.models.model.ItemModelUtils;
-import net.minecraft.core.Holder;
+import net.minecraft.client.data.models.model.ModelTemplates;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.Identifier;
+import org.jspecify.annotations.NonNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +32,7 @@ public class LyraItemModelProvider extends ModelProvider {
     }
 
     @Override
-    protected void registerModels(BlockModelGenerators blockModels, ItemModelGenerators itemModels) {
+    protected void registerModels(@NonNull BlockModelGenerators blockModels, @NonNull ItemModelGenerators itemModels) {
         this.itemModels = itemModels;
         ItemModelGenerate.entrySet()
                 .removeIf(entry -> {
@@ -43,15 +43,20 @@ public class LyraItemModelProvider extends ModelProvider {
                 });
     }
 
-    /** 替代旧 basicItem:item/generated 基础模型 */
+    /**
+     * 替代旧 basicItem:item/generated 基础模型。
+     * <p>
+     * 26.2: 使用 vanilla 原生 {@link ItemModelGenerators#generateFlatItem},
+     * 同时输出传统模型文件(models/item/{id}.json,parent+layer0 纹理)与
+     * 物品模型描述(items/{id}.json,引用该模型),缺一不可。
+     * </p>
+     */
     public void basicItem(Identifier location) {
-        itemModels.itemModelOutput.accept(BuiltInRegistries.ITEM.get(location).map(Holder.Reference::value).orElse(null),
-                ItemModelUtils.plainModel(Identifier.withDefaultNamespace("item/generated")));
+        BuiltInRegistries.ITEM.get(location).ifPresent(holder -> itemModels.generateFlatItem(holder.value(), ModelTemplates.FLAT_ITEM));
     }
 
     /** 替代旧 handheldItem:item/handheld 基础模型 */
     public void handheldItem(Identifier location) {
-        itemModels.itemModelOutput.accept(BuiltInRegistries.ITEM.get(location).map(Holder.Reference::value).orElse(null),
-                ItemModelUtils.plainModel(Identifier.withDefaultNamespace("item/handheld")));
+        BuiltInRegistries.ITEM.get(location).ifPresent(holder -> itemModels.generateFlatItem(holder.value(), ModelTemplates.FLAT_HANDHELD_ITEM));
     }
 }

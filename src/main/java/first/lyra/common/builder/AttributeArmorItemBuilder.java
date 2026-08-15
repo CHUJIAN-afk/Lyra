@@ -3,6 +3,9 @@ package first.lyra.common.builder;
 import first.lyra.Lyra;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.Unit;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -57,10 +60,20 @@ public class AttributeArmorItemBuilder {
     }
 
     public Item build() {
+        return build(null);
+    }
+
+    /**
+     * 26.2: 注册时显式注入物品 id(Item.Properties 构造即需要)。
+     */
+    public Item build(Identifier id) {
         // 基础护甲属性(ArmorMaterial.createAttributes) + 构建器附加修饰
         ItemAttributeModifiers merged = material.value().createAttributes(type);
         for (ItemAttributeModifiers.Entry entry : modifiers.build().modifiers()) {
             merged = merged.withModifierAdded(entry.attribute(), entry.modifier(), entry.slot());
+        }
+        if (id != null) {
+            properties.setId(ResourceKey.create(Registries.ITEM, id));
         }
         return new Item(properties
                 .attributes(merged)
