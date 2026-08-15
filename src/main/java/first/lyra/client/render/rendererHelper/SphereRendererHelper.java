@@ -119,7 +119,9 @@ public class SphereRendererHelper {
     // 26.2: MultiBufferSource 移除,渲染走 submitCustomGeometry
     public void render(PoseStack poseStack, SubmitNodeCollector collector) {
         collector.submitCustomGeometry(poseStack, TrailRenderType.getTrail(), (pose, consumer) -> {
-            Matrix4f poseMatrix = poseStack.last().pose();
+            // 必须用回调的 pose 快照(提交时 copy),不能捕获 poseStack.last()——提交延迟执行,
+            // poseStack 随后会被 popPose/mulPose 修改,捕获的矩阵会指向错误位置
+            Matrix4f poseMatrix = pose.pose();
 
             // 基础颜色分量：RGB 全层一致，仅 alpha 按层渐变
             int baseR = ARGB.red(colorRGB);

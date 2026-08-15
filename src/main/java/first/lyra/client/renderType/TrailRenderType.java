@@ -18,7 +18,6 @@ public class TrailRenderType {
                     .withTexture("Sampler0", Lyra.id("textures/trail.png"))
                     .useLightmap()
                     .useOverlay()
-                    .sortOnUpload()
                     .createRenderSetup());
 
     public static RenderType getTrail() {

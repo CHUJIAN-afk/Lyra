@@ -1,6 +1,7 @@
 package first.lyra.client;
 
 import first.lyra.Lyra;
+import first.lyra.client.render.LyraCustomFeatureRenderer;
 import first.lyra.client.tooltip.TooltipHandler;
 import first.lyra.common.particle.genericParticle.GenericParticleProvider;
 import first.lyra.common.damageInfo.DamageInfoStyleManager;
@@ -9,6 +10,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.RegisterFeatureRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
@@ -28,5 +30,10 @@ public class ClientEvent {
     @SubscribeEvent
     public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(LyraParticleRegister.Generic.get(), GenericParticleProvider::new);
+    }
+
+    @SubscribeEvent
+    public static void registerFeatureRenderers(RegisterFeatureRenderersEvent event) {
+        event.register(LyraCustomFeatureRenderer.TYPE, new LyraCustomFeatureRenderer());
     }
 }

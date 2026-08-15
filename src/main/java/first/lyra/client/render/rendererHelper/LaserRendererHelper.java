@@ -114,29 +114,23 @@ public class LaserRendererHelper {
      * 最内层相对半径 0~1（内层越细，核心越锐利）。
      */
     public LaserRendererHelper innerRatio(float ratio) {
-        this.innerRatio = Math.max(0f, Math.min(1f, ratio));
+        this.innerRatio = Math.clamp(ratio, 0f, 1f);
         return this;
     }
 
     // -------------------- 渲染 --------------------
-
-    /**
-     * 提交渲染。
-     *
-     * @param poseStack    姿态栈
-     * @param bufferSource 缓冲源
-     */
     // 26.2: MultiBufferSource 移除,渲染走 submitCustomGeometry
     public void render(PoseStack poseStack, SubmitNodeCollector collector) {
         collector.submitCustomGeometry(poseStack, TrailRenderType.getTrail(), (pose, consumer) -> {
-            Matrix4f poseMatrix = poseStack.last()
-                    .pose();
+            // 必须用回调的 pose 快照(提交时 copy),不能捕获 poseStack.last()——提交延迟执行,
+            // poseStack 随后会被 popPose/mulPose 修改,捕获的矩阵会指向错误位置
+            Matrix4f poseMatrix = pose.pose();
 
             // 基础颜色分量：RGB 全层一致（保证圆柱连续，不压黑接缝），仅 alpha 按层渐变
             int baseR = ARGB.red(colorRGB);
             int baseG = ARGB.green(colorRGB);
             int baseB = ARGB.blue(colorRGB);
-            int baseA = Math.max(0, Math.min(255, Math.round(alpha * 255)));
+            int baseA = Math.clamp(Math.round(alpha * 255), 0, 255);
 
             for (int layer = 0; layer < layers; layer++) {
                 // 层级比例: 0=最内层, 1=最外层
@@ -166,7 +160,7 @@ public class LaserRendererHelper {
         float rFar = radiusEnd * radiusScale;
 
         // 该层统一顶点色：RGB 不衰减，alpha 按层渐变
-        int a = Math.max(0, Math.min(255, Math.round(baseA * layerAlpha)));
+        int a = Math.clamp(Math.round(baseA * layerAlpha), 0, 255);
         int vertexColor = ARGB.color(a, baseR, baseG, baseB);
 
         for (int j = 0; j < segments; j++) {

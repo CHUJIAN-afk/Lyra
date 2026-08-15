@@ -2,6 +2,8 @@ package first.lyra.client.render.trail;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import first.lyra.client.render.ColorVertexConsumer;
+import first.lyra.client.render.LyraRenderPhases;
 import first.lyra.client.render.RenderContext;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
@@ -152,8 +154,9 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
         if (setup == null) {
             return;
         }
-        collector.submitCustomGeometry(poseStack, renderType, (pose, buffer) -> {
-            setup.consumer = first.lyra.client.render.AlphaBufferSource.wrap(buffer, alpha);
+        // 走排序 phase(translucentModels),与 Java Model 按距离统一排序,半透明混合层级正确
+        LyraRenderPhases.submitTranslucentCustom(collector, poseStack, renderType, (pose, buffer) -> {
+            setup.consumer = ColorVertexConsumer.wrapAlpha(buffer, alpha);
             renderBody(setup);
         });
     }
