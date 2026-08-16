@@ -15,6 +15,7 @@ import net.neoforged.neoforge.client.model.standalone.StandaloneModelKey;
 import net.neoforged.neoforge.client.submit.RenderPhaseKeys;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,8 +46,15 @@ public class RenderUtil {
 
     private static final Map<StandaloneModelKey<QuadCollection>, CachedModel> CACHE = new HashMap<>();
 
-    /** 缓存结果,collection 引用用于资源重载后失效重建。 */
-    private record CachedModel(QuadCollection collection, List<BakedQuad> quads) {}
+    /**
+     * 缓存结果：烘焙后把 quad 顶点数据预提取为紧凑数组（消除渲染期 record/switch/解包开销）。
+     * <ul>
+     *   <li>vertices：每顶点 5 float（x,y,z,u,v 局部坐标与 uv），4 顶点/quad 连续</li>
+     *   <li>colors：每顶点 1 int（烘焙色 ARGB，渲染期按 tint 直接使用或 multiply）</li>
+     *   <li>normals：每 quad 3 float（局部法线）</li>
+     * </ul>
+     */
+    private record CachedModel(QuadCollection collection, float[] vertices, int[] colors, float[] normals) {}
 
     private RenderUtil() {
     }
@@ -76,30 +84,44 @@ public class RenderUtil {
         if (cached == null) {
             return;
         }
-        collector.submitSpecial(RenderPhaseKeys.TRANSLUCENT_BLOCKS_AND_ITEMS, new LyraCustomSubmit(poseStack.last().copy(), LyraRenderTypes.ENTITY_ATLAS_TRANSLUCENT, (pose, consumer) -> writeQuads(pose, consumer, cached.quads(), tint)));
+        collector.submitSpecial(RenderPhaseKeys.TRANSLUCENT_BLOCKS_AND_ITEMS, new LyraCustomSubmit(poseStack.last().copy(), LyraRenderTypes.ENTITY_ATLAS_TRANSLUCENT, (pose, consumer) -> writeQuads(pose, consumer, cached, tint)));
     }
 
     /** 全亮光照常量（消除每顶点 pack 调用）。 */
     private static final int FULL_LIGHT = LightCoordsUtil.pack(LightCoordsUtil.FULL_BRIGHT, LightCoordsUtil.FULL_SKY);
 
     /**
-     * 手写顶点写入（无分配）：复用 scratch Vector3f 变换位置与法线，11 参 addVertex 直写
+     * 手写顶点写入（无分配、零 record 访问）：顶点数据从预烘焙数组直读，
+     * 复用 scratch Vector3f 变换位置与法线，11 参 addVertex 直写
      * （BufferBuilder 对 ENTITY/BLOCK 格式是快路径——一次 beginVertex 直写内存；
      * 勿经 VertexConsumer 包装器，否则降级 default 链式慢路径）。
-     * 顶点色 = tint × quad 烘焙色（tint = -1 时仅烘焙色，跳过乘法）。
+     * 顶点色 = tint × 烘焙色（tint = -1 时跳过乘法）。
      */
-    private static void writeQuads(PoseStack.Pose pose, VertexConsumer consumer, List<BakedQuad> quads, int tint) {
+    private static void writeQuads(PoseStack.Pose pose, VertexConsumer consumer, CachedModel cached, int tint) {
         Matrix4f matrix = pose.pose();
         Vector3f pos = new Vector3f();
         Vector3f normal = new Vector3f();
-        for (BakedQuad quad : quads) {
-            pose.transformNormal(quad.direction().getUnitVec3f(), normal);
-            for (int vertex = 0; vertex < 4; vertex++) {
-                long packedUv = quad.packedUV(vertex);
-                int vertexColor = tint == -1 ? quad.bakedColors().color(vertex) : ARGB.multiply(tint, quad.bakedColors().color(vertex));
-                matrix.transformPosition(quad.position(vertex), pos);
+        float[] vertices = cached.vertices();
+        int[] colors = cached.colors();
+        float[] normals = cached.normals();
+        int quadCount = normals.length / 3;
+        boolean tinted = tint != -1;
+        for (int q = 0; q < quadCount; q++) {
+            int nb = q * 3;
+            normal.set(normals[nb], normals[nb + 1], normals[nb + 2]);
+            pose.transformNormal(normal, normal);
+            int vb = q * 20;
+            int cb = q * 4;
+            for (int v = 0; v < 4; v++) {
+                int idx = vb + v * 5;
+                pos.set(vertices[idx], vertices[idx + 1], vertices[idx + 2]);
+                matrix.transformPosition(pos);
+                int vertexColor = colors[cb + v];
+                if (tinted) {
+                    vertexColor = ARGB.multiply(tint, vertexColor);
+                }
                 consumer.addVertex(pos.x(), pos.y(), pos.z(), vertexColor,
-                        UVPair.unpackU(packedUv), UVPair.unpackV(packedUv),
+                        vertices[idx + 3], vertices[idx + 4],
                         OverlayTexture.NO_OVERLAY, FULL_LIGHT,
                         normal.x(), normal.y(), normal.z());
             }
@@ -114,19 +136,45 @@ public class RenderUtil {
         }
         CachedModel cached = CACHE.get(key);
         if (cached == null || cached.collection() != collection) {
-            cached = new CachedModel(collection, collectQuads(collection));
+            cached = buildCached(collection);
             CACHE.put(key, cached);
         }
         return cached;
     }
 
-    /** 收集 6 方向 + unculled 的全部 quads（QuadCollection.getQuads(null) 仅返回 unculled）。 */
-    private static List<BakedQuad> collectQuads(QuadCollection collection) {
+    /**
+     * 预烘焙：收集 6 方向 + unculled 的全部 quads（getQuads(null) 仅返回 unculled），
+     * 提取顶点数据到紧凑数组。
+     */
+    private static CachedModel buildCached(QuadCollection collection) {
         List<BakedQuad> quads = new ArrayList<>();
         for (Direction direction : Direction.values()) {
             quads.addAll(collection.getQuads(direction));
         }
         quads.addAll(collection.getQuads(null));
-        return quads;
+        int count = quads.size();
+        float[] vertices = new float[count * 20];
+        int[] colors = new int[count * 4];
+        float[] normals = new float[count * 3];
+        int vi = 0;
+        int ci = 0;
+        int ni = 0;
+        for (BakedQuad quad : quads) {
+            Vector3fc n = quad.direction().getUnitVec3f();
+            normals[ni++] = n.x();
+            normals[ni++] = n.y();
+            normals[ni++] = n.z();
+            for (int vertex = 0; vertex < 4; vertex++) {
+                Vector3fc p = quad.position(vertex);
+                vertices[vi++] = p.x();
+                vertices[vi++] = p.y();
+                vertices[vi++] = p.z();
+                long packedUv = quad.packedUV(vertex);
+                vertices[vi++] = UVPair.unpackU(packedUv);
+                vertices[vi++] = UVPair.unpackV(packedUv);
+                colors[ci++] = quad.bakedColors().color(vertex);
+            }
+        }
+        return new CachedModel(collection, vertices, colors, normals);
     }
 }
