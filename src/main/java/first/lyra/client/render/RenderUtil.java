@@ -12,9 +12,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.LightCoordsUtil;
 import net.neoforged.neoforge.client.model.standalone.StandaloneModelKey;
+import net.neoforged.neoforge.client.submit.RenderPhaseKeys;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
-import org.joml.Vector3fc;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,11 +28,11 @@ import java.util.Map;
  * </p>
  * <h2>提交路径（26.2 高性能路径）</h2>
  * <p>
- * 手写顶点提交：{@link LyraItemRenderTypes#ENTITY_ATLAS_TRANSLUCENT}（items atlas + entity 管线，
+ * 手写顶点提交：{@link LyraRenderTypes#ENTITY_ATLAS_TRANSLUCENT}（items atlas + entity 管线，
  * 无 item sheet 的 ITEM_ENTITY_TARGET 离屏目标）+ 复用 scratch Vector3f 逐顶点写入
  * （无 {@code putBakedQuad} 的每顶点分配）。一次提交全部 quads（单 renderType 单 draw）。
- * 经 {@link LyraRenderPhases#submitTranslucentCustom} 挂 afterTerrain phase
- * （半透明方块/云之后渲染，层级正确；实体间按距离排序见 {@link LyraCustomFeatureRenderer}）。
+ * 经 {@code submitSpecial(RenderPhaseKeys.AFTER_TERRAIN, ...)} 挂 afterTerrain phase
+ * （半透明方块/云之后渲染，层级正确）。
  * </p>
  * <h2>性能设计</h2>
  * <p>
@@ -76,7 +76,7 @@ public class RenderUtil {
         if (cached == null) {
             return;
         }
-        LyraRenderPhases.submitTranslucentCustom(collector, poseStack, LyraItemRenderTypes.ENTITY_ATLAS_TRANSLUCENT, (pose, consumer) -> writeQuads(pose, consumer, cached.quads(), tint));
+        collector.submitSpecial(RenderPhaseKeys.AFTER_TERRAIN, new LyraCustomSubmit(poseStack.last().copy(), LyraRenderTypes.ENTITY_ATLAS_TRANSLUCENT, (pose, consumer) -> writeQuads(pose, consumer, cached.quads(), tint)));
     }
 
     /** 全亮光照常量（消除每顶点 pack 调用）。 */

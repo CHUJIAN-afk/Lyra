@@ -70,6 +70,12 @@ public class LightningRendererHelper {
     private float alpha = 0.9f;
     private float innerRatio = 0.25f;   // 最内层相对半径(0~1)
 
+    /** 全亮光照常量（消除每顶点 pack 调用）。 */
+    private static final int FULL_LIGHT = LightCoordsUtil.pack(LightCoordsUtil.FULL_BRIGHT, LightCoordsUtil.FULL_SKY);
+
+    /** 位置预变换复用（避免每顶点分配）。 */
+    private final Vector3f scratch = new Vector3f();
+
     private LightningRendererHelper() {
     }
 
@@ -376,13 +382,11 @@ public class LightningRendererHelper {
                 .add(new Vector3f(perpB).mul(sa * radius));
     }
 
+    /** 提交单个顶点（11 参 addVertex 快路径，ENTITY 格式一次 beginVertex 直写内存）。 */
     private void emitVertex(VertexConsumer consumer, Matrix4f pose, Vector3f v, int color, float u, float vCoord, Vector3f normal) {
-        consumer.addVertex(pose, v.x, v.y, v.z)
-                .setColor(color)
-                .setUv(u, vCoord)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightCoordsUtil.FULL_BRIGHT)
-                .setNormal(normal.x, normal.y, normal.z);
+        scratch.set(v);
+        pose.transformPosition(scratch);
+        consumer.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, vCoord, OverlayTexture.NO_OVERLAY, FULL_LIGHT, normal.x(), normal.y(), normal.z());
     }
 
     private static Vector3f worldToLocal(Vec3 world, Vec3 origin) {

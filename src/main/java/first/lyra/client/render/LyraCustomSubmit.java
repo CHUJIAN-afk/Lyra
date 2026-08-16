@@ -11,8 +11,8 @@ import org.jspecify.annotations.NonNull;
 /**
  * 自定义几何提交节点（TranslucentSubmit + BatchableSubmit，挂 afterTerrain phase）。
  * <p>
- * 经 {@code submitSpecial} + {@link LyraRenderPhases} 提交，在半透明方块/云之后渲染
- * （层级正确）。实体间遮挡由渲染类型的深度测试负责（depthWrite=true）。
+ * 经 {@code collector.submitSpecial(RenderPhaseKeys.AFTER_TERRAIN, ...)} 提交，
+ * 在半透明方块/云之后渲染（层级正确）。实体间遮挡由渲染类型的深度测试负责。
  * {@code distanceToCameraSq} 为 TranslucentSubmit 接口要求（保留挂排序 phase 的能力）。
  * </p>
  * <p>

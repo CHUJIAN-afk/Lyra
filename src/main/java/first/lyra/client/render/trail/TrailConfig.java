@@ -3,7 +3,7 @@ package first.lyra.client.render.trail;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.render.ColorVertexConsumer;
-import first.lyra.client.render.LyraRenderPhases;
+import first.lyra.client.render.LyraCustomSubmit;
 import first.lyra.client.render.RenderContext;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.client.submit.RenderPhaseKeys;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -155,10 +156,10 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
             return;
         }
         // 走排序 phase(translucentModels),与 Java Model 按距离统一排序,半透明混合层级正确
-        LyraRenderPhases.submitTranslucentCustom(collector, poseStack, renderType, (pose, buffer) -> {
+        collector.submitSpecial(RenderPhaseKeys.AFTER_TERRAIN, new LyraCustomSubmit(poseStack.last().copy(), renderType, (pose, buffer) -> {
             setup.consumer = ColorVertexConsumer.wrapAlpha(buffer, alpha);
             renderBody(setup);
-        });
+        }));
     }
 
     /** 子类实现的具体渲染逻辑（顶点写入 setup.consumer）。 */
@@ -248,7 +249,7 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
             nodes[i] = history.get(i).lerp(history.get(Math.max(0, i - 1)), partialTick);
         }
         int endIndex = nodes.length - 1;
-        int startIdx = Math.max(0, Math.min(startIndex, endIndex - 1));
+        int startIdx = Math.clamp(startIndex, 0, endIndex - 1);
 
         List<InterpolatedNode> result = new ArrayList<>((endIndex - startIdx) * segmentsPerNode + 1);
         Quaternionf tempQuat = new Quaternionf();
@@ -328,6 +329,6 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
     // ===================== 工具 =====================
 
     private static int clampByte(float v) {
-        return Math.max(0, Math.min(255, Math.round(v)));
+        return Math.clamp(Math.round(v), 0, 255);
     }
 }

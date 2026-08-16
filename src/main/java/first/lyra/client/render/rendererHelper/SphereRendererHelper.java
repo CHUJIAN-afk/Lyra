@@ -8,6 +8,7 @@ import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.LightCoordsUtil;
 import org.joml.Matrix4f;
+import org.joml.Vector3f;
 
 /**
  * 球体渲染器（链式 MinionWeaponItemBuilder）。
@@ -46,6 +47,12 @@ public class SphereRendererHelper {
     private int colorRGB = 0xFFFFFFFF;
     private float alpha = 0.9f;
     private float innerRatio = 0.4f; // 最内层相对半径(0~1)
+
+    /** 全亮光照常量（消除每顶点 pack 调用）。 */
+    private static final int FULL_LIGHT = LightCoordsUtil.pack(LightCoordsUtil.FULL_BRIGHT, LightCoordsUtil.FULL_SKY);
+
+    /** 位置预变换复用（避免每顶点分配）。 */
+    private final Vector3f scratch = new Vector3f();
 
     private SphereRendererHelper() {
     }
@@ -195,14 +202,12 @@ public class SphereRendererHelper {
         }
     }
 
+    /** 提交单个顶点（11 参 addVertex 快路径，ENTITY 格式一次 beginVertex 直写内存）。 */
     private void emitVertex(VertexConsumer consumer, Matrix4f pose, float x, float y, float z,
                             int color, float u, float v, float nx, float ny, float nz) {
-        consumer.addVertex(pose, x, y, z)
-                .setColor(color)
-                .setUv(u, v)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightCoordsUtil.FULL_BRIGHT)
-                .setNormal(nx, ny, nz);
+        scratch.set(x, y, z);
+        pose.transformPosition(scratch);
+        consumer.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, v, OverlayTexture.NO_OVERLAY, FULL_LIGHT, nx, ny, nz);
     }
 
     private static float mix(float a, float b, float t) {

@@ -337,7 +337,7 @@ solidTerrain → renderSolidFeatures（executeSolid）
 | 类 | 职责 |
 |---|---|
 | `RenderUtil` | 静态渲染入口：renderStandalone（无染色/染色），缓存 + 手写顶点 + entity-atlas 管线 |
-| `LyraItemRenderTypes` | items atlas + entity 管线（无离屏目标） |
+| `LyraRenderTypes` | items atlas + entity 管线（无离屏目标） |
 | `LyraRenderPhases` | submitSpecial 封装（afterTerrain phase） |
 | `LyraCustomSubmit` | TranslucentSubmit + BatchableSubmit（batchKey=renderType） |
 | `LyraCustomFeatureRenderer` | 回调执行提交（RegisterFeatureRenderersEvent 注册） |
