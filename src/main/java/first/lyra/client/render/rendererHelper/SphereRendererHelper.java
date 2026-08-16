@@ -2,7 +2,7 @@ package first.lyra.client.render.rendererHelper;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import first.lyra.client.renderType.TrailRenderType;
+import first.lyra.client.render.LyraRenderTypes;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ARGB;
@@ -19,7 +19,7 @@ import org.joml.Vector3f;
  * 一致，仅几何由圆柱改为球面。
  * </p>
  * <p>
- * 使用原版 {@code entity_translucent_emissive} 渲染类型（{@link TrailRenderType#getTrail()}），
+ * 使用原版 {@code item_translucent} 渲染类型（{@link LyraRenderTypes#TRAIL}），
  * 原版与光影（Iris/Oculus）环境下效果一致。所有视觉效果在 Java 侧预乘进顶点色。
  * </p>
  * <p>
@@ -125,7 +125,7 @@ public class SphereRendererHelper {
      */
     // 26.2: MultiBufferSource 移除,渲染走 submitCustomGeometry
     public void render(PoseStack poseStack, SubmitNodeCollector collector) {
-        collector.submitCustomGeometry(poseStack, TrailRenderType.getTrail(), (pose, consumer) -> {
+        collector.submitCustomGeometry(poseStack, LyraRenderTypes.TRAIL, (pose, consumer) -> {
             // 必须用回调的 pose 快照(提交时 copy),不能捕获 poseStack.last()——提交延迟执行,
             // poseStack 随后会被 popPose/mulPose 修改,捕获的矩阵会指向错误位置
             Matrix4f poseMatrix = pose.pose();

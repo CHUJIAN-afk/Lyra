@@ -54,8 +54,7 @@ public class AttachmentEntityRenderDispatcher {
      */
     public static void render(List<AbstractClientPlayer> players, Vec3 camPos, PoseStack poseStack, SubmitNodeCollector collector, float partialTick) {
         for (AbstractClientPlayer player : players) {
-            List<AttachmentEntity> entities = player.getData(LyraAttachmentRegister.EntityData)
-                    .getRenderCache();
+            List<AttachmentEntity> entities = player.getData(LyraAttachmentRegister.EntityData).getRenderCache();
             boolean showHitboxes = Minecraft.getInstance().options.keyDebugShowHitboxes.isDown();
             int packedLight = LightCoordsUtil.FULL_BRIGHT;
             for (AttachmentEntity entity : entities) {

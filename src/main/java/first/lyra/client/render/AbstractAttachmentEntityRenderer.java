@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import first.lyra.client.render.trail.ModelConfig;
 import first.lyra.client.render.trail.TrailConfig;
-import first.lyra.client.renderType.TrailRenderType;
+import first.lyra.client.render.LyraRenderTypes;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
 import first.lyra.client.config.ClientConfig;
@@ -44,7 +44,7 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
             poseStack.pushPose();
             float alpha = ClientConfig.AlphaModify.isTrue() ? getAlphaModify(context, visualNode, partialTick) : 1.0f;
             if (context.hasTrail()) {
-                context.trail.render(entity, poseStack, collector, partialTick, visualNode, TrailRenderType.getTrail(), alpha);
+                context.trail.render(entity, poseStack, collector, partialTick, visualNode, LyraRenderTypes.TRAIL, alpha);
             }
             modelModify(entity, poseStack, collector, visualNode, context, partialTick, alpha);
             poseStack.popPose();
