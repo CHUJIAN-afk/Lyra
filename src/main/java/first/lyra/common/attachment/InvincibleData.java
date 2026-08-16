@@ -3,6 +3,7 @@ package first.lyra.common.attachment;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraDamageRegister;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -138,7 +139,8 @@ public class InvincibleData {
         }
 
         public boolean apply() {
-            if (target.isAlive() && damageAmount > 0) {
+            Level level = target.level();
+            if (!level.isClientSide() && target.isAlive() && damageAmount > 0) {
                 InvincibleData invincibleData = InvincibleData.get(target);
                 boolean canDamage = uuid == null;
                 if (!canDamage) {
@@ -149,14 +151,12 @@ public class InvincibleData {
                     };
                 }
                 if (canDamage) {
-                    Level level = target.level();
                     if (damageSource == null) {
                         damageSource = LyraDamageRegister.getDamageSource(DamageTypes.GENERIC, level);
                     }
                     int invulnerableTime = target.invulnerableTime;
                     target.invulnerableTime = 0;
-                    // 26.2: hurt(DamageSource, float) 已移除(Entity.hurt 变 void),改用自动分发入口
-                    boolean hurt = target.hurtOrSimulate(damageSource, damageAmount);
+                    boolean hurt = target.hurtServer((ServerLevel) level, damageSource, damageAmount);
                     target.invulnerableTime = invulnerableTime;
                     if (hurt) {
                         if (mobEffectInstance != null) {

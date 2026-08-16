@@ -12,6 +12,7 @@ import java.util.*;
 public final class CreativeTabDispatcher {
 
     private static final Map<CreativeModeTab, List<Section>> ManagedTabs = new HashMap<>();
+    private static final Map<Section, List<ItemStack>> SelectedTabs = new HashMap<>();
 
     private CreativeTabDispatcher() {
     }
@@ -43,9 +44,9 @@ public final class CreativeTabDispatcher {
      * 归入该分段的全部物品（带特征标签的已注册物品）。
      */
     public static List<ItemStack> itemsOf(Section section) {
-        return BuiltInRegistries.ITEM.stream()
+        return SelectedTabs.computeIfAbsent(section, key -> BuiltInRegistries.ITEM.stream()
                 .map(Item::getDefaultInstance)
                 .filter(itemStack -> itemStack.is(section.tag()))
-                .toList();
+                .toList());
     }
 }
