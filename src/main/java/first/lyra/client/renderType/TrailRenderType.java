@@ -14,7 +14,7 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 public class TrailRenderType {
 
     private static final RenderType TRAIL = RenderType.create("lyra_trail",
-            RenderSetup.builder(RenderPipelines.ENTITY_TRANSLUCENT_EMISSIVE)
+            RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
                     .withTexture("Sampler0", Lyra.id("textures/trail.png"))
                     .useLightmap()
                     .useOverlay()

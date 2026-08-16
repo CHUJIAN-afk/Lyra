@@ -1,10 +1,7 @@
 package first.lyra.client.render.trail;
 
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.common.entity.AttachmentEntity;
-import first.lyra.common.entity.PathNode;
-import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;

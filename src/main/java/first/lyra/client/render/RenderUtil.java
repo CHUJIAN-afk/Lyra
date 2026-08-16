@@ -76,7 +76,7 @@ public class RenderUtil {
         if (cached == null) {
             return;
         }
-        collector.submitSpecial(RenderPhaseKeys.AFTER_TERRAIN, new LyraCustomSubmit(poseStack.last().copy(), LyraRenderTypes.ENTITY_ATLAS_TRANSLUCENT, (pose, consumer) -> writeQuads(pose, consumer, cached.quads(), tint)));
+        collector.submitSpecial(RenderPhaseKeys.TRANSLUCENT_BLOCKS_AND_ITEMS, new LyraCustomSubmit(poseStack.last().copy(), LyraRenderTypes.ENTITY_ATLAS_TRANSLUCENT, (pose, consumer) -> writeQuads(pose, consumer, cached.quads(), tint)));
     }
 
     /** 全亮光照常量（消除每顶点 pack 调用）。 */
