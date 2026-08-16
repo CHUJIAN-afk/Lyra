@@ -30,7 +30,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
 
     private final Map<Type, Map<AttachmentEntityType<?>, List<AttachmentEntity>>> pendingAdd = new EnumMap<>(Type.class);
     private final Map<Type, Map<AttachmentEntityType<?>, List<AttachmentEntity>>> groups = new EnumMap<>(Type.class);
-    private final List<AttachmentEntity> renderCache = new ArrayList<>();
+    private final Map<AttachmentEntityType<?>, List<AttachmentEntity>> renderCache = new HashMap<>();
     private ResourceKey<Level> dimension = null;
     private boolean changed = false;
 
@@ -70,7 +70,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     }
 
     private void tickEntity(Player player) {
-        renderCache.clear();
+        renderCache.values().forEach(List::clear);
         boolean clientSide = player.level().isClientSide();
         for (Map<AttachmentEntityType<?>, List<AttachmentEntity>> map : groups.values()) {
             for (List<AttachmentEntity> list : map.values()) {
@@ -78,7 +78,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                     entity.setOwner(player);
                     entity.tick();
                     if (clientSide) {
-                        renderCache.add(entity);
+                        renderCache.computeIfAbsent(entity.getType(), key -> new ArrayList<>()).add(entity);
                     }
                 }
             }
@@ -268,7 +268,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
         return groups;
     }
 
-    public List<AttachmentEntity> getRenderCache() {
+    public Map<AttachmentEntityType<?>, List<AttachmentEntity>> getRenderCache() {
         return renderCache;
     }
 

@@ -6,6 +6,7 @@ import first.lyra.dataGenerator.provider.LyraItemModelProvider;
 import first.lyra.dataGenerator.provider.LyraItemTagsProvider;
 import first.lyra.dataGenerator.provider.LyraLanguageProvider;
 import first.lyra.dataGenerator.provider.LyraRecipeProvider;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
@@ -85,6 +86,14 @@ public class LyraItemRegisterBuilder<T extends Item> {
     public LyraItemRegisterBuilder<T> recipe(Consumer<RecipeOutput> outputConsumer) {
         if (!FMLLoader.getCurrent().isProduction()) {
             LyraRecipeProvider.RecipeGenerate.add(outputConsumer);
+        }
+        return this;
+    }
+
+    /** 注册配方（runData 时输出，回调额外提供 HolderLookup，供 ShapedRecipeBuilder 等需要 HolderGetter 的构建器使用）。 */
+    public LyraItemRegisterBuilder<T> recipeWithLookup(BiConsumer<HolderLookup.Provider, RecipeOutput> outputConsumer) {
+        if (!FMLLoader.getCurrent().isProduction()) {
+            LyraRecipeProvider.RecipeGenerateWithLookup.add(outputConsumer);
         }
         return this;
     }

@@ -6,21 +6,21 @@ import first.lyra.common.entity.*;
 import first.lyra.client.config.ClientConfig;
 import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.gizmos.GizmoStyle;
 import net.minecraft.gizmos.Gizmos;
 import net.minecraft.util.LightCoordsUtil;
-import net.minecraft.util.ARGB;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 附件实体渲染调度器，统一管理所有附件实体（仆从、射弹）的渲染。
@@ -38,104 +38,91 @@ import java.util.Map;
  */
 public class AttachmentEntityRenderDispatcher {
 
+    private static final int FULL_LIGHT = LightCoordsUtil.pack(LightCoordsUtil.FULL_BRIGHT, LightCoordsUtil.FULL_SKY);
     /**
      * 渲染器映射表，按实体类型存储对应的渲染器
      */
-    private static final Map<AttachmentEntityType<?>, IAttachmentEntityRenderer<?>> renderers = new HashMap<>();
+    private static final Map<AttachmentEntityType<AttachmentEntity>, IAttachmentEntityRenderer<AttachmentEntity>> renderers = new HashMap<>();
 
     /**
      * 渲染玩家的所有附件实体。
      *
-     * @param players      全部玩家
-     * @param camPos       摄像机世界坐标
-     * @param poseStack    矩阵栈
-     * @param collector    提交节点收集器
-     * @param partialTick  部分 tick 插值进度
+     * @param players     全部玩家
+     * @param camPos      摄像机世界坐标
+     * @param poseStack   矩阵栈
+     * @param collector   提交节点收集器
+     * @param partialTick 部分 tick 插值进度
      */
     public static void render(List<AbstractClientPlayer> players, Vec3 camPos, PoseStack poseStack, SubmitNodeCollector collector, float partialTick) {
         for (AbstractClientPlayer player : players) {
-            List<AttachmentEntity> entities = player.getData(LyraAttachmentRegister.EntityData).getRenderCache();
-            boolean showHitboxes = Minecraft.getInstance().options.keyDebugShowHitboxes.isDown();
-            int packedLight = LightCoordsUtil.FULL_BRIGHT;
-            for (AttachmentEntity entity : entities) {
-                entity.setOwner(player);
-                poseStack.pushPose();
-                PathNode renderNode = entity.getRenderNode(partialTick);
-                Vec3 pos = renderNode.pos();
-                poseStack.translate(pos.x() - camPos.x(), pos.y() - camPos.y(), pos.z() - camPos.z());
-                // 渲染实体模型
-                IAttachmentEntityRenderer<AttachmentEntity> renderer = getRenderer(entity);
-                if (renderer != null) {
-                    renderer.render(entity, poseStack, collector, partialTick, packedLight, renderNode);
-                }
-                if (ClientConfig.DebugMode.isTrue()) {
-                    debugRender(poseStack, entity, showHitboxes, renderNode);
-                }
-                poseStack.popPose();
-            }
-        }
-    }
-
-    private static void debugRender(PoseStack poseStack, AttachmentEntity entity, boolean showHitboxes, PathNode renderNode) {
-        // 调试渲染（26.2: renderLineBox 移除,改用 gizmos 体系）
-        if (showHitboxes) {
-            Matrix4f pose = poseStack.last().pose();
-            try (Gizmos.TemporaryCollection ignored = Minecraft.getInstance().levelRenderer.collectPerFrameRenderThreadGizmos()) {
-                lineBoxWorld(pose, -0.001, -0.001, -0.001, 0.001, 0.001, 0.001, ARGB.colorFromFloat(1.0F, 1.0F, 1.0F, 0.0F));
-                poseStack.pushPose();
-                poseStack.mulPose(Axis.YN.rotationDegrees(renderNode.yaw()));
-                poseStack.mulPose(Axis.XP.rotationDegrees(renderNode.pitch()));
-                poseStack.mulPose(Axis.ZP.rotationDegrees(renderNode.roll()));
-                Matrix4f rotated = poseStack.last().pose();
-                lineBoxWorld(rotated, -0.0001, -0.0001, 0, 0.0001, 0.0001, 2, ARGB.colorFromFloat(1.0F, 0.0F, 0.0F, 1.0F));
-                lineBoxWorld(rotated, -0.0001, 0, -0.0001, 0.0001, 0.5, 0.0001, ARGB.colorFromFloat(1.0F, 0.0F, 0.0F, 1.0F));
-                if (entity instanceof ICollideAttack<?> iCollideAttack) {
-                    if (iCollideAttack.renderHitbox()) {
-                        lineBoxWorld(pose, iCollideAttack.getHitbox(), ARGB.colorFromFloat(1.0F, 1.0F, 0.0F, 0.0F));
+            Set<Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>>> entries = player.getData(LyraAttachmentRegister.EntityData).getRenderCache().entrySet();
+            for (Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>> entry : entries) {
+                IAttachmentEntityRenderer<AttachmentEntity> renderer = renderers.get(entry.getKey());
+                List<AttachmentEntity> entities = entry.getValue();
+                if (renderer != null && !entities.isEmpty()) {
+                    for (AttachmentEntity entity : entities) {
+                        entity.setOwner(player);
+                        poseStack.pushPose();
+                        PathNode renderNode = entity.getRenderNode(partialTick);
+                        Vec3 pos = renderNode.pos();
+                        poseStack.translate(pos.x() - camPos.x(), pos.y() - camPos.y(), pos.z() - camPos.z());
+                        renderer.render(entity, poseStack, collector, partialTick, FULL_LIGHT, renderNode);
+                        debugRender(entity, poseStack, renderNode);
+                        poseStack.popPose();
                     }
                 }
-                poseStack.popPose();
-                if (entity instanceof IBlockCollision<?> iBlockCollision) {
-                    lineBoxWorld(pose, iBlockCollision.getBlockCollisionBox(), ARGB.colorFromFloat(1.0F, 0.0F, 1.0F, 0.0F));
-                }
             }
-        }
-    }
-
-    /** 将局部 AABB 经矩阵变换后画 12 条边线（gizmos 世界坐标）。 */
-    private static void lineBoxWorld(Matrix4f pose, double minX, double minY, double minZ, double maxX, double maxY, double maxZ, int argb) {
-        lineBoxWorld(pose, new AABB(minX, minY, minZ, maxX, maxY, maxZ), argb);
-    }
-
-    private static void lineBoxWorld(Matrix4f pose, AABB box, int argb) {
-        float minX = (float) box.minX, minY = (float) box.minY, minZ = (float) box.minZ;
-        float maxX = (float) box.maxX, maxY = (float) box.maxY, maxZ = (float) box.maxZ;
-        float[][] raw = {
-                {minX, minY, minZ}, {maxX, minY, minZ}, {maxX, minY, maxZ}, {minX, minY, maxZ},
-                {minX, maxY, minZ}, {maxX, maxY, minZ}, {maxX, maxY, maxZ}, {minX, maxY, maxZ}
-        };
-        Vector3f[] corners = new Vector3f[8];
-        for (int i = 0; i < 8; i++) {
-            corners[i] = new Vector3f(raw[i][0], raw[i][1], raw[i][2]);
-            pose.transformPosition(corners[i]);
-        }
-        int[][] edges = {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
-        for (int[] e : edges) {
-            Gizmos.line(new Vec3(corners[e[0]].x(), corners[e[0]].y(), corners[e[0]].z()),
-                    new Vec3(corners[e[1]].x(), corners[e[1]].y(), corners[e[1]].z()), argb);
         }
     }
 
     /**
-     * 获取附件实体对应的渲染器。
-     *
-     * @param entity 附件实体实例
-     * @return 对应的渲染器，若未注册则返回 null
+     * 调试渲染（对齐原版 EntityHitboxDebugRenderer 的 gizmos 方式，全部世界坐标）。
+     * <ul>
+     *   <li>位置点 + 视线箭头（原版蓝色，从实体当前位置沿朝向 2 格——虚拟实体无眼睛）</li>
+     *   <li>实体碰撞箱：OBB 有向包围盒——局部 box 按欧拉角旋转（与模型一致的
+     *       qYaw·qPitch·qRoll）后画 12 条边线，白色（原版一致）</li>
+     *   <li>方块碰撞箱：白色 cuboid，仅平移不旋转（原版一致）</li>
+     * </ul>
      */
-    @SuppressWarnings("unchecked")
-    public static <T extends AttachmentEntity> IAttachmentEntityRenderer<T> getRenderer(T entity) {
-        AttachmentEntityType<T> type = (AttachmentEntityType<T>) entity.getType();
-        return (IAttachmentEntityRenderer<T>) renderers.get(type);
+    private static void debugRender(AttachmentEntity entity, PoseStack poseStack, PathNode renderNode) {
+        if (ClientConfig.DebugMode.isFalse()) {
+            return;
+        }
+        try (Gizmos.TemporaryCollection ignored = Minecraft.getInstance().levelRenderer.collectPerFrameRenderThreadGizmos()) {
+            Vec3 pos = renderNode.pos();
+            // 位置点 + 视线（原版：蓝色 arrow，从当前位置沿朝向 2 格）
+            Gizmos.point(pos, -1, 2.0F);
+            float yaw = (float) Math.toRadians(renderNode.yaw());
+            float pitch = (float) Math.toRadians(renderNode.pitch());
+            Gizmos.arrow(pos, pos.add(new Vec3(-Mth.sin(yaw) * Mth.cos(pitch), -Mth.sin(pitch), Mth.cos(yaw) * Mth.cos(pitch)).scale(2.0)), -16776961);
+            // 实体碰撞箱：OBB（欧拉角旋转后的 12 条边线，白色——原版一致）
+            if (entity instanceof ICollideAttack<?> iCollideAttack && iCollideAttack.renderHitbox()) {
+                AABB box = iCollideAttack.getHitbox();
+                Quaternionf rotation = new Quaternionf(Axis.YN.rotationDegrees(renderNode.yaw()))
+                        .mul(Axis.XP.rotationDegrees(renderNode.pitch()))
+                        .mul(Axis.ZP.rotationDegrees(renderNode.roll()));
+                Vec3 pos1 = renderNode.pos();
+                float[][] raw = {
+                        {(float) box.minX, (float) box.minY, (float) box.minZ}, {(float) box.maxX, (float) box.minY, (float) box.minZ},
+                        {(float) box.maxX, (float) box.minY, (float) box.maxZ}, {(float) box.minX, (float) box.minY, (float) box.maxZ},
+                        {(float) box.minX, (float) box.maxY, (float) box.minZ}, {(float) box.maxX, (float) box.maxY, (float) box.minZ},
+                        {(float) box.maxX, (float) box.maxY, (float) box.maxZ}, {(float) box.minX, (float) box.maxY, (float) box.maxZ}
+                };
+                Vec3[] corners = new Vec3[8];
+                for (int i = 0; i < 8; i++) {
+                    Vector3f v = new Vector3f(raw[i][0], raw[i][1], raw[i][2]).rotate(rotation);
+                    corners[i] = new Vec3(v.x() + pos1.x, v.y() + pos1.y, v.z() + pos1.z);
+                }
+                int[][] edges = {{0, 1}, {1, 2}, {2, 3}, {3, 0}, {4, 5}, {5, 6}, {6, 7}, {7, 4}, {0, 4}, {1, 5}, {2, 6}, {3, 7}};
+                for (int[] e : edges) {
+                    Gizmos.line(corners[e[0]], corners[e[1]], -1);
+                }
+            }
+            // 方块碰撞箱（不旋转，仅平移，白色——原版一致）
+            if (entity instanceof IBlockCollision<?> iBlockCollision) {
+                Gizmos.cuboid(iBlockCollision.getBlockCollisionBox().move(pos.x, pos.y, pos.z), GizmoStyle.stroke(-1));
+            }
+        }
     }
 
     /**
@@ -147,9 +134,10 @@ public class AttachmentEntityRenderDispatcher {
      * @param type     实体类型
      * @param renderer 渲染器实例
      */
+    @SuppressWarnings("unchecked")
     public static <T extends AttachmentEntity> void register(AttachmentEntityType<T> type, IAttachmentEntityRenderer<T> renderer) {
         if (!renderers.containsKey(type)) {
-            renderers.put(type, renderer);
+            renderers.put((AttachmentEntityType<AttachmentEntity>) type, (IAttachmentEntityRenderer<AttachmentEntity>) renderer);
         }
     }
 }

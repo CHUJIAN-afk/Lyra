@@ -14,13 +14,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-/**
- * 物品模型数据生成：输出宿主 mod 通过 {@code LyraItemRegisterBuilder.itemModel()} 收集的模型。
- * <p>
- * 26.2: NeoForge ItemModelProvider 移除 → vanilla {@link ModelProvider};
- * basicItem/handheldItem → {@link ItemModelUtils#plainModel} + {@link ItemModelGenerators#itemModelOutput}。
- * </p>
- */
 public class LyraItemModelProvider extends ModelProvider {
 
     public static final Map<Identifier, BiConsumer<Identifier, LyraItemModelProvider>> ItemModelGenerate = new HashMap<>();
