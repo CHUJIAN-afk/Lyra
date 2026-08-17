@@ -5,6 +5,7 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.texture.TextureAtlas;
+import net.minecraft.resources.Identifier;
 
 /**
  * Lyra 渲染类型工厂（模型 + 拖尾统一入口）。
@@ -35,11 +36,21 @@ public final class LyraRenderTypes {
                     .useOverlay()
                     .createRenderSetup());
 
-    /** 拖尾渲染类型（item translucent 管线 + trail 纹理）。 */
+    /** 拖尾渲染类型（block translucent 管线 + trail 纹理，BLOCK 格式批量直写性能最优）。 */
     public static final RenderType TRAIL = RenderType.create("lyra_trail",
-            RenderSetup.builder(RenderPipelines.ITEM_TRANSLUCENT)
+            RenderSetup.builder(RenderPipelines.TRANSLUCENT_BLOCK)
                     .withTexture("Sampler0", Lyra.id("textures/trail.png"))
                     .useLightmap()
                     .useOverlay()
                     .createRenderSetup());
+
+    /** 单纹理 translucent 管线（block 格式，伤害数字等自定义几何批量直写）。 */
+    public static RenderType textureTranslucent(Identifier texture) {
+        return RenderType.create("lyra_texture_translucent",
+                RenderSetup.builder(RenderPipelines.TRANSLUCENT_BLOCK)
+                        .withTexture("Sampler0", texture)
+                        .useLightmap()
+                        .useOverlay()
+                        .createRenderSetup());
+    }
 }

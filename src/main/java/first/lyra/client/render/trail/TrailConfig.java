@@ -2,9 +2,9 @@ package first.lyra.client.render.trail;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import first.lyra.client.render.ColorVertexConsumer;
 import first.lyra.client.render.LyraCustomSubmit;
 import first.lyra.client.render.RenderContext;
+import first.lyra.client.render.RenderUtil;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
 import net.minecraft.client.renderer.SubmitNodeCollector;
@@ -155,10 +155,15 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
         if (setup == null) {
             return;
         }
-        // 走排序 phase(translucentModels),与 Java Model 按距离统一排序,半透明混合层级正确
+        // 挂 afterTerrain phase：顶点先组装到连续缓冲（emitQuad），回调末尾一次性
+        // MemorySegment 批量直写（BLOCK 格式，RenderUtil.writeVertices）
         collector.submitSpecial(RenderPhaseKeys.AFTER_TERRAIN, new LyraCustomSubmit(poseStack.last().copy(), renderType, (pose, buffer) -> {
-            setup.consumer = ColorVertexConsumer.wrapAlpha(buffer, alpha);
+            this.currentAlpha = alpha;
+            this.vertexCount = 0;
+            setup.consumer = buffer;
             renderBody(setup);
+            RenderUtil.writeVertices(buffer, this.xyzuvData, this.colorData, RenderUtil.FULL_LIGHT, this.vertexCount);
+            this.currentAlpha = 1.0F;
         }));
     }
 
@@ -300,25 +305,59 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
                 .rotateZ((float) Math.toRadians(roll));
     }
 
-    // ===================== 四边形发射（10 参数快速路径） =====================
+    // ===================== 四边形发射（组装到连续缓冲，回调末尾批量直写） =====================
 
     /**
-     * 发射一个四边形（float 坐标版本，10 参数 addVertex 快速路径）。
+     * 发射一个四边形（float 坐标版本）：顶点变换后组装到 {@link #xyzuvData}/{@link #colorData}，
+     * 由 render 回调末尾经 {@link RenderUtil#writeVertices} 一次性 MemorySegment 批量直写
+     * （BLOCK 格式）。consumer 参数保留（子类调用兼容，写入阶段不使用）。
+     * alpha（当前透明度）在组装时乘入颜色。
      */
     protected void emitQuad(VertexConsumer consumer, Matrix4f matrix,
                             float x1, float y1, float z1, int c1,
                             float x2, float y2, float z2, int c2,
                             float x3, float y3, float z3, int c3,
                             float x4, float y4, float z4, int c4) {
+        ensureVertexCapacity(this.vertexCount + 4);
         Vector3f v = new Vector3f();
         matrix.transformPosition(x1, y1, z1, v);
-        consumer.addVertex(v.x, v.y, v.z, c1, 0, 0, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 1, 0, 0);
+        appendVertex(v.x(), v.y(), v.z(), c1, 0, 0);
         matrix.transformPosition(x2, y2, z2, v);
-        consumer.addVertex(v.x, v.y, v.z, c2, 1, 0, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 1, 0, 0);
+        appendVertex(v.x(), v.y(), v.z(), c2, 1, 0);
         matrix.transformPosition(x3, y3, z3, v);
-        consumer.addVertex(v.x, v.y, v.z, c3, 1, 1, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 1, 0, 0);
+        appendVertex(v.x(), v.y(), v.z(), c3, 1, 1);
         matrix.transformPosition(x4, y4, z4, v);
-        consumer.addVertex(v.x, v.y, v.z, c4, 0, 1, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 1, 0, 0);
+        appendVertex(v.x(), v.y(), v.z(), c4, 0, 1);
+    }
+
+    /** 顶点组装缓冲（每顶点 5 float：x,y,z,u,v），回调末尾批量直写。 */
+    private float[] xyzuvData = new float[1024 * 5];
+    /** 颜色缓冲（每顶点 1 int ARGB，alpha 已乘入）。 */
+    private int[] colorData = new int[1024];
+    private int vertexCount;
+    private float currentAlpha = 1.0F;
+
+    private void appendVertex(float x, float y, float z, int color, float u, float v) {
+        int vertexIndex = this.vertexCount * 5;
+        this.xyzuvData[vertexIndex] = x;
+        this.xyzuvData[vertexIndex + 1] = y;
+        this.xyzuvData[vertexIndex + 2] = z;
+        this.xyzuvData[vertexIndex + 3] = u;
+        this.xyzuvData[vertexIndex + 4] = v;
+        this.colorData[this.vertexCount] = ARGB.multiplyAlpha(color, this.currentAlpha);
+        this.vertexCount++;
+    }
+
+    private void ensureVertexCapacity(int requiredVertexCount) {
+        if (requiredVertexCount * 5 > this.xyzuvData.length) {
+            int newVertexCapacity = Math.max(requiredVertexCount, this.xyzuvData.length / 5 * 2);
+            float[] newXyzuvData = new float[newVertexCapacity * 5];
+            System.arraycopy(this.xyzuvData, 0, newXyzuvData, 0, this.vertexCount * 5);
+            this.xyzuvData = newXyzuvData;
+            int[] newColorData = new int[newVertexCapacity];
+            System.arraycopy(this.colorData, 0, newColorData, 0, this.vertexCount);
+            this.colorData = newColorData;
+        }
     }
 
     // ===================== 插值节点记录 =====================

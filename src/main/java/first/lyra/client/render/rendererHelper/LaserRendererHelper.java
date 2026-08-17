@@ -3,6 +3,7 @@ package first.lyra.client.render.rendererHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.render.LyraRenderTypes;
+import first.lyra.client.render.VertexAssembler;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ARGB;
@@ -55,6 +56,9 @@ public class LaserRendererHelper {
 
     /** 位置预变换复用（避免每顶点分配）。 */
     private final Vector3f scratch = new Vector3f();
+
+    /** 顶点批量组装器（回调末尾 MemorySegment 直写）。 */
+    private final VertexAssembler assembler = new VertexAssembler();
 
     private LaserRendererHelper() {
     }
@@ -126,12 +130,13 @@ public class LaserRendererHelper {
     }
 
     // -------------------- 渲染 --------------------
-    // 26.2: MultiBufferSource 移除,渲染走 submitCustomGeometry
+    // 26.2: MultiBufferSource 移除,渲染走 submitCustomGeometry（顶点组装后批量直写）
     public void render(PoseStack poseStack, SubmitNodeCollector collector) {
         collector.submitCustomGeometry(poseStack, LyraRenderTypes.TRAIL, (pose, consumer) -> {
             // 必须用回调的 pose 快照(提交时 copy),不能捕获 poseStack.last()——提交延迟执行,
             // poseStack 随后会被 popPose/mulPose 修改,捕获的矩阵会指向错误位置
             Matrix4f poseMatrix = pose.pose();
+            this.assembler.clear();
 
             // 基础颜色分量：RGB 全层一致（保证圆柱连续，不压黑接缝），仅 alpha 按层渐变
             int baseR = ARGB.red(colorRGB);
@@ -150,6 +155,7 @@ public class LaserRendererHelper {
 
                 renderLayer(consumer, poseMatrix, radiusScale, layerAlpha, baseR, baseG, baseB, baseA);
             }
+            this.assembler.write(consumer, FULL_LIGHT);
         });
     }
 
@@ -187,14 +193,11 @@ public class LaserRendererHelper {
         }
     }
 
-    /**
-     * 提交单个顶点（11 参 addVertex 快路径，ENTITY 格式一次 beginVertex 直写内存）。
-     * 位置经矩阵预变换到相机空间（复用 scratch），法线为局部空间原值（与原链式 setNormal 一致）。
-     */
+    /** 提交单个顶点：位置经矩阵预变换（复用 scratch），组装到连续缓冲（BLOCK 格式批量直写）。 */
     private void emitVertex(VertexConsumer consumer, Matrix4f pose, float x, float y, float z, int color, float u, float v) {
         scratch.set(x, y, z);
         pose.transformPosition(scratch);
-        consumer.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, v, OverlayTexture.NO_OVERLAY, FULL_LIGHT, 0, 0, 1);
+        this.assembler.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, v);
     }
 
     private static float mix(float a, float b, float t) {

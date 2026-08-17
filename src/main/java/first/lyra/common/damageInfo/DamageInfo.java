@@ -1,10 +1,7 @@
 package first.lyra.common.damageInfo;
 
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.utils.EasingCurve;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
-import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
@@ -100,19 +97,30 @@ public class DamageInfo {
     // ===================== 渲染 =====================
 
     /**
-     * 完整渲染本条伤害数字：直接构造 Matrix4f + 顶点写入。
+     * 本条伤害数字的顶点数（每字符 4 顶点）。
+     */
+    public int vertexCount() {
+        return text.length() * 4;
+    }
+
+    /**
+     * 完整渲染本条伤害数字：直接构造 Matrix4f + 顶点组装到连续缓冲
+     * （由调度器回调末尾经 {@link first.lyra.client.render.RenderUtil#writeVertices}
+     * MemorySegment 批量直写，BLOCK 格式）。
      * <p>
      * 绕过 PoseStack 以避免每条数字 3 次 mulPose（矩阵乘法 + 栈拷贝）。
      * 相机朝向（{@code cameraOrientation × XN(180)}）由调用方每帧预计算一次传入 {@code baseRotation}，
      * 本条数字只需在此基础上叠加 roll 旋转与平移。
      * </p>
      *
-     * @param consumer      已绑定贴图的 VertexConsumer
-     * @param baseRotation  相机朝向 + XN(180) 预乘旋转（每帧一次，所有数字共享）
-     * @param camPos        相机世界坐标
-     * @param partialTick   插值因子
+     * @param xyzuvData    顶点组装缓冲（每顶点 5 float：x,y,z,u,v 已变换）
+     * @param colorData    颜色缓冲（每顶点 1 int ARGB）
+     * @param startVertex  本条数字的起始顶点索引
+     * @param baseRotation 相机朝向 + XN(180) 预乘旋转（每帧一次，所有数字共享）
+     * @param camPos       相机世界坐标
+     * @param partialTick  插值因子
      */
-    public void render(VertexConsumer consumer, Quaternionf baseRotation, Vec3 camPos, float partialTick) {
+    public void render(float[] xyzuvData, int[] colorData, int startVertex, Quaternionf baseRotation, Vec3 camPos, float partialTick) {
         Vec3 renderPos = getRenderPos(partialTick);
 
         // 预计算渲染参数
@@ -141,6 +149,7 @@ public class DamageInfo {
         int glyphPixelWidth = style.glyphPixelWidth();
         int length = text.length();
         Vector3f v = new Vector3f();
+        int vertexIndex = startVertex;
         for (int i = 0; i < length; i++) {
             int glyph = glyphIndex(text.charAt(i));
             float u0 = (float) (glyph * glyphPixelWidth) / style.textureWidth();
@@ -150,16 +159,27 @@ public class DamageInfo {
             float x0 = i * step - halfWidth;
             float x1 = x0 + size;
 
-            // 4 个顶点，逐个变换后走 10 参数 fast path
+            // 4 个顶点，逐个变换后组装到缓冲（批量直写由调度器完成）
             matrix.transformPosition(x0, -halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u0, 0f, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 0, 0, 1);
+            appendVertex(xyzuvData, colorData, vertexIndex++, v.x(), v.y(), v.z(), color, u0, 0f);
             matrix.transformPosition(x0, halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u0, 1f, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 0, 0, 1);
+            appendVertex(xyzuvData, colorData, vertexIndex++, v.x(), v.y(), v.z(), color, u0, 1f);
             matrix.transformPosition(x1, halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u1, 1f, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 0, 0, 1);
+            appendVertex(xyzuvData, colorData, vertexIndex++, v.x(), v.y(), v.z(), color, u1, 1f);
             matrix.transformPosition(x1, -halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u1, 0f, OverlayTexture.NO_OVERLAY, LightCoordsUtil.FULL_BRIGHT, 0, 0, 1);
+            appendVertex(xyzuvData, colorData, vertexIndex++, v.x(), v.y(), v.z(), color, u1, 0f);
         }
+    }
+
+    private static void appendVertex(float[] xyzuvData, int[] colorData, int vertexIndex,
+                                     float x, float y, float z, int color, float u, float v) {
+        int dataIndex = vertexIndex * 5;
+        xyzuvData[dataIndex] = x;
+        xyzuvData[dataIndex + 1] = y;
+        xyzuvData[dataIndex + 2] = z;
+        xyzuvData[dataIndex + 3] = u;
+        xyzuvData[dataIndex + 4] = v;
+        colorData[vertexIndex] = color;
     }
 
     /**

@@ -3,6 +3,7 @@ package first.lyra.client.render.rendererHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.render.LyraRenderTypes;
+import first.lyra.client.render.VertexAssembler;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ARGB;
@@ -53,6 +54,9 @@ public class SphereRendererHelper {
 
     /** 位置预变换复用（避免每顶点分配）。 */
     private final Vector3f scratch = new Vector3f();
+
+    /** 顶点批量组装器（回调末尾 MemorySegment 直写）。 */
+    private final VertexAssembler assembler = new VertexAssembler();
 
     private SphereRendererHelper() {
     }
@@ -129,12 +133,13 @@ public class SphereRendererHelper {
             // 必须用回调的 pose 快照(提交时 copy),不能捕获 poseStack.last()——提交延迟执行,
             // poseStack 随后会被 popPose/mulPose 修改,捕获的矩阵会指向错误位置
             Matrix4f poseMatrix = pose.pose();
+            this.assembler.clear();
 
             // 基础颜色分量：RGB 全层一致，仅 alpha 按层渐变
             int baseR = ARGB.red(colorRGB);
             int baseG = ARGB.green(colorRGB);
             int baseB = ARGB.blue(colorRGB);
-            int baseA = Math.max(0, Math.min(255, Math.round(alpha * 255)));
+            int baseA = Math.clamp(Math.round(alpha * 255), 0, 255);
 
             for (int layer = 0; layer < layers; layer++) {
                 // 层级比例: 0=最内层, 1=最外层
@@ -147,6 +152,7 @@ public class SphereRendererHelper {
 
                 renderLayer(consumer, poseMatrix, r, layerAlpha, baseR, baseG, baseB, baseA, sides);
             }
+            this.assembler.write(consumer, FULL_LIGHT);
         });
     }
 
@@ -202,12 +208,11 @@ public class SphereRendererHelper {
         }
     }
 
-    /** 提交单个顶点（11 参 addVertex 快路径，ENTITY 格式一次 beginVertex 直写内存）。 */
-    private void emitVertex(VertexConsumer consumer, Matrix4f pose, float x, float y, float z,
-                            int color, float u, float v, float nx, float ny, float nz) {
+    /** 提交单个顶点：位置经矩阵预变换（复用 scratch），组装到连续缓冲（BLOCK 格式批量直写）。 */
+    private void emitVertex(VertexConsumer consumer, Matrix4f pose, float x, float y, float z, int color, float u, float v, float nx, float ny, float nz) {
         scratch.set(x, y, z);
         pose.transformPosition(scratch);
-        consumer.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, v, OverlayTexture.NO_OVERLAY, FULL_LIGHT, nx, ny, nz);
+        this.assembler.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, v);
     }
 
     private static float mix(float a, float b, float t) {

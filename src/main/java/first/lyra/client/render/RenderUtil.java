@@ -91,6 +91,75 @@ public final class RenderUtil {
     }
 
     /**
+     * 通用顶点批量写入（MemorySegment 直写，伤害信息/轨迹等共用）。
+     * <p>
+     * 数据约定：每顶点 5 float（已变换 x,y,z + u,v）+ 每顶点 1 int（ARGB 颜色）。
+     * 按目标格式自适应：BLOCK（28B，无 overlay/normal）与 ENTITY（36B，overlay=0、
+     * normal=0,0,1 填充）——ENTITY 半透明混合正确（TRAIL/伤害数字管线）。
+     * consumer 为 BufferBuilder 时一次 reserve + 逐字段内联写入（无 JNI、无弃用 API）；
+     * 其他实现回退逐顶点 addVertex。
+     * </p>
+     *
+     * @param consumer    顶点消费者
+     * @param xyzuvData   每顶点 5 float（x,y,z,u,v，模型视图空间已变换）
+     * @param colorData   每顶点 1 int（ARGB）
+     * @param packedLight 打包光照
+     * @param vertexCount 顶点数
+     */
+    public static void writeVertices(VertexConsumer consumer, float[] xyzuvData, int[] colorData, int packedLight, int vertexCount) {
+        if (consumer instanceof BufferBuilder builder) {
+            BufferBuilderAccessor accessor = (BufferBuilderAccessor) builder;
+            int vertexSize = accessor.getFormat().getVertexSize();
+            long totalBytes = (long) vertexCount * vertexSize;
+            long pointer = accessor.getBuffer().reserve((int) totalBytes);
+            MemorySegment segment = MemorySegment.ofAddress(pointer).reinterpret(totalBytes);
+            boolean entityFormat = vertexSize == 36;
+            long offset = 0;
+            for (int i = 0; i < vertexCount; i++) {
+                int sourceIndex = i * 5;
+                segment.set(ValueLayout.JAVA_FLOAT_UNALIGNED, offset, xyzuvData[sourceIndex]);
+                offset += 4;
+                segment.set(ValueLayout.JAVA_FLOAT_UNALIGNED, offset, xyzuvData[sourceIndex + 1]);
+                offset += 4;
+                segment.set(ValueLayout.JAVA_FLOAT_UNALIGNED, offset, xyzuvData[sourceIndex + 2]);
+                offset += 4;
+                segment.set(ValueLayout.JAVA_INT_UNALIGNED, offset, ARGB.toABGR(colorData[i]));
+                offset += 4;
+                segment.set(ValueLayout.JAVA_FLOAT_UNALIGNED, offset, xyzuvData[sourceIndex + 3]);
+                offset += 4;
+                segment.set(ValueLayout.JAVA_FLOAT_UNALIGNED, offset, xyzuvData[sourceIndex + 4]);
+                offset += 4;
+                if (entityFormat) {
+                    segment.set(ValueLayout.JAVA_INT_UNALIGNED, offset, 0); // overlay
+                    offset += 4;
+                    segment.set(ValueLayout.JAVA_INT_UNALIGNED, offset, packedLight); // light
+                    offset += 4;
+                    segment.set(ValueLayout.JAVA_BYTE, offset, (byte) 0); // nx
+                    offset += 1;
+                    segment.set(ValueLayout.JAVA_BYTE, offset, (byte) 0); // ny
+                    offset += 1;
+                    segment.set(ValueLayout.JAVA_BYTE, offset, (byte) 127); // nz
+                    offset += 1;
+                    offset += 1; // padding（ENTITY 36B = 35 数据 + 1 对齐）
+                } else {
+                    segment.set(ValueLayout.JAVA_INT_UNALIGNED, offset, packedLight); // light
+                    offset += 4;
+                }
+            }
+            accessor.setVertices(accessor.getVertices() + vertexCount);
+            accessor.setElementsToFill(0);
+        } else {
+            // 回退：逐顶点写入（非 BufferBuilder consumer）
+            for (int i = 0; i < vertexCount; i++) {
+                int sourceIndex = i * 5;
+                consumer.addVertex(xyzuvData[sourceIndex], xyzuvData[sourceIndex + 1], xyzuvData[sourceIndex + 2],
+                        colorData[i], xyzuvData[sourceIndex + 3], xyzuvData[sourceIndex + 4],
+                        OverlayTexture.NO_OVERLAY, packedLight, 0, 0, 1);
+            }
+        }
+    }
+
+    /**
      * 顶点写入：consumer 为 BufferBuilder 时走 MemorySegment 批量直写（BLOCK 格式，
      * 一次 reserve + 逐字段内联写入，无 JNI）；其他实现回退逐顶点 addVertex。
      */
