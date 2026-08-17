@@ -114,6 +114,6 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
         }
 
         float alpha = (float) ((distance - minDistance) / (maxDistance - minDistance));
-        return Math.max(0.102f, Math.min(1.0f, alpha));
+        return Math.clamp(alpha, 0.102f, 1.0f);
     }
 }

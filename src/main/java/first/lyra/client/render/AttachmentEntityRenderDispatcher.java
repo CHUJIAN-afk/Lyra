@@ -8,6 +8,9 @@ import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.extract.LevelExtractor;
+import net.minecraft.client.renderer.state.level.LevelRenderState;
+import net.minecraft.core.BlockPos;
 import net.minecraft.gizmos.GizmoStyle;
 import net.minecraft.gizmos.Gizmos;
 import net.minecraft.util.LightCoordsUtil;
@@ -66,7 +69,7 @@ public class AttachmentEntityRenderDispatcher {
                         PathNode renderNode = entity.getRenderNode(partialTick);
                         Vec3 pos = renderNode.pos();
                         poseStack.translate(pos.x() - camPos.x(), pos.y() - camPos.y(), pos.z() - camPos.z());
-                        renderer.render(entity, poseStack, collector, partialTick, FULL_LIGHT, renderNode);
+                        renderer.render(entity, poseStack, collector, partialTick, LightCoordsUtil.getLightCoords(player.level(), BlockPos.containing(pos)), renderNode);
                         debugRender(entity, poseStack, renderNode);
                         poseStack.popPose();
                     }

@@ -1,7 +1,9 @@
 package first.lyra.client.render;
 
+import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import first.lyra.mixin.BufferBuilderAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -16,6 +18,9 @@ import net.neoforged.neoforge.client.submit.RenderPhaseKeys;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
+
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,18 +50,15 @@ import java.util.Map;
 public class RenderUtil {
 
     private static final Map<StandaloneModelKey<QuadCollection>, CachedModel> CACHE = new HashMap<>();
-
-    /**
-     * 缓存结果：烘焙后把 quad 顶点数据预提取为紧凑数组（消除渲染期 record/switch/解包开销）。
-     * <ul>
-     *   <li>vertices：每顶点 5 float（x,y,z,u,v 局部坐标与 uv），4 顶点/quad 连续</li>
-     *   <li>colors：每顶点 1 int（烘焙色 ARGB，渲染期按 tint 直接使用或 multiply）</li>
-     *   <li>normals：每 quad 3 float（局部法线）</li>
-     * </ul>
-     */
-    private record CachedModel(QuadCollection collection, float[] vertices, int[] colors, float[] normals) {}
+    /** 全亮光照常量（消除每顶点 pack 调用）。 */
+    private static final int FULL_LIGHT = LightCoordsUtil.pack(LightCoordsUtil.FULL_BRIGHT, LightCoordsUtil.FULL_SKY);
 
     private RenderUtil() {
+    }
+
+    //TODO 只保留全参数的渲染方法
+    public static void renderStandalone(StandaloneModelKey<QuadCollection> key, PoseStack poseStack, SubmitNodeCollector collector, int ARGB, int packedLight) {
+        renderStandalone(key, poseStack, collector, -1);
     }
 
     /**
@@ -87,29 +89,76 @@ public class RenderUtil {
         collector.submitSpecial(RenderPhaseKeys.TRANSLUCENT_BLOCKS_AND_ITEMS, new LyraCustomSubmit(poseStack.last().copy(), LyraRenderTypes.ENTITY_ATLAS_TRANSLUCENT, (pose, consumer) -> writeQuads(pose, consumer, cached, tint)));
     }
 
-    /** 全亮光照常量（消除每顶点 pack 调用）。 */
-    private static final int FULL_LIGHT = LightCoordsUtil.pack(LightCoordsUtil.FULL_BRIGHT, LightCoordsUtil.FULL_SKY);
-
     /**
-     * 手写顶点写入（无分配、零 record 访问）：顶点数据从预烘焙数组直读，
-     * 复用 scratch Vector3f 变换位置与法线，11 参 addVertex 直写
-     * （BufferBuilder 对 ENTITY/BLOCK 格式是快路径——一次 beginVertex 直写内存；
-     * 勿经 VertexConsumer 包装器，否则降级 default 链式慢路径）。
+     * 顶点写入：consumer 为 BufferBuilder 时走批量快路径（一次 reserve + 内存组装 + 一次
+     * memCopy，JNI 边界从每顶点 8 次降为每批 1 次）；其他实现回退逐顶点 addVertex
+     * （BLOCK 格式下 blockFormat 快路径，忽略 overlay/normal）。
      * 顶点色 = tint × 烘焙色（tint = -1 时跳过乘法）。
      */
     private static void writeQuads(PoseStack.Pose pose, VertexConsumer consumer, CachedModel cached, int tint) {
+        if (consumer instanceof BufferBuilder builder) {
+            writeQuadsBatch(pose, builder, cached, tint);
+        } else {
+            writeQuadsSingle(pose, consumer, cached, tint);
+        }
+    }
+
+    /**
+     * 批量写入（零 JNI、无弃用 API）：一次 reserve 全部顶点，MemorySegment 直写目标地址
+     * （java.lang.foreign 官方 off-heap 访问，JIT 内联为 mov，无 memCopy/memPut 的 JNI 边界，
+     * 替代弃用的 sun.misc.Unsafe.put*）。
+     * BLOCK 格式（28 字节/顶点：Position 12 + Color 4 + UV0 8 + UV2 4，平台字节序）。
+     * 模拟 beginVertex：经 BufferBuilderAccessor（mixin 接口）同步内部计数，
+     * 保证 build() 正确产出 MeshData。
+     */
+    private static void writeQuadsBatch(PoseStack.Pose pose, BufferBuilder builder, CachedModel cached, int tint) {
         Matrix4f matrix = pose.pose();
         Vector3f pos = new Vector3f();
-        Vector3f normal = new Vector3f();
         float[] vertices = cached.vertices();
         int[] colors = cached.colors();
-        float[] normals = cached.normals();
-        int quadCount = normals.length / 3;
+        int vertexCount = colors.length;
+        boolean tinted = tint != -1;
+        BufferBuilderAccessor accessor = (BufferBuilderAccessor) builder;
+        long pointer = accessor.getBuffer().reserve(vertexCount * accessor.getFormat().getVertexSize());
+        // ofAddress(long) 为 zero-length segment，reinterpret 指定实际大小（信任模式）
+        MemorySegment segment = MemorySegment.ofAddress(pointer).reinterpret((long) vertexCount * accessor.getFormat().getVertexSize());
+        long off = 0;
+        for (int i = 0; i < vertexCount; i++) {
+            int idx = i * 5;
+            pos.set(vertices[idx], vertices[idx + 1], vertices[idx + 2]);
+            matrix.transformPosition(pos);
+            int vertexColor = colors[i];
+            if (tinted) {
+                vertexColor = ARGB.multiply(tint, vertexColor);
+            }
+            segment.set(ValueLayout.JAVA_FLOAT_UNALIGNED, off, pos.x());
+            off += 4;
+            segment.set(ValueLayout.JAVA_FLOAT_UNALIGNED, off, pos.y());
+            off += 4;
+            segment.set(ValueLayout.JAVA_FLOAT_UNALIGNED, off, pos.z());
+            off += 4;
+            segment.set(ValueLayout.JAVA_INT_UNALIGNED, off, ARGB.toABGR(vertexColor));
+            off += 4;
+            segment.set(ValueLayout.JAVA_FLOAT_UNALIGNED, off, vertices[idx + 3]);
+            off += 4;
+            segment.set(ValueLayout.JAVA_FLOAT_UNALIGNED, off, vertices[idx + 4]);
+            off += 4;
+            segment.set(ValueLayout.JAVA_INT_UNALIGNED, off, FULL_LIGHT);
+            off += 4;
+        }
+        accessor.setVertices(accessor.getVertices() + vertexCount);
+        accessor.setElementsToFill(0);
+    }
+
+    /** 逐顶点回退路径（非 BufferBuilder consumer）。 */
+    private static void writeQuadsSingle(PoseStack.Pose pose, VertexConsumer consumer, CachedModel cached, int tint) {
+        Matrix4f matrix = pose.pose();
+        Vector3f pos = new Vector3f();
+        float[] vertices = cached.vertices();
+        int[] colors = cached.colors();
+        int quadCount = colors.length / 4;
         boolean tinted = tint != -1;
         for (int q = 0; q < quadCount; q++) {
-            int nb = q * 3;
-            normal.set(normals[nb], normals[nb + 1], normals[nb + 2]);
-            pose.transformNormal(normal, normal);
             int vb = q * 20;
             int cb = q * 4;
             for (int v = 0; v < 4; v++) {
@@ -123,10 +172,11 @@ public class RenderUtil {
                 consumer.addVertex(pos.x(), pos.y(), pos.z(), vertexColor,
                         vertices[idx + 3], vertices[idx + 4],
                         OverlayTexture.NO_OVERLAY, FULL_LIGHT,
-                        normal.x(), normal.y(), normal.z());
+                        0, 0, 1);
             }
         }
     }
+
 
     private static CachedModel getCached(StandaloneModelKey<QuadCollection> key) {
         Minecraft minecraft = Minecraft.getInstance();
@@ -155,15 +205,9 @@ public class RenderUtil {
         int count = quads.size();
         float[] vertices = new float[count * 20];
         int[] colors = new int[count * 4];
-        float[] normals = new float[count * 3];
         int vi = 0;
         int ci = 0;
-        int ni = 0;
         for (BakedQuad quad : quads) {
-            Vector3fc n = quad.direction().getUnitVec3f();
-            normals[ni++] = n.x();
-            normals[ni++] = n.y();
-            normals[ni++] = n.z();
             for (int vertex = 0; vertex < 4; vertex++) {
                 Vector3fc p = quad.position(vertex);
                 vertices[vi++] = p.x();
@@ -175,6 +219,16 @@ public class RenderUtil {
                 colors[ci++] = quad.bakedColors().color(vertex);
             }
         }
-        return new CachedModel(collection, vertices, colors, normals);
+        return new CachedModel(collection, vertices, colors);
     }
+
+    /**
+     * 缓存结果：烘焙后把 quad 顶点数据预提取为紧凑数组（消除渲染期 record/switch/解包开销）。
+     * <ul>
+     *   <li>vertices：每顶点 5 float（x,y,z,u,v 局部坐标与 uv），4 顶点/quad 连续</li>
+     *   <li>colors：每顶点 1 int（烘焙色 ARGB，渲染期按 tint 直接使用或 multiply）</li>
+     * </ul>
+     * 法线不需要：BLOCK 格式管线（TRANSLUCENT_BLOCK）无法线元素，着色器无 per-face 漫反射。
+     */
+    private record CachedModel(QuadCollection collection, float[] vertices, int[] colors) {}
 }

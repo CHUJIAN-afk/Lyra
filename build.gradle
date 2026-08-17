@@ -32,7 +32,7 @@ neoForge {
     // Specify the version of NeoForge to use.
     version = project.neo_version
 
-    // This line is optional. Access Transformers are automatically detected
+    // Access Transformers are automatically detected
     // accessTransformers.add('src/main/resources/META-INF/accesstransformer.cfg')
 
     // Default run configurations.
@@ -72,6 +72,10 @@ neoForge {
 
         // applies to all the run configs above
         configureEach {
+            // Unsafe 内存访问直通（跳过 sun.misc.unsafe.memory.access 的 WARN 检查，
+            // RenderUtil 批量顶点写入的 Unsafe.put 内联为 mov 指令）
+            jvmArgument('-Dsun.misc.unsafe.memory.access=allow')
+
             // 26.2: DCEVM/HotswapAgent 参数为 JetBrains Runtime 专属,普通 JDK 25 无法识别。
             // 如需热重载,请改用 JBR 25 作为运行 JVM 后取消以下注释。
             // jvmArgument('-XX:+AllowEnhancedClassRedefinition')
