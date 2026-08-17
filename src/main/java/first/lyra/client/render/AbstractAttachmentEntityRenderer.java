@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import first.lyra.client.render.trail.ModelConfig;
 import first.lyra.client.render.trail.TrailConfig;
-import first.lyra.client.render.LyraRenderTypes;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
 import first.lyra.client.config.ClientConfig;
@@ -31,15 +30,18 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
 
     /**
      * 为指定附件实体创建渲染上下文
+     *
+     * @param entity      附件实体
+     * @param partialTick 部分 tick 插值进度
      */
-    protected abstract RenderContext<T> createContext(T entity);
+    protected abstract RenderContext<T> createContext(T entity, float partialTick);
 
     /** 渲染附件实体本体 */
     protected abstract void render(T entity, PoseStack poseStack, SubmitNodeCollector collector, PathNode visualNode, RenderContext<T> context, float partialTick, float alpha);
 
     @Override
     public void render(T entity, PoseStack poseStack, SubmitNodeCollector collector, float partialTick, int packedLight, PathNode visualNode) {
-        RenderContext<T> context = createContext(entity);
+        RenderContext<T> context = createContext(entity, partialTick);
         if (context != null) {
             poseStack.pushPose();
             float alpha = ClientConfig.AlphaModify.isTrue() ? getAlphaModify(context, visualNode, partialTick) : 1.0f;
