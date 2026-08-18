@@ -62,7 +62,7 @@ public final class RenderUtil {
         if (cached == null) {
             return;
         }
-        VertexConsumer consumer = bufferSource.getBuffer(Sheets.translucentCullBlockSheet());
+        VertexConsumer consumer = bufferSource.getBuffer(LyraRenderTypes.getModel());
         writeModel(poseStack.last().pose(), consumer, cached, tintColor, packedLight);
     }
 
