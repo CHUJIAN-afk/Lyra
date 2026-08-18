@@ -22,7 +22,7 @@ public class LyraRenderTypes extends RenderType {
     }
 
     private static final RenderType TRAIL = create("lyra_trail", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 256, false, true, CompositeState.builder()
-            .setShaderState(RenderStateShard.RENDERTYPE_TRANSLUCENT_SHADER)
+            .setShaderState(RenderStateShard.RENDERTYPE_ENTITY_TRANSLUCENT_CULL_SHADER)
             .setTextureState(new TextureStateShard(Lyra.rl("textures/trail.png"), false, false))
             .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
             .setCullState(NO_CULL)
@@ -32,6 +32,6 @@ public class LyraRenderTypes extends RenderType {
             .createCompositeState(false));
 
     public static RenderType getTrail() {
-        return TRAIL;
+        return RenderType.entityTranslucentEmissive(Lyra.rl("textures/trail.png"));
     }
 }
