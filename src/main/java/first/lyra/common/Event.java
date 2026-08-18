@@ -2,10 +2,10 @@ package first.lyra.common;
 
 import first.lyra.Lyra;
 import first.lyra.common.armorSet.ArmorSet;
-import first.lyra.common.builder.MinionWeaponItemBuilder;
-import first.lyra.common.attachment.ParticlesData;
 import first.lyra.common.attachment.DamageInfoData;
 import first.lyra.common.attachment.InvincibleData;
+import first.lyra.common.attachment.ParticlesData;
+import first.lyra.common.builder.MinionWeaponItemBuilder;
 import first.lyra.register.LyraAttributeRegister;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;

@@ -30,6 +30,7 @@ public class DropletTrailConfig<T extends AttachmentEntity> extends ConeTrailCon
         renderConeBody(setup);
         // 头部半球
         renderHeadHemisphere(setup);
+        flushVertices(setup.consumer);
     }
 
     /**

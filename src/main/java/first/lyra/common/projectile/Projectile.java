@@ -2,9 +2,9 @@ package first.lyra.common.projectile;
 
 import first.lyra.api.LyraHelper;
 import first.lyra.common.attachment.AttachmentEntityData;
-import first.lyra.common.minion.MinionDamageSource;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
+import first.lyra.common.minion.MinionDamageSource;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;

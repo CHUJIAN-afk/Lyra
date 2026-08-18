@@ -2,8 +2,8 @@ package first.lyra.client;
 
 import first.lyra.Lyra;
 import first.lyra.client.tooltip.TooltipHandler;
-import first.lyra.common.particle.genericParticle.GenericParticleProvider;
 import first.lyra.common.damageInfo.DamageInfoStyleManager;
+import first.lyra.common.particle.genericParticle.GenericParticleProvider;
 import first.lyra.register.LyraParticleRegister;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;

@@ -3,7 +3,6 @@ package first.lyra.register;
 import first.lyra.Lyra;
 import first.lyra.common.network.BatchedDamageInfoPayload;
 import first.lyra.common.network.BatchedParticlesPayload;
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;

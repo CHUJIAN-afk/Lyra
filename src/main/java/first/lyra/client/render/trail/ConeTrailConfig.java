@@ -52,6 +52,7 @@ public class ConeTrailConfig<T extends AttachmentEntity> extends TrailConfig<T, 
             return;
         }
         renderConeBody(setup);
+        flushVertices(setup.consumer);
     }
 
     /**

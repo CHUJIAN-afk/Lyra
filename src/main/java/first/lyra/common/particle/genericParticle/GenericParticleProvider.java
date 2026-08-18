@@ -1,6 +1,5 @@
 package first.lyra.common.particle.genericParticle;
 
-import first.lyra.common.particle.genericParticle.GenericParticleOptions;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleProvider;

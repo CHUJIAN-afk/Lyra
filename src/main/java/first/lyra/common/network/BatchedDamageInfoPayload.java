@@ -5,7 +5,6 @@ import first.lyra.common.attachment.DamageInfoData;
 import first.lyra.common.damageInfo.DamageInfo;
 import first.lyra.common.damageInfo.DamageInfoStyle;
 import first.lyra.common.damageInfo.DamageInfoStyleManager;
-import first.lyra.client.config.ClientConfig;
 import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;

@@ -2,7 +2,6 @@ package first.lyra.client.dynamicLight;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import first.lyra.common.entity.PathNode;
-import first.lyra.client.config.ClientConfig;
 import first.lyra.mixin.LevelRendererAccessor;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;

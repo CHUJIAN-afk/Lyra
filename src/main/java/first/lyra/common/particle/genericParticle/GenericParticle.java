@@ -2,7 +2,6 @@ package first.lyra.common.particle.genericParticle;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
-import first.lyra.common.particle.genericParticle.GenericParticleOptions;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;

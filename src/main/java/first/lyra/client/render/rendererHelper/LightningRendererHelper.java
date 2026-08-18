@@ -2,7 +2,7 @@ package first.lyra.client.render.rendererHelper;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import first.lyra.client.renderType.TrailRenderType;
+import first.lyra.client.render.LyraRenderTypes;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -33,7 +33,7 @@ import org.joml.Vector3f;
  * </ul>
  * </p>
  * <p>
- * 使用原版 {@code entity_translucent_emissive} 渲染类型（{@link TrailRenderType#getTrail()}），
+ * 使用原版 {@code entity_translucent_emissive} 渲染类型（{@link LyraRenderTypes#getTrail()}），
  * 原版与光影（Iris/Oculus）环境下效果一致。所有视觉效果在 Java 侧预乘进顶点色。
  * </p>
  *
@@ -193,7 +193,7 @@ public class LightningRendererHelper {
      * @param random       决定扭曲样式（分支位置/方向、各段垂直位移）。同种子实例产生确定性结果。
      */
     public void render(PoseStack poseStack, MultiBufferSource bufferSource, RandomSource random) {
-        VertexConsumer consumer = bufferSource.getBuffer(TrailRenderType.getTrail());
+        VertexConsumer consumer = bufferSource.getBuffer(LyraRenderTypes.getTrail());
         Matrix4f pose = poseStack.last().pose();
 
         // 世界坐标 -> 相对 renderOrigin 的局部坐标

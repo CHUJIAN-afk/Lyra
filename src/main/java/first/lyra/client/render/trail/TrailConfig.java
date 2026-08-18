@@ -3,12 +3,12 @@ package first.lyra.client.render.trail;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.render.RenderContext;
+import first.lyra.client.render.RenderUtil;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.FastColor;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -43,6 +43,15 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
 
     /** 历史节点数量，默认 4 */
     public int historyLength = 4;
+
+    // ===================== 顶点收集（writeVertices 批量提交，26.2 移植） =====================
+
+    /** 收集缓冲：每顶点 5 float（已变换 x,y,z + u,v）。 */
+    private float[] trailVertexData = new float[1024 * 5];
+    /** 收集缓冲：每顶点 1 int（ARGB）。 */
+    private int[] trailColorData = new int[1024];
+    /** 已收集顶点数。 */
+    private int trailVertexCount;
 
     /** 每节点插值分段数，默认 8 */
     public int segmentsPerNode = 8;
@@ -161,6 +170,7 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
         VertexConsumer consumer = bufferSource.getBuffer(renderType);
         Matrix4f matrix = new Matrix4f(poseStack.last().pose());
         Vec3 renderPos = visualNode.pos();
+        this.trailVertexCount = 0; // 清空收集缓冲
         return new RenderSetup<>(entity, consumer, matrix, partialTick, renderPos, smoothNodes);
     }
 
@@ -276,25 +286,54 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
                 .rotateZ((float) Math.toRadians(roll));
     }
 
-    // ===================== 四边形发射（10 参数快速路径） =====================
+    // ===================== 四边形发射（收集 + 批量提交） =====================
 
     /**
-     * 发射一个四边形（float 坐标版本，10 参数 addVertex 快速路径）。
+     * 收集一个四边形到缓冲（矩阵变换后暂存），由 {@link #flushVertices} 批量提交。
      */
     protected void emitQuad(VertexConsumer consumer, Matrix4f matrix,
                             float x1, float y1, float z1, int c1,
                             float x2, float y2, float z2, int c2,
                             float x3, float y3, float z3, int c3,
                             float x4, float y4, float z4, int c4) {
+        ensureTrailCapacity(this.trailVertexCount + 4);
         Vector3f v = new Vector3f();
-        matrix.transformPosition(x1, y1, z1, v);
-        consumer.addVertex(v.x, v.y, v.z, c1, 0, 0, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 1, 0, 0);
-        matrix.transformPosition(x2, y2, z2, v);
-        consumer.addVertex(v.x, v.y, v.z, c2, 1, 0, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 1, 0, 0);
-        matrix.transformPosition(x3, y3, z3, v);
-        consumer.addVertex(v.x, v.y, v.z, c3, 1, 1, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 1, 0, 0);
-        matrix.transformPosition(x4, y4, z4, v);
-        consumer.addVertex(v.x, v.y, v.z, c4, 0, 1, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 1, 0, 0);
+        appendTrailVertex(matrix, x1, y1, z1, c1, 0, 0, v);
+        appendTrailVertex(matrix, x2, y2, z2, c2, 1, 0, v);
+        appendTrailVertex(matrix, x3, y3, z3, c3, 1, 1, v);
+        appendTrailVertex(matrix, x4, y4, z4, c4, 0, 1, v);
+    }
+
+    private void appendTrailVertex(Matrix4f matrix, float x, float y, float z, int color, float u, float v, Vector3f scratch) {
+        matrix.transformPosition(x, y, z, scratch);
+        int vertexIndex = this.trailVertexCount * 5;
+        this.trailVertexData[vertexIndex] = scratch.x;
+        this.trailVertexData[vertexIndex + 1] = scratch.y;
+        this.trailVertexData[vertexIndex + 2] = scratch.z;
+        this.trailVertexData[vertexIndex + 3] = u;
+        this.trailVertexData[vertexIndex + 4] = v;
+        this.trailColorData[this.trailVertexCount] = color;
+        this.trailVertexCount++;
+    }
+
+    /** 收集完成：批量提交（Unsafe 直写）并清空缓冲。子类 render 末尾调用。 */
+    protected void flushVertices(VertexConsumer consumer) {
+        if (this.trailVertexCount > 0) {
+            RenderUtil.writeVertices(consumer, this.trailVertexData, this.trailColorData, LightTexture.FULL_BRIGHT, this.trailVertexCount);
+            this.trailVertexCount = 0;
+        }
+    }
+
+    private void ensureTrailCapacity(int requiredVertexCount) {
+        if (requiredVertexCount * 5 > this.trailVertexData.length) {
+            int newVertexCapacity = Math.max(requiredVertexCount, this.trailVertexData.length / 5 * 2);
+            float[] newVertexData = new float[newVertexCapacity * 5];
+            System.arraycopy(this.trailVertexData, 0, newVertexData, 0, this.trailVertexCount * 5);
+            this.trailVertexData = newVertexData;
+            int[] newColorData = new int[newVertexCapacity];
+            System.arraycopy(this.trailColorData, 0, newColorData, 0, this.trailVertexCount);
+            this.trailColorData = newColorData;
+        }
     }
 
     // ===================== 插值节点记录 =====================

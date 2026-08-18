@@ -2,12 +2,11 @@ package first.lyra.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import first.lyra.client.config.ClientConfig;
 import first.lyra.client.render.trail.ModelConfig;
 import first.lyra.client.render.trail.TrailConfig;
-import first.lyra.client.renderType.TrailRenderType;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.PathNode;
-import first.lyra.client.config.ClientConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.entity.player.Player;
@@ -31,31 +30,35 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
 
     /**
      * 为指定附件实体创建渲染上下文
+     *
+     * @param entity      附件实体
+     * @param partialTick 部分 tick 插值进度
      */
-    protected abstract RenderContext<T> createContext(T entity);
+    protected abstract RenderContext<T> createContext(T entity, float partialTick);
 
-    /** 渲染附件实体本体 */
-    protected abstract void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick);
+    /** 渲染附件实体本体（alpha：第一人称距离淡化透明度，模型渲染调用点直接使用） */
+    protected abstract void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick, float alpha);
 
     @Override
     public void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, int packedLight, PathNode visualNode) {
-        RenderContext<T> context = createContext(entity);
+        RenderContext<T> context = createContext(entity, partialTick);
         if (context != null) {
             poseStack.pushPose();
-            if (ClientConfig.AlphaModify.isTrue()) {
-                AlphaBufferSource alphaBufferSource = new AlphaBufferSource(bufferSource);
-                alphaBufferSource.setAlpha(getAlphaModify(context, visualNode, partialTick));
-                bufferSource = alphaBufferSource;
-            }
+            float alpha = getAlpha(context, visualNode, partialTick);
             if (context.hasTrail()) {
-                context.trail.render(entity, poseStack, bufferSource, partialTick, visualNode, TrailRenderType.getTrail());
+                context.trail.render(entity, poseStack, bufferSource, partialTick, visualNode, LyraRenderTypes.getTrail());
             }
-            modelModify(entity, poseStack, bufferSource, visualNode, context, partialTick);
+            modelModify(entity, poseStack, bufferSource, visualNode, context, partialTick, alpha);
             poseStack.popPose();
         }
     }
 
-    protected void modelModify(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick) {
+    /** 当前透明度（第一人称按距离淡化，AlphaModify 关闭时 1.0）。渲染器调用点直接使用。 */
+    protected float getAlpha(RenderContext<T> context, PathNode visualNode, float partialTick) {
+        return ClientConfig.AlphaModify.isTrue() ? getAlphaModify(context, visualNode, partialTick) : 1.0f;
+    }
+
+    protected void modelModify(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick, float alpha) {
         ModelConfig<T> model = context.model;
 
         // 绕过 PoseStack 的 6 次 mulPose + scale + translate，
@@ -92,7 +95,7 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
         poseStack.last().pose().mul(transform);
         poseStack.last().normal().mul(new Matrix3f().rotation(rotation));
 
-        render(entity, poseStack, bufferSource, visualNode, context, partialTick);
+        render(entity, poseStack, bufferSource, visualNode, context, partialTick, alpha);
         poseStack.popPose();
     }
 

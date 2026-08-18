@@ -1,10 +1,8 @@
 package first.lyra;
 
 import first.lyra.client.config.ClientConfig;
-import first.lyra.dataGenerator.LyraDataGeneratorEvent;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
-import first.lyra.register.LyraNetworkPacketRegister;
 import first.lyra.register.LyraParticleRegister;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;

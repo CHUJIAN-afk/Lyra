@@ -1,7 +1,5 @@
 package first.lyra.common.particle.genericParticle;
 
-import first.lyra.common.particle.genericParticle.GenericParticleOptions;
-
 import java.util.Random;
 
 /**

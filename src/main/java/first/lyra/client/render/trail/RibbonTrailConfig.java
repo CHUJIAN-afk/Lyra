@@ -111,5 +111,6 @@ public class RibbonTrailConfig<T extends AttachmentEntity> extends TrailConfig<T
                     prx + prevBase.x, pry + prevBase.y, prz + prevBase.z, prevBaseColor,
                     prx + prevTip.x, pry + prevTip.y, prz + prevTip.z, prevTipColor);
         }
+        flushVertices(setup.consumer);
     }
 }

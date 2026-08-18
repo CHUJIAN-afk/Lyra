@@ -4,6 +4,7 @@
   "package": "first.lyra.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
+    "BufferBuilderAccessor",
     "CombatRulesMixin",
     "CreativeModeTabMixin",
     "DamageSourceMixin",

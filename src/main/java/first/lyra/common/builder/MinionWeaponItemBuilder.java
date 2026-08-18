@@ -2,11 +2,11 @@ package first.lyra.common.builder;
 
 import first.lyra.api.LyraHelper;
 import first.lyra.common.attachment.AttachmentEntityData;
-import first.lyra.common.sound.Playable;
 import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.common.entity.PathNode;
 import first.lyra.common.item.IMinionWeaponItem;
 import first.lyra.common.minion.Minion;
+import first.lyra.common.sound.Playable;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;

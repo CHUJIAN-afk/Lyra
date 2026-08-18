@@ -1,9 +1,9 @@
 package first.lyra.common.damageInfo;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import first.lyra.client.render.RenderUtil;
 import first.lyra.utils.EasingCurve;
 import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -36,6 +36,15 @@ public class DamageInfo {
 
     /** 缓存：格式化后的伤害值字符串（含小数点） */
     private final String text;
+
+    // ===================== 顶点收集（writeVertices 批量提交，26.2 移植） =====================
+
+    /** 收集缓冲：每顶点 5 float（已变换 x,y,z + u,v）。 */
+    private float[] damageVertexData = new float[128 * 5];
+    /** 收集缓冲：每顶点 1 int（ARGB）。 */
+    private int[] damageColorData = new int[128];
+    /** 已收集顶点数。 */
+    private int damageVertexCount;
 
     public DamageInfo(DamageInfoStyle style, float damageAmount, Vec3 pos, Vec3 velocity, boolean critical) {
         this.style = style;
@@ -140,25 +149,48 @@ public class DamageInfo {
 
         int glyphPixelWidth = style.glyphPixelWidth();
         int length = text.length();
+        this.damageVertexCount = 0; // 清空收集缓冲
+        ensureDamageCapacity(length * 4);
         Vector3f v = new Vector3f();
         for (int i = 0; i < length; i++) {
             int glyph = glyphIndex(text.charAt(i));
             float u0 = (float) (glyph * glyphPixelWidth) / style.textureWidth();
             float u1 = (float) ((glyph + 1) * glyphPixelWidth) / style.textureWidth();
 
-            // 本地坐标先减 halfWidth 居中，再变换
+            // 本地坐标先减 halfWidth 居中，再变换 + 收集
             float x0 = i * step - halfWidth;
             float x1 = x0 + size;
 
-            // 4 个顶点，逐个变换后走 10 参数 fast path
-            matrix.transformPosition(x0, -halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u0, 0f, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 0, 0, 1);
-            matrix.transformPosition(x0, halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u0, 1f, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 0, 0, 1);
-            matrix.transformPosition(x1, halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u1, 1f, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 0, 0, 1);
-            matrix.transformPosition(x1, -halfSize, 0, v);
-            consumer.addVertex(v.x, v.y, v.z, color, u1, 0f, OverlayTexture.NO_OVERLAY, LightTexture.FULL_BRIGHT, 0, 0, 1);
+            appendDamageVertex(matrix, x0, -halfSize, 0, color, u0, 0f, v);
+            appendDamageVertex(matrix, x0, halfSize, 0, color, u0, 1f, v);
+            appendDamageVertex(matrix, x1, halfSize, 0, color, u1, 1f, v);
+            appendDamageVertex(matrix, x1, -halfSize, 0, color, u1, 0f, v);
+        }
+        RenderUtil.writeVertices(consumer, this.damageVertexData, this.damageColorData, LightTexture.FULL_BRIGHT, this.damageVertexCount);
+        this.damageVertexCount = 0;
+    }
+
+    private void appendDamageVertex(Matrix4f matrix, float x, float y, float z, int color, float u, float v, Vector3f scratch) {
+        matrix.transformPosition(x, y, z, scratch);
+        int vertexIndex = this.damageVertexCount * 5;
+        this.damageVertexData[vertexIndex] = scratch.x;
+        this.damageVertexData[vertexIndex + 1] = scratch.y;
+        this.damageVertexData[vertexIndex + 2] = scratch.z;
+        this.damageVertexData[vertexIndex + 3] = u;
+        this.damageVertexData[vertexIndex + 4] = v;
+        this.damageColorData[this.damageVertexCount] = color;
+        this.damageVertexCount++;
+    }
+
+    private void ensureDamageCapacity(int requiredVertexCount) {
+        if (requiredVertexCount * 5 > this.damageVertexData.length) {
+            int newVertexCapacity = Math.max(requiredVertexCount, this.damageVertexData.length / 5 * 2);
+            float[] newVertexData = new float[newVertexCapacity * 5];
+            System.arraycopy(this.damageVertexData, 0, newVertexData, 0, this.damageVertexCount * 5);
+            this.damageVertexData = newVertexData;
+            int[] newColorData = new int[newVertexCapacity];
+            System.arraycopy(this.damageColorData, 0, newColorData, 0, this.damageVertexCount);
+            this.damageColorData = newColorData;
         }
     }
 

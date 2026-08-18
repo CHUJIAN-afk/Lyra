@@ -2,7 +2,7 @@ package first.lyra.client.render.rendererHelper;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import first.lyra.client.renderType.TrailRenderType;
+import first.lyra.client.render.LyraRenderTypes;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -18,7 +18,7 @@ import org.joml.Matrix4f;
  * 一致，仅几何由圆柱改为球面。
  * </p>
  * <p>
- * 使用原版 {@code entity_translucent_emissive} 渲染类型（{@link TrailRenderType#getTrail()}），
+ * 使用原版 {@code entity_translucent_emissive} 渲染类型（{@link LyraRenderTypes#getTrail()}），
  * 原版与光影（Iris/Oculus）环境下效果一致。所有视觉效果在 Java 侧预乘进顶点色。
  * </p>
  * <p>
@@ -117,14 +117,14 @@ public class SphereRendererHelper {
      * @param bufferSource 缓冲源
      */
     public void render(PoseStack poseStack, MultiBufferSource bufferSource) {
-        VertexConsumer consumer = bufferSource.getBuffer(TrailRenderType.getTrail());
+        VertexConsumer consumer = bufferSource.getBuffer(LyraRenderTypes.getTrail());
         Matrix4f pose = poseStack.last().pose();
 
         // 基础颜色分量：RGB 全层一致，仅 alpha 按层渐变
         int baseR = FastColor.ARGB32.red(colorRGB);
         int baseG = FastColor.ARGB32.green(colorRGB);
         int baseB = FastColor.ARGB32.blue(colorRGB);
-        int baseA = Math.max(0, Math.min(255, Math.round(alpha * 255)));
+        int baseA = Math.clamp(Math.round(alpha * 255), 0, 255);
 
         for (int layer = 0; layer < layers; layer++) {
             // 层级比例: 0=最内层, 1=最外层
