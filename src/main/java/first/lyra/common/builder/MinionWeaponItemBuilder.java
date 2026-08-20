@@ -59,12 +59,14 @@ public class MinionWeaponItemBuilder<T extends Minion> {
     private SummonTooltip<T> summonTooltip = null;
     private TriConsumer<@NotNull IMinionWeaponItem<T>, @NotNull Player, @Nullable ItemStack> summonAction = (weapon, player, itemStack) -> {
         T minion = weapon.createMinion(player, itemStack);
-        LyraHelper lyraHelper = LyraHelper.get(player);
-        if (lyraHelper.canSummon(AttachmentEntityData.Type.Minion, 1)) {
-            AABB box = player.getBoundingBox();
-            Vec3 pos = box.getCenter();
-            minion.init(new PathNode(pos.offsetRandom(player.getRandom(), 2), 0, 0, 0));
-            lyraHelper.add(AttachmentEntityData.Type.Minion, minion);
+        if (minion != null) {
+            LyraHelper lyraHelper = LyraHelper.get(player);
+            if (lyraHelper.canSummon(AttachmentEntityData.Type.Minion, 1)) {
+                AABB box = player.getBoundingBox();
+                Vec3 pos = box.getCenter();
+                minion.init(new PathNode(pos.offsetRandom(player.getRandom(), 2), 0, 0, 0));
+                lyraHelper.add(AttachmentEntityData.Type.Minion, minion);
+            }
         }
     };
     private Consumer<Player> onRemove = null;
@@ -164,7 +166,7 @@ public class MinionWeaponItemBuilder<T extends Minion> {
         }
 
         @Override
-        public @NotNull AttachmentEntityType<T> getType() {
+        public @Nullable AttachmentEntityType<T> getType() {
             return typeSupplier.get();
         }
 
