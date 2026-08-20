@@ -27,7 +27,7 @@ public interface IMinionWeaponItem<T extends Minion> {
     /**
      * 获取此武器对应的仆从类型。
      */
-    @NotNull AttachmentEntityType<T> getType();
+    @Nullable AttachmentEntityType<T> getType();
 
     /**
      * 是否是哨兵。
@@ -68,7 +68,7 @@ public interface IMinionWeaponItem<T extends Minion> {
     default List<Component> getTooltips(ItemStack itemStack, Player player) {
         List<Component> toolTips = new ArrayList<>();
         AttachmentEntityType<?> type = getType();
-        Identifier location = LyraRegistries.ATTACHMENT_ENTITY_TYPES.getKey(type);
+        Identifier location = type != null ? LyraRegistries.ATTACHMENT_ENTITY_TYPES.getKey(type) : null;
         if (location != null) {
             float damage = getSummonDamage(player, itemStack);
             if (damage > 0) {
@@ -107,12 +107,16 @@ public interface IMinionWeaponItem<T extends Minion> {
      * 构建一个已初始化属性的仆从实例。
      */
     default T createMinion(@NotNull Player player, @Nullable ItemStack itemStack) {
-        T minion = getType().factory().get();
-        minion.setOwner(player);
-        minion.setDamage(getSummonDamage(player, itemStack));
-        minion.setKnockback(getSummonKnockback(player, itemStack));
-        minion.setArmorPierce(getSummonArmorPierce(player, itemStack));
-        return minion;
+        AttachmentEntityType<T> type = getType();
+        if (type != null) {
+            T minion = type.factory().get();
+            minion.setOwner(player);
+            minion.setDamage(getSummonDamage(player, itemStack));
+            minion.setKnockback(getSummonKnockback(player, itemStack));
+            minion.setArmorPierce(getSummonArmorPierce(player, itemStack));
+            return minion;
+        }
+        return null;
     }
 
     /**
