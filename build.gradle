@@ -10,6 +10,9 @@ group = mod_group_id
 
 repositories {
     mavenLocal()
+    maven {
+        url "https://cursemaven.com"
+    }
     exclusiveContent {
         forRepository {
             maven {
@@ -115,6 +118,7 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 
 dependencies {
     compileOnly("com.geckolib:geckolib-neoforge-26.2:${geckolibVersion}")
+    compileOnly("curse.maven:jei-238222:8632218")
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

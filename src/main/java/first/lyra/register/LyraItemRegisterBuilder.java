@@ -8,6 +8,7 @@ import first.lyra.dataGenerator.provider.LyraLanguageProvider;
 import first.lyra.dataGenerator.provider.LyraRecipeProvider;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
@@ -44,6 +45,16 @@ public class LyraItemRegisterBuilder<T extends Item> {
     /** 使用宿主 mod 的 DeferredRegister 注册物品。 */
     public static LyraItemRegisterBuilder<Item> build(DeferredRegister.Items register, String name) {
         return build(register, name, () -> new Item(new Item.Properties()));
+    }
+
+    public LyraItemRegisterBuilder<T> jeiInfo(int index, String enDesc, String zhDesc) {
+        if (register != null) {
+            Identifier id = register.getId();
+            String key = "item." + id.getNamespace() + "." + id.getPath() + "jei.description." + index;
+            LyraLanguageProvider.addIngredientInfo(register, Component.translatable(key));
+            return language(key, enDesc, zhDesc);
+        }
+        return this;
     }
 
     public LyraItemRegisterBuilder<T> language(String key, String enDesc, String zhDesc) {
