@@ -116,6 +116,13 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                     if (minions.isEmpty()) {
                         break;
                     }
+                    if (player.isDeadOrDying() || !player.isAlive()) {
+                        for (Minion minion : minions) {
+                            minion.setRemove();
+                            changed = true;
+                        }
+                        break;
+                    }
                     if (minions.stream().allMatch(AttachmentEntity::isRemove)) {
                         break;
                     }
