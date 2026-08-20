@@ -2,13 +2,20 @@ package first.lyra.dataGenerator.provider;
 
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.data.PackOutput;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.ItemLike;
+import net.neoforged.fml.ModList;
+import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforge.common.data.LanguageProvider;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LyraLanguageProvider extends LanguageProvider {
 
+    public static final Map<ItemLike, List<Component>> InfoMap = new HashMap<>();
     public static final Map<String, String[]> LanguageGenerate = new HashMap<>();
 
     protected final String locale;
@@ -20,6 +27,12 @@ public class LyraLanguageProvider extends LanguageProvider {
 
     public static void entry(String key, String en, String zh) {
         LanguageGenerate.put(key, new String[]{en, zh});
+    }
+
+    public static void addIngredientInfo(ItemLike item, Component component) {
+        if (ModList.get().isLoaded("jei") && FMLLoader.getDist().isClient()) {
+            InfoMap.computeIfAbsent(item, key -> new ArrayList<>()).add(component);
+        }
     }
 
     protected void init() {
