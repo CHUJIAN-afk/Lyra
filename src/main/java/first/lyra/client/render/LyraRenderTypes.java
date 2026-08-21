@@ -1,5 +1,6 @@
 package first.lyra.client.render;
 
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import first.lyra.Lyra;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
@@ -16,6 +17,11 @@ import net.minecraft.resources.Identifier;
 @SuppressWarnings("deprecation")
 public final class LyraRenderTypes {
 
+    /** TRANSLUCENT_BLOCK 克隆：不剔除背面（模型/拖尾/伤害数字均为双面可见）。 */
+    private static final RenderPipeline TRANSLUCENT_NO_CULL = RenderPipelines.TRANSLUCENT_BLOCK.toBuilder()
+            .withCull(false)
+            .build();
+
     private LyraRenderTypes() {
     }
 
@@ -30,7 +36,7 @@ public final class LyraRenderTypes {
      * </p>
      */
     public static final RenderType ENTITY_ATLAS_TRANSLUCENT = RenderType.create("lyra_entity_atlas_translucent",
-            RenderSetup.builder(RenderPipelines.TRANSLUCENT_BLOCK)
+            RenderSetup.builder(TRANSLUCENT_NO_CULL)
                     .withTexture("Sampler0", TextureAtlas.LOCATION_ITEMS)
                     .useLightmap()
                     .useOverlay()
@@ -38,7 +44,7 @@ public final class LyraRenderTypes {
 
     /** 拖尾渲染类型（block translucent 管线 + trail 纹理，BLOCK 格式批量直写性能最优）。 */
     public static final RenderType TRAIL = RenderType.create("lyra_trail",
-            RenderSetup.builder(RenderPipelines.TRANSLUCENT_BLOCK)
+            RenderSetup.builder(TRANSLUCENT_NO_CULL)
                     .withTexture("Sampler0", Lyra.id("textures/trail.png"))
                     .useLightmap()
                     .useOverlay()
@@ -47,7 +53,7 @@ public final class LyraRenderTypes {
     /** 单纹理 translucent 管线（block 格式，伤害数字等自定义几何批量直写）。 */
     public static RenderType textureTranslucent(Identifier texture) {
         return RenderType.create("lyra_texture_translucent",
-                RenderSetup.builder(RenderPipelines.TRANSLUCENT_BLOCK)
+                RenderSetup.builder(TRANSLUCENT_NO_CULL)
                         .withTexture("Sampler0", texture)
                         .useLightmap()
                         .useOverlay()
