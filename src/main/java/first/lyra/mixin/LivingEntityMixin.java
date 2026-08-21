@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.sugar.Local;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.minion.MinionDamageSource;
+import first.lyra.mixinHandler.LivingEntityMixinHandler;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.server.level.ServerLevel;
@@ -30,21 +31,11 @@ public class LivingEntityMixin {
         living.getData(LyraAttachmentRegister.InvincibleData).tick();
     }
 
-    // 26.2 中 hurt(DamageSource, float) 已移除,服务端伤害入口改为 hurtServer(ServerLevel, DamageSource, float)
     @WrapMethod(method = "hurtServer")
-    public boolean hurtServer(ServerLevel level, DamageSource source, float amount, Operation<Boolean> original) {
-        if (source instanceof MinionDamageSource minionDamageSource) {
-            Minion minion = minionDamageSource.getMinion();
-            Player owner = minion.getOwner();
-            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonDamage);
-            float scale = instance != null ? (float) instance.getValue() : 1;
-            amount *= scale;
-            amount *= 0.85f + owner.getRandom().nextFloat() * 0.3f;
-        }
-        return original.call(level, source, amount);
+    public boolean hurtServer(ServerLevel level, DamageSource source, float damage, Operation<Boolean> original) {
+        return LivingEntityMixinHandler.hurtServer(LivingEntity.class.cast(this), level, source, damage, original);
     }
 
-    // 26.2 中 knockback(DDD)V 已删除;伤害流程为 hurtServer -> dealDefaultKnockback -> knockback(DDD, DamageSource, float)
     @ModifyArg(
             method = "dealDefaultKnockback",
             at = @At(

@@ -50,6 +50,7 @@ public class LaserRendererHelper {
     private int colorRGB = 0xFFFFFFFF;
     private float alpha = 0.8f;
     private float innerRatio = 0.3f;    // 最内层相对半径(0~1)
+    private boolean caps = true;        // 是否闭合两端端面（默认闭合）
 
     /** 全亮光照常量（消除每顶点 pack 调用）。 */
     private static final int FULL_LIGHT = LightCoordsUtil.pack(LightCoordsUtil.FULL_BRIGHT, LightCoordsUtil.FULL_SKY);
@@ -129,6 +130,18 @@ public class LaserRendererHelper {
         return this;
     }
 
+    /**
+     * 是否闭合两端端面（默认 true = 闭合）。
+     * <p>
+     * 默认补画近端(z=0)与远端(z=-length)两个实心圆盘（最外层半径 + 完整 alpha）；
+     * 长激光如需开口管效果可传 false 关闭。
+     * </p>
+     */
+    public LaserRendererHelper caps(boolean caps) {
+        this.caps = caps;
+        return this;
+    }
+
     // -------------------- 渲染 --------------------
     // 26.2: MultiBufferSource 移除,渲染走 submitCustomGeometry（顶点组装后批量直写）
     public void render(PoseStack poseStack, SubmitNodeCollector collector) {
@@ -154,6 +167,16 @@ public class LaserRendererHelper {
                 float layerAlpha = mix(1.0f, 0.15f, layerRatio);
 
                 renderLayer(consumer, poseMatrix, radiusScale, layerAlpha, baseR, baseG, baseB, baseA);
+            }
+            if (caps) {
+                renderCaps(consumer, poseMatrix, baseR, baseG, baseB, baseA);
+            }
+            // 跨几何体共享 buffer（同 RenderType 合并绘制）：顶点数对齐到 12 的倍数
+            // （QUADS 4 顶点/四边形 与 TRIANGLES 3 顶点/三角形 的公倍数），
+            // 末尾补退化顶点避免余数与下一个几何体组成错误图元
+            int remainder = this.assembler.getVertexCount() % 12;
+            if (remainder != 0) {
+                this.assembler.duplicateLast(12 - remainder);
             }
             this.assembler.write(consumer, FULL_LIGHT);
         });
@@ -190,6 +213,40 @@ public class LaserRendererHelper {
             emitVertex(consumer, pose, cos2 * rNear, sin2 * rNear, 0, vertexColor, u, 0f);
             emitVertex(consumer, pose, cos2 * rFar, sin2 * rFar, -length, vertexColor, u, 1f);
             emitVertex(consumer, pose, cos1 * rFar, sin1 * rFar, -length, vertexColor, u, 1f);
+        }
+    }
+
+    /**
+     * 渲染两端端面（闭合圆盘）。
+     * <p>
+     * 以最外层半径（radiusStart/radiusEnd）+ 完整 alpha 画实心圆盘：
+     * 圆心一个顶点 + 每 segment 两个圆周顶点构成 fan。渲染类型为双面
+     * （TRANSLUCENT_NO_CULL），绕序无需严格；近端反绕、远端顺绕保证双面视觉一致。
+     * </p>
+     */
+    private void renderCaps(VertexConsumer consumer, Matrix4f pose, int baseR, int baseG, int baseB, int baseA) {
+        int vertexColor = ARGB.color(baseA, baseR, baseG, baseB);
+
+        // 近端面 (z=0)
+        emitVertex(consumer, pose, 0, 0, 0, vertexColor, 0.5f, 0.5f);
+        for (int j = 0; j < segments; j++) {
+            float angle1 = (float) (j) / segments * (float) (Math.PI * 2.0);
+            float angle2 = (float) (j + 1) / segments * (float) (Math.PI * 2.0);
+            float cos1 = (float) Math.cos(angle1), sin1 = (float) Math.sin(angle1);
+            float cos2 = (float) Math.cos(angle2), sin2 = (float) Math.sin(angle2);
+            emitVertex(consumer, pose, cos1 * radiusStart, sin1 * radiusStart, 0, vertexColor, 0.5f, 0f);
+            emitVertex(consumer, pose, cos2 * radiusStart, sin2 * radiusStart, 0, vertexColor, 0.5f, 0f);
+        }
+
+        // 远端面 (z=-length)
+        emitVertex(consumer, pose, 0, 0, -length, vertexColor, 0.5f, 0.5f);
+        for (int j = 0; j < segments; j++) {
+            float angle1 = (float) (j) / segments * (float) (Math.PI * 2.0);
+            float angle2 = (float) (j + 1) / segments * (float) (Math.PI * 2.0);
+            float cos1 = (float) Math.cos(angle1), sin1 = (float) Math.sin(angle1);
+            float cos2 = (float) Math.cos(angle2), sin2 = (float) Math.sin(angle2);
+            emitVertex(consumer, pose, cos2 * radiusEnd, sin2 * radiusEnd, -length, vertexColor, 0.5f, 1f);
+            emitVertex(consumer, pose, cos1 * radiusEnd, sin1 * radiusEnd, -length, vertexColor, 0.5f, 1f);
         }
     }
 
