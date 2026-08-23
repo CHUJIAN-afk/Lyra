@@ -7,6 +7,7 @@ import first.lyra.common.particle.genericParticle.GenericParticleProvider;
 import first.lyra.common.damageInfo.DamageInfoStyleManager;
 import first.lyra.register.LyraParticleRegister;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
@@ -17,7 +18,7 @@ import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 @EventBusSubscriber(modid = Lyra.MODID, value = Dist.CLIENT)
 public class ClientEvent {
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void handler(ItemTooltipEvent event) {
         TooltipHandler.handler(event);
     }

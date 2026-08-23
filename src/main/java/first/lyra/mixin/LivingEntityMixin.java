@@ -5,7 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.sugar.Local;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.minion.MinionDamageSource;
-import first.lyra.mixinHandler.LivingEntityMixinHandler;
+import first.lyra.mixinHandler.MixinHandler;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.server.level.ServerLevel;
@@ -29,11 +29,6 @@ public class LivingEntityMixin {
     private void tick(CallbackInfo ci) {
         LivingEntity living = (LivingEntity) (Object) this;
         living.getData(LyraAttachmentRegister.InvincibleData).tick();
-    }
-
-    @WrapMethod(method = "hurtServer")
-    public boolean hurtServer(ServerLevel level, DamageSource source, float damage, Operation<Boolean> original) {
-        return LivingEntityMixinHandler.hurtServer(LivingEntity.class.cast(this), level, source, damage, original);
     }
 
     @ModifyArg(

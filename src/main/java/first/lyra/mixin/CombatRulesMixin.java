@@ -4,6 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.minion.MinionDamageSource;
+import first.lyra.mixinHandler.MixinHandler;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.world.damagesource.CombatRules;
 import net.minecraft.world.damagesource.DamageSource;
@@ -21,12 +22,9 @@ public class CombatRulesMixin {
     private static float modifyArmorValue(LivingEntity victim, float damage, DamageSource source, float totalArmor, float armorToughness, Operation<Float> original) {
         if (source instanceof MinionDamageSource minionDamageSource) {
             Minion minion = minionDamageSource.getMinion();
-            totalArmor -= minion.getArmorPierce();
             Player owner = minion.getOwner();
-            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonArmorPierce);
-            if (instance != null) {
-                totalArmor -= (float) instance.getValue();
-            }
+            damage = MixinHandler.getModifyDamage(victim, owner, minion, damage, minionDamageSource);
+            totalArmor = MixinHandler.getModifyArmorPierce(victim, owner, minion, totalArmor, minionDamageSource);
         }
         return original.call(victim, damage, source, Math.max(totalArmor, 0), armorToughness);
     }

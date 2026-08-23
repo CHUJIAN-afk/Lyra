@@ -54,7 +54,13 @@ public class LyraItemTagsProvider extends ItemTagsProvider {
                         Item item = itemLike.asItem();
                         ResourceKey<Item> key = function.apply(item);
                         appender.add(key);
-                        Equippable equippable = item.getDefaultInstance().get(DataComponents.EQUIPPABLE);
+                        Equippable equippable = null;
+                        try {
+                            equippable = item.getDefaultInstance().get(DataComponents.EQUIPPABLE);
+                        } catch (NullPointerException ignored) {
+                            // 26.2 datagen 缺陷：mod item 的 components 未绑定（不进 ReloadableServerResources），
+                            // Item.getDefaultInstance 抛 "Components not bound yet"，跳过护甲细分
+                        }
                         if (equippable != null) {
                             EquipmentSlot equipmentSlot = equippable.slot();
                             if (tag == Tags.Items.ARMORS) {
