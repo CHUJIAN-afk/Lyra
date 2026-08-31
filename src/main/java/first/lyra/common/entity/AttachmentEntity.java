@@ -96,8 +96,8 @@ public abstract class AttachmentEntity {
             }
             if (!isRemove()) {
                 // 碰撞攻击检测
-                if (this instanceof ICollideAttack<?>) {
-                    @SuppressWarnings("unchecked") ICollideAttack<AttachmentEntity> collideAttack = (ICollideAttack<AttachmentEntity>) this;
+                if (this instanceof IEntityCollision<?>) {
+                    @SuppressWarnings("unchecked") IEntityCollision<AttachmentEntity> collideAttack = (IEntityCollision<AttachmentEntity>) this;
                     if (collideAttack.canCollideAttack()) {
                         collideAttack.processCollision(this);
                     }

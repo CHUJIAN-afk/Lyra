@@ -151,6 +151,6 @@
 - mixin 注入点:tick、attack、hurtServer、dealDefaultKnockback、buildContents、extractRenderState、EffectsInInventory.extractRenderState、getPackedLightCoords(final 可包装)、getLightProbePosition
 - 注册:DeferredRegister/DeferredHolder/DeferredItem、NewRegistryEvent/RegistryBuilder、AttachmentType、EntityAttributeModificationEvent(DeferredHolder 即 Holder)、RangedAttribute、Attribute.setSyncable
 - 网络:CustomPacketPayload/StreamCodec/ByteBufCodecs/RegisterPayloadHandlersEvent/PacketDistributor/HandlerThread、RegistryFriendlyByteBuf
-- 实体:DamageSource 4 参构造(可继承)、typeHolder、DamageSources.generic、Vec3.offsetRandom、Mth 全套、getEntitiesOfClass、getBlockCollisions、Shapes.collide(List→Iterable 源码兼容)
+- 实体:DamageSource 4 参构造(可继承)、typeSupplier、DamageSources.generic、Vec3.offsetRandom、Mth 全套、getEntitiesOfClass、getBlockCollisions、Shapes.collide(List→Iterable 源码兼容)
 - GUI:CreativeModeTab.buildContents/字段、selectedTab/scrollOffs、getLeftPos/getTopPos、TooltipFlag、ModConfigSpec、ConfigurationScreen、IConfigScreenFactory
 - 事件:bust 8.0.5、EventBusSubscriber、LevelTickEvent、PlayerInteractEvent、LivingEquipmentChangeEvent(存在性待 NeoForge jar 终验)

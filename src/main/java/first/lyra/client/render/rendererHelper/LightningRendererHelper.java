@@ -3,7 +3,6 @@ package first.lyra.client.render.rendererHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.render.LyraRenderTypes;
-import first.lyra.client.render.VertexAssembler;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ARGB;
@@ -77,8 +76,6 @@ public class LightningRendererHelper {
     /** 位置预变换复用（避免每顶点分配）。 */
     private final Vector3f scratch = new Vector3f();
 
-    /** 顶点批量组装器（回调末尾 MemorySegment 直写）。 */
-    private final VertexAssembler assembler = new VertexAssembler();
 
     private LightningRendererHelper() {
     }
@@ -208,7 +205,6 @@ public class LightningRendererHelper {
             // 必须用回调的 pose 快照(提交时 copy),不能捕获 poseStack.last()——提交延迟执行,
             // poseStack 随后会被 popPose/mulPose 修改,捕获的矩阵会指向错误位置
             Matrix4f poseMatrix = pose.pose();
-            this.assembler.clear();
 
             // 世界坐标 -> 相对 renderOrigin 的局部坐标
             Vector3f sLocal = worldToLocal(start, renderOrigin);
@@ -290,7 +286,6 @@ public class LightningRendererHelper {
                     renderLayer(consumer, poseMatrix, bPoints, bpa, bpb, radius, vertexColor);
                 }
             }
-            this.assembler.write(consumer, FULL_LIGHT);
         });
     }
 
@@ -358,6 +353,11 @@ public class LightningRendererHelper {
                 emitVertex(consumer, pose, v01, vertexColor, u, v0, segDir);
                 emitVertex(consumer, pose, v11, vertexColor, u, v1, segDir);
                 emitVertex(consumer, pose, v10, vertexColor, u, v1, segDir);
+                // 反向绕序一遍（管线剔除背面，几何层手动双面）
+                emitVertex(consumer, pose, v10, vertexColor, u, v1, segDir);
+                emitVertex(consumer, pose, v11, vertexColor, u, v1, segDir);
+                emitVertex(consumer, pose, v01, vertexColor, u, v0, segDir);
+                emitVertex(consumer, pose, v00, vertexColor, u, v0, segDir);
             }
         }
     }
@@ -392,7 +392,8 @@ public class LightningRendererHelper {
     private void emitVertex(VertexConsumer consumer, Matrix4f pose, Vector3f v, int color, float u, float vCoord, Vector3f normal) {
         scratch.set(v);
         pose.transformPosition(scratch);
-        this.assembler.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, vCoord);
+        consumer.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, vCoord,
+                OverlayTexture.NO_OVERLAY, FULL_LIGHT, normal.x(), normal.y(), normal.z());
     }
 
     private static Vector3f worldToLocal(Vec3 world, Vec3 origin) {

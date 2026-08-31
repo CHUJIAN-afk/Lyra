@@ -30,11 +30,6 @@ public class Event {
         ArmorSet.handler(event);
     }
 
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void handler(PlayerInteractEvent.RightClickItem event) {
-        MinionWeaponItemBuilder.handler(event);
-    }
-
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void handler(EntityAttributeModificationEvent event) {
         LyraAttributeRegister.handler(event);
@@ -43,6 +38,5 @@ public class Event {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void handler(LivingDamageEvent.Post event) {
         InvincibleData.handler(event);
-        // 伤害信息数据构造已迁移到 DamageInfo 子模组(DamageInfoData.handler 由子模组调用)
     }
 }

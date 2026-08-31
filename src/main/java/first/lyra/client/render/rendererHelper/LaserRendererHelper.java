@@ -3,7 +3,6 @@ package first.lyra.client.render.rendererHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.render.LyraRenderTypes;
-import first.lyra.client.render.VertexAssembler;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ARGB;
@@ -58,8 +57,6 @@ public class LaserRendererHelper {
     /** 位置预变换复用（避免每顶点分配）。 */
     private final Vector3f scratch = new Vector3f();
 
-    /** 顶点批量组装器（回调末尾 MemorySegment 直写）。 */
-    private final VertexAssembler assembler = new VertexAssembler();
 
     private LaserRendererHelper() {
     }
@@ -149,7 +146,6 @@ public class LaserRendererHelper {
             // 必须用回调的 pose 快照(提交时 copy),不能捕获 poseStack.last()——提交延迟执行,
             // poseStack 随后会被 popPose/mulPose 修改,捕获的矩阵会指向错误位置
             Matrix4f poseMatrix = pose.pose();
-            this.assembler.clear();
 
             // 基础颜色分量：RGB 全层一致（保证圆柱连续，不压黑接缝），仅 alpha 按层渐变
             int baseR = ARGB.red(colorRGB);
@@ -171,14 +167,6 @@ public class LaserRendererHelper {
             if (caps) {
                 renderCaps(consumer, poseMatrix, baseR, baseG, baseB, baseA);
             }
-            // 跨几何体共享 buffer（同 RenderType 合并绘制）：顶点数对齐到 12 的倍数
-            // （QUADS 4 顶点/四边形 与 TRIANGLES 3 顶点/三角形 的公倍数），
-            // 末尾补退化顶点避免余数与下一个几何体组成错误图元
-            int remainder = this.assembler.getVertexCount() % 12;
-            if (remainder != 0) {
-                this.assembler.duplicateLast(12 - remainder);
-            }
-            this.assembler.write(consumer, FULL_LIGHT);
         });
     }
 
@@ -209,10 +197,15 @@ public class LaserRendererHelper {
             float u = ((float) j + 0.5f) / segments;
 
             // 四个顶点构成一个纵向四边形(沿轴向): 近角1, 近角2, 远角2, 远角1
+            // 正向 + 反向绕序各一遍（管线剔除背面，几何层手动双面）
             emitVertex(consumer, pose, cos1 * rNear, sin1 * rNear, 0, vertexColor, u, 0f);
             emitVertex(consumer, pose, cos2 * rNear, sin2 * rNear, 0, vertexColor, u, 0f);
             emitVertex(consumer, pose, cos2 * rFar, sin2 * rFar, -length, vertexColor, u, 1f);
             emitVertex(consumer, pose, cos1 * rFar, sin1 * rFar, -length, vertexColor, u, 1f);
+            emitVertex(consumer, pose, cos1 * rFar, sin1 * rFar, -length, vertexColor, u, 1f);
+            emitVertex(consumer, pose, cos2 * rFar, sin2 * rFar, -length, vertexColor, u, 1f);
+            emitVertex(consumer, pose, cos2 * rNear, sin2 * rNear, 0, vertexColor, u, 0f);
+            emitVertex(consumer, pose, cos1 * rNear, sin1 * rNear, 0, vertexColor, u, 0f);
         }
     }
 
@@ -228,25 +221,46 @@ public class LaserRendererHelper {
         int vertexColor = ARGB.color(baseA, baseR, baseG, baseB);
 
         // 近端面 (z=0)
-        emitVertex(consumer, pose, 0, 0, 0, vertexColor, 0.5f, 0.5f);
-        for (int j = 0; j < segments; j++) {
-            float angle1 = (float) (j) / segments * (float) (Math.PI * 2.0);
-            float angle2 = (float) (j + 1) / segments * (float) (Math.PI * 2.0);
-            float cos1 = (float) Math.cos(angle1), sin1 = (float) Math.sin(angle1);
-            float cos2 = (float) Math.cos(angle2), sin2 = (float) Math.sin(angle2);
-            emitVertex(consumer, pose, cos1 * radiusStart, sin1 * radiusStart, 0, vertexColor, 0.5f, 0f);
-            emitVertex(consumer, pose, cos2 * radiusStart, sin2 * radiusStart, 0, vertexColor, 0.5f, 0f);
-        }
-
+        renderDisc(consumer, pose, 0, radiusStart, vertexColor, false);
         // 远端面 (z=-length)
-        emitVertex(consumer, pose, 0, 0, -length, vertexColor, 0.5f, 0.5f);
+        renderDisc(consumer, pose, -length, radiusEnd, vertexColor, true);
+    }
+
+    /**
+     * 渲染实心圆盘端面（QUADS 拓扑下的三角扇形）。
+     * <p>
+     * 每 segment 一个退化 quad（圆心, p_j, p_{j+1}, 圆心）——QUADS 管线无法直接画
+     * TRIANGLES fan，fan 顶点流会被 QUADS 错位解读成横贯面片；退化 quad 首尾圆心重合
+     * 等效三角扇形。绕序：近端逆时针（法线 +Z）、远端反向（法线 -Z），双面一致。
+     * </p>
+     */
+    private void renderDisc(VertexConsumer consumer, Matrix4f pose, float z, float radius, int vertexColor, boolean far) {
         for (int j = 0; j < segments; j++) {
             float angle1 = (float) (j) / segments * (float) (Math.PI * 2.0);
             float angle2 = (float) (j + 1) / segments * (float) (Math.PI * 2.0);
             float cos1 = (float) Math.cos(angle1), sin1 = (float) Math.sin(angle1);
             float cos2 = (float) Math.cos(angle2), sin2 = (float) Math.sin(angle2);
-            emitVertex(consumer, pose, cos2 * radiusEnd, sin2 * radiusEnd, -length, vertexColor, 0.5f, 1f);
-            emitVertex(consumer, pose, cos1 * radiusEnd, sin1 * radiusEnd, -length, vertexColor, 0.5f, 1f);
+            if (far) {
+                emitVertex(consumer, pose, 0, 0, z, vertexColor, 0.5f, 1f);
+                emitVertex(consumer, pose, cos2 * radius, sin2 * radius, z, vertexColor, 0.5f, 1f);
+                emitVertex(consumer, pose, cos1 * radius, sin1 * radius, z, vertexColor, 0.5f, 1f);
+            } else {
+                emitVertex(consumer, pose, 0, 0, z, vertexColor, 0.5f, 0f);
+                emitVertex(consumer, pose, cos1 * radius, sin1 * radius, z, vertexColor, 0.5f, 0f);
+                emitVertex(consumer, pose, cos2 * radius, sin2 * radius, z, vertexColor, 0.5f, 0f);
+            }
+            emitVertex(consumer, pose, 0, 0, z, vertexColor, 0.5f, 0f); // 闭合退化 quad
+            // 反向绕序一遍（管线剔除背面，几何层手动双面）
+            if (far) {
+                emitVertex(consumer, pose, 0, 0, z, vertexColor, 0.5f, 1f);
+                emitVertex(consumer, pose, cos1 * radius, sin1 * radius, z, vertexColor, 0.5f, 1f);
+                emitVertex(consumer, pose, cos2 * radius, sin2 * radius, z, vertexColor, 0.5f, 1f);
+            } else {
+                emitVertex(consumer, pose, 0, 0, z, vertexColor, 0.5f, 0f);
+                emitVertex(consumer, pose, cos2 * radius, sin2 * radius, z, vertexColor, 0.5f, 0f);
+                emitVertex(consumer, pose, cos1 * radius, sin1 * radius, z, vertexColor, 0.5f, 0f);
+            }
+            emitVertex(consumer, pose, 0, 0, z, vertexColor, 0.5f, 0f); // 闭合退化 quad
         }
     }
 
@@ -254,7 +268,7 @@ public class LaserRendererHelper {
     private void emitVertex(VertexConsumer consumer, Matrix4f pose, float x, float y, float z, int color, float u, float v) {
         scratch.set(x, y, z);
         pose.transformPosition(scratch);
-        this.assembler.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, v);
+        consumer.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, v, OverlayTexture.NO_OVERLAY, FULL_LIGHT, 0, 0, 1);
     }
 
     private static float mix(float a, float b, float t) {

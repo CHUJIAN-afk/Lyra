@@ -89,7 +89,7 @@ GeoSideloader.create(Lyra.rl("laser_minigun"))   // 模型 RL → geo/texture/an
 
 - `Section(order, texture, animBanner, tag)` 定义分段：**特征标签**决定物品自动归组（无需注册时指定）
 - `CreativeTabDispatcher.registerTab(tab)` 让宿主 Tab 接入 Lyra 分组逻辑；mixin `CreativeModeTab.buildContents` 将物品按分段排序，每段前插整行空位（横幅行）
-- 动画横幅：`AnimBanner(frameHeight, frameTime, totalFrames)` 帧动画贴图，`CreativeModeInventoryScreenMixin` 在物品栏中逐段渲染横幅（跟随滚动对齐，**鼠标悬停时播放**）
+- 动画横幅：`AnimBanner(frameHeight, frameTime, totalFrames)` 帧动画贴图，`AbstractContainerScreenMixin` 在物品栏中逐段渲染横幅（跟随滚动对齐，**鼠标悬停时播放**）
 
 ### <a id="feat-6"></a>6. 物品注册时的数据生成集成
 

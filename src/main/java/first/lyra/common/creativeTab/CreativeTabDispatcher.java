@@ -1,6 +1,7 @@
 package first.lyra.common.creativeTab;
 
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
@@ -43,10 +44,12 @@ public final class CreativeTabDispatcher {
     /**
      * 归入该分段的全部物品（带特征标签的已注册物品）。
      */
-    public static List<ItemStack> itemsOf(Section section) {
-        return SelectedTabs.computeIfAbsent(section, key -> BuiltInRegistries.ITEM.stream()
-                .map(Item::getDefaultInstance)
-                .filter(itemStack -> itemStack.is(section.tag()))
-                .toList());
+    public static List<ItemStack> itemsOf(HolderLookup.Provider provider, Section section) {
+        return SelectedTabs.computeIfAbsent(section, key -> {
+            List<ItemStack> list = new ArrayList<>();
+            list.addAll(BuiltInRegistries.ITEM.stream().map(Item::getDefaultInstance).filter(itemStack -> itemStack.is(section.tag())).toList());
+            list.addAll(section.function().apply(provider));
+            return list;
+        });
     }
 }

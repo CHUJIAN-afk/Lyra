@@ -14,7 +14,7 @@ import java.util.List;
  *
  * @param <T> 附件实体类型
  */
-public interface IBlockCollision<T extends AttachmentEntity> {
+public interface IBlockCollision<T extends AttachmentEntity> extends ICollision {
 
     /**
      * 清零碰撞轴的速度分量
@@ -84,7 +84,7 @@ public interface IBlockCollision<T extends AttachmentEntity> {
 
         if (!correctedMotion.equals(motion)) {
             Vec3 correctedPos = from.add(correctedMotion);
-            entity.currentPathNode = new PathNode(correctedPos, entity.currentPathNode.yaw(), entity.currentPathNode.pitch(), entity.currentPathNode.roll());
+            entity.setCurrentPathNode(getCollisionAfterPathNode(correctedPos, entity.getCurrentPathNode()));
             boolean collisionX = correctedMotion.x != motion.x;
             boolean collisionY = correctedMotion.y != motion.y;
             boolean collisionZ = correctedMotion.z != motion.z;

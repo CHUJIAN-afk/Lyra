@@ -1,5 +1,10 @@
 package first.lyra.common.entity;
 
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import org.jetbrains.annotations.NotNull;
+
 import java.util.function.Supplier;
 
 /**
@@ -10,6 +15,10 @@ import java.util.function.Supplier;
  *
  * @param <T> 实体类型
  */
-public record AttachmentEntityType<T extends AttachmentEntity>(Supplier<T> factory) {
+public record AttachmentEntityType<T extends AttachmentEntity>(@NotNull Identifier identifier, @NotNull Supplier<T> factory) {
 
+    public Component getDisplayName() {
+        String key = "summon." + identifier.toLanguageKey();
+        return Component.translatable(key).withStyle(ChatFormatting.BLUE);
+    }
 }

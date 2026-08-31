@@ -1,9 +1,11 @@
 package first.lyra;
 
 import first.lyra.client.config.ClientConfig;
+import first.lyra.client.render.LyraRenderTypes;
 import first.lyra.common.damageInfo.DamageInfoStyleManager;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
+import first.lyra.register.LyraDataComponentRegister;
 import first.lyra.register.LyraParticleRegister;
 import net.minecraft.resources.Identifier;
 import net.neoforged.api.distmarker.Dist;
@@ -13,6 +15,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.AddClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.RegisterRenderPipelinesEvent;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 
@@ -26,6 +29,7 @@ public class Lyra {
     }
 
     public Lyra(IEventBus eventBus, Dist dist, ModContainer container) {
+        LyraDataComponentRegister.register(eventBus);
         LyraAttachmentRegister.register(eventBus);
         LyraAttributeRegister.register(eventBus);
         LyraParticleRegister.register(eventBus);

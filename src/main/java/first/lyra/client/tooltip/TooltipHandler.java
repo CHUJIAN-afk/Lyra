@@ -2,7 +2,7 @@ package first.lyra.client.tooltip;
 
 import first.lyra.Lyra;
 import first.lyra.common.armorSet.ArmorSet;
-import first.lyra.common.item.IMinionWeaponItem;
+import first.lyra.common.item.SummonerWeaponItem;
 import first.lyra.register.LyraRegistries;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -124,8 +124,8 @@ public final class TooltipHandler {
 
     private static List<Component> getMinionWeaponItemTooltip(ItemStack itemStack, Player player) {
         List<Component> lines = new ArrayList<>();
-        if (itemStack.getItem() instanceof IMinionWeaponItem<?> iMinionWeaponItem && player != null) {
-            lines.addAll(iMinionWeaponItem.getTooltips(itemStack, player));
+        if (itemStack.getItem() instanceof SummonerWeaponItem<?> summonerWeaponItem && player != null) {
+            lines.addAll(summonerWeaponItem.getTooltips(itemStack, player));
         }
         return lines;
     }

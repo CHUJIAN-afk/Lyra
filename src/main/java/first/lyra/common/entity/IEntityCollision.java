@@ -14,7 +14,7 @@ import java.util.*;
  *
  * @param <T> 附件实体类型
  */
-public interface ICollideAttack<T extends AttachmentEntity> {
+public interface IEntityCollision<T extends AttachmentEntity> extends ICollision {
 
     /**
      * 获取用于碰撞检测的局部碰撞盒

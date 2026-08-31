@@ -318,8 +318,9 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
                             float x2, float y2, float z2, int c2,
                             float x3, float y3, float z3, int c3,
                             float x4, float y4, float z4, int c4) {
-        ensureVertexCapacity(this.vertexCount + 4);
+        ensureVertexCapacity(this.vertexCount + 8);
         Vector3f v = new Vector3f();
+        // 正向 + 反向绕序各一遍（管线剔除背面，几何层手动双面）
         matrix.transformPosition(x1, y1, z1, v);
         appendVertex(v.x(), v.y(), v.z(), c1, 0, 0);
         matrix.transformPosition(x2, y2, z2, v);
@@ -328,6 +329,14 @@ public abstract class TrailConfig<T extends AttachmentEntity, SELF extends Trail
         appendVertex(v.x(), v.y(), v.z(), c3, 1, 1);
         matrix.transformPosition(x4, y4, z4, v);
         appendVertex(v.x(), v.y(), v.z(), c4, 0, 1);
+        matrix.transformPosition(x4, y4, z4, v);
+        appendVertex(v.x(), v.y(), v.z(), c4, 0, 1);
+        matrix.transformPosition(x3, y3, z3, v);
+        appendVertex(v.x(), v.y(), v.z(), c3, 1, 1);
+        matrix.transformPosition(x2, y2, z2, v);
+        appendVertex(v.x(), v.y(), v.z(), c2, 1, 0);
+        matrix.transformPosition(x1, y1, z1, v);
+        appendVertex(v.x(), v.y(), v.z(), c1, 0, 0);
     }
 
     /** 顶点组装缓冲（每顶点 5 float：x,y,z,u,v），回调末尾批量直写。 */

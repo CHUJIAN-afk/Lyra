@@ -8,13 +8,12 @@ import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.client.renderer.extract.LevelExtractor;
-import net.minecraft.client.renderer.state.level.LevelRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gizmos.GizmoStyle;
 import net.minecraft.gizmos.Gizmos;
 import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
@@ -58,7 +57,9 @@ public class AttachmentEntityRenderDispatcher {
      */
     public static void render(List<AbstractClientPlayer> players, Vec3 camPos, PoseStack poseStack, SubmitNodeCollector collector, float partialTick) {
         for (AbstractClientPlayer player : players) {
+            Level level = player.level();
             Set<Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>>> entries = player.getData(LyraAttachmentRegister.EntityData).getRenderCache().entrySet();
+            int playerLightCoords = LightCoordsUtil.getLightCoords(level, BlockPos.containing(player.getLightProbePosition(partialTick)));
             for (Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>> entry : entries) {
                 IAttachmentEntityRenderer<AttachmentEntity> renderer = renderers.get(entry.getKey());
                 List<AttachmentEntity> entities = entry.getValue();
@@ -69,7 +70,11 @@ public class AttachmentEntityRenderDispatcher {
                         PathNode renderNode = entity.getRenderNode(partialTick);
                         Vec3 pos = renderNode.pos();
                         poseStack.translate(pos.x() - camPos.x(), pos.y() - camPos.y(), pos.z() - camPos.z());
-                        renderer.render(entity, poseStack, collector, partialTick, LightCoordsUtil.getLightCoords(player.level(), BlockPos.containing(pos)), renderNode);
+                        int lightCoords = playerLightCoords;
+                        if (!level.getBlockState(BlockPos.containing(pos)).isSolidRender()) {
+                            lightCoords = LightCoordsUtil.getLightCoords(level, BlockPos.containing(pos));
+                        }
+                        renderer.render(entity, poseStack, collector, partialTick, lightCoords, renderNode);
                         debugRender(entity, poseStack, renderNode);
                         poseStack.popPose();
                     }
@@ -78,15 +83,6 @@ public class AttachmentEntityRenderDispatcher {
         }
     }
 
-    /**
-     * 调试渲染（对齐原版 EntityHitboxDebugRenderer 的 gizmos 方式，全部世界坐标）。
-     * <ul>
-     *   <li>位置点 + 视线箭头（原版蓝色，从实体当前位置沿朝向 2 格——虚拟实体无眼睛）</li>
-     *   <li>实体碰撞箱：OBB 有向包围盒——局部 box 按欧拉角旋转（与模型一致的
-     *       qYaw·qPitch·qRoll）后画 12 条边线，白色（原版一致）</li>
-     *   <li>方块碰撞箱：白色 cuboid，仅平移不旋转（原版一致）</li>
-     * </ul>
-     */
     private static void debugRender(AttachmentEntity entity, PoseStack poseStack, PathNode renderNode) {
         if (ClientConfig.DebugMode.isFalse()) {
             return;
@@ -99,8 +95,8 @@ public class AttachmentEntityRenderDispatcher {
             float pitch = (float) Math.toRadians(renderNode.pitch());
             Gizmos.arrow(pos, pos.add(new Vec3(-Mth.sin(yaw) * Mth.cos(pitch), -Mth.sin(pitch), Mth.cos(yaw) * Mth.cos(pitch)).scale(2.0)), -16776961);
             // 实体碰撞箱：OBB（欧拉角旋转后的 12 条边线，白色——原版一致）
-            if (entity instanceof ICollideAttack<?> iCollideAttack && iCollideAttack.renderHitbox()) {
-                AABB box = iCollideAttack.getHitbox();
+            if (entity instanceof IEntityCollision<?> iEntityCollision && iEntityCollision.renderHitbox()) {
+                AABB box = iEntityCollision.getHitbox();
                 Quaternionf rotation = new Quaternionf(Axis.YN.rotationDegrees(renderNode.yaw()))
                         .mul(Axis.XP.rotationDegrees(renderNode.pitch()))
                         .mul(Axis.ZP.rotationDegrees(renderNode.roll()));

@@ -6,13 +6,14 @@
   "mixins": [
     "BufferBuilderAccessor",
     "CombatRulesMixin",
+    "CreativeModeInventoryScreenAccessor",
     "CreativeModeTabMixin",
     "DamageSourceMixin",
     "LivingEntityMixin",
     "PlayerMixin"
   ],
   "client": [
-    "CreativeModeInventoryScreenMixin",
+    "AbstractContainerScreenMixin",
     "EntityRendererMixin",
     "LightCoordsUtilMixin"
   ],

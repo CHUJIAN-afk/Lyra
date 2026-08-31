@@ -3,7 +3,6 @@ package first.lyra.client.render.rendererHelper;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.render.LyraRenderTypes;
-import first.lyra.client.render.VertexAssembler;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.util.ARGB;
@@ -55,8 +54,6 @@ public class SphereRendererHelper {
     /** 位置预变换复用（避免每顶点分配）。 */
     private final Vector3f scratch = new Vector3f();
 
-    /** 顶点批量组装器（回调末尾 MemorySegment 直写）。 */
-    private final VertexAssembler assembler = new VertexAssembler();
 
     private SphereRendererHelper() {
     }
@@ -133,7 +130,6 @@ public class SphereRendererHelper {
             // 必须用回调的 pose 快照(提交时 copy),不能捕获 poseStack.last()——提交延迟执行,
             // poseStack 随后会被 popPose/mulPose 修改,捕获的矩阵会指向错误位置
             Matrix4f poseMatrix = pose.pose();
-            this.assembler.clear();
 
             // 基础颜色分量：RGB 全层一致，仅 alpha 按层渐变
             int baseR = ARGB.red(colorRGB);
@@ -152,7 +148,6 @@ public class SphereRendererHelper {
 
                 renderLayer(consumer, poseMatrix, r, layerAlpha, baseR, baseG, baseB, baseA, sides);
             }
-            this.assembler.write(consumer, FULL_LIGHT);
         });
     }
 
@@ -204,6 +199,11 @@ public class SphereRendererHelper {
                 emitVertex(consumer, pose, nx1y0 * r, ny1y0 * r, nz1y0 * r, vertexColor, u1, v0, nx1y0, ny1y0, nz1y0);
                 emitVertex(consumer, pose, nx1y1 * r, ny1y1 * r, nz1y1 * r, vertexColor, u1, v1, nx1y1, ny1y1, nz1y1);
                 emitVertex(consumer, pose, nx0y1 * r, ny0y1 * r, nz0y1 * r, vertexColor, u0, v1, nx0y1, ny0y1, nz0y1);
+                // 反向绕序一遍（管线剔除背面，几何层手动双面）
+                emitVertex(consumer, pose, nx0y1 * r, ny0y1 * r, nz0y1 * r, vertexColor, u0, v1, nx0y1, ny0y1, nz0y1);
+                emitVertex(consumer, pose, nx1y1 * r, ny1y1 * r, nz1y1 * r, vertexColor, u1, v1, nx1y1, ny1y1, nz1y1);
+                emitVertex(consumer, pose, nx1y0 * r, ny1y0 * r, nz1y0 * r, vertexColor, u1, v0, nx1y0, ny1y0, nz1y0);
+                emitVertex(consumer, pose, nx0y0 * r, ny0y0 * r, nz0y0 * r, vertexColor, u0, v0, nx0y0, ny0y0, nz0y0);
             }
         }
     }
@@ -212,7 +212,8 @@ public class SphereRendererHelper {
     private void emitVertex(VertexConsumer consumer, Matrix4f pose, float x, float y, float z, int color, float u, float v, float nx, float ny, float nz) {
         scratch.set(x, y, z);
         pose.transformPosition(scratch);
-        this.assembler.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, v);
+        consumer.addVertex(scratch.x(), scratch.y(), scratch.z(), color, u, v,
+                OverlayTexture.NO_OVERLAY, FULL_LIGHT, nx, ny, nz);
     }
 
     private static float mix(float a, float b, float t) {
