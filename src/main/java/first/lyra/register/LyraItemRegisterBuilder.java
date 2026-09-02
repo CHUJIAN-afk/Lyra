@@ -2,6 +2,7 @@ package first.lyra.register;
 
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.AttachmentEntityType;
+import first.lyra.common.lootTable.LootTableManager;
 import first.lyra.dataGenerator.provider.LyraItemModelProvider;
 import first.lyra.dataGenerator.provider.LyraItemTagsProvider;
 import first.lyra.dataGenerator.provider.LyraLanguageProvider;
@@ -14,6 +15,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.storage.loot.LootPool;
+import net.minecraft.world.level.storage.loot.LootTable;
 import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -56,6 +59,16 @@ public class LyraItemRegisterBuilder<T extends Item> {
             LyraLanguageProvider.addIngredientInfo(register, Component.translatable(key));
             return language(key, enDesc, zhDesc);
         }
+        return this;
+    }
+
+    public LyraItemRegisterBuilder<T> lootTable(Identifier identifier, Function<LootTable, LootPool> function) {
+        LootTableManager.register(identifier, function);
+        return this;
+    }
+
+    public LyraItemRegisterBuilder<T> lootTable(Identifier identifier, Supplier<LootPool> supplier) {
+        LootTableManager.register(identifier, lootTable -> supplier.get());
         return this;
     }
 
