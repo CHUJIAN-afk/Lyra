@@ -5,19 +5,24 @@ import first.lyra.common.armorSet.ArmorSet;
 import first.lyra.common.attachment.DamageInfoData;
 import first.lyra.common.attachment.InvincibleData;
 import first.lyra.common.attachment.ParticlesData;
-import first.lyra.common.builder.MinionWeaponItemBuilder;
+import first.lyra.common.lootTable.LootTableManager;
 import first.lyra.register.LyraAttributeRegister;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.LootTableLoadEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeModificationEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 @EventBusSubscriber(modid = Lyra.MODID)
 public class Event {
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void handler(LootTableLoadEvent event) {
+        LootTableManager.addToLootTable(event.getName(), event.getTable());
+    }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void tick(LevelTickEvent.Post event) {
@@ -28,11 +33,6 @@ public class Event {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void handler(LivingEquipmentChangeEvent event) {
         ArmorSet.handler(event);
-    }
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void handler(PlayerInteractEvent.RightClickItem event) {
-        MinionWeaponItemBuilder.handler(event);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)

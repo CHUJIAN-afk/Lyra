@@ -3,53 +3,54 @@ package first.lyra.client.render;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import first.lyra.mixin.BufferBuilderAccessor;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.Sheets;
 import net.minecraft.client.renderer.block.model.BakedQuad;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.client.resources.model.ModelManager;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
- * 独立模型渲染工具（静态方法调用，全参数签名，26.2 向下移植）。
+ * 独立模型渲染工具（静态方法调用，全参数签名，26.2 行为对齐）。
  * <p>
  * 渲染经 {@code ModelEvent.RegisterAdditional} 注册的独立模型（{@link ModelResourceLocation}）。
- * 模型顶点数据预烘焙为紧凑数组（消除逐帧 record/解包开销），提交时一次
- * {@code ByteBufferBuilder.reserve} + <b>Unsafe 批量直写</b>（跳过逐顶点 addVertex 检查，
- * Java 21 无 java.lang.foreign 正式 API，用 Unsafe 替代 26.2 的 MemorySegment）。
- * 管线 {@link Sheets#translucentItemSheet()}（items atlas，ITEM 格式 36 字节/顶点）。
+ * 模型<b>不手动缓存</b>：每次渲染时经 {@link ModelManager#getModel} 获取烘焙模型（烘焙 manager），
+ * 遍历其全部 quads（6 方向 + unculled）即时写入。
+ * 顶点写入使用<b>完整实体顶点格式</b>（位置/颜色/UV/overlay/光照/法线），
+ * 法线取 quad 朝向并经姿态 normal 矩阵变换（不忽略法线、不写死 0,0,1）。
+ * consumer 为 BufferBuilder 时一次 reserve + Unsafe 直写（跳过逐顶点 addVertex 检查）；
+ * 其他实现回退逐顶点 addVertex。
  * </p>
  */
+@SuppressWarnings("deprecation")
 public final class RenderUtil {
 
     /** 全亮光照常量（packed）。 */
-    public static final int FULL_LIGHT = net.minecraft.client.renderer.LightTexture.FULL_BRIGHT;
-
-    private static final Map<ModelResourceLocation, CachedModel> CACHE = new HashMap<>();
-
-    /** 缓存结果：预烘焙紧凑数组。vertices 每顶点 5 float（x,y,z 局部 + atlas u,v），colors 每顶点 1 int（ARGB）。 */
-    record CachedModel(BakedModel model, float[] vertices, int[] colors) {}
+    public static final int FULL_LIGHT = LightTexture.FULL_BRIGHT;
 
     private RenderUtil() {
     }
 
     /**
-     * 渲染独立模型（全参数版本）。
+     * 渲染独立模型（全参数版本，与 26.2 同构；跨版本仅需替换 key/bufferSource 类型）。
      *
      * @param key          模型注册键（ModelResourceLocation）
      * @param poseStack    姿态栈（模型视图空间）
@@ -58,38 +59,125 @@ public final class RenderUtil {
      * @param packedLight  打包光照
      */
     public static void renderStandalone(ModelResourceLocation key, PoseStack poseStack, MultiBufferSource bufferSource, int tintColor, int packedLight) {
-        CachedModel cached = getCached(key);
-        if (cached == null) {
-            return;
+        Minecraft minecraft = Minecraft.getInstance();
+        ModelManager modelManager = minecraft.getModelManager();
+        // 不手动缓存：每次从模型烘焙 manager 获取（资源重载后自动生效）
+        BakedModel model = modelManager.getModel(key);
+        if (model != modelManager.getMissingModel()) {
+            VertexConsumer consumer = bufferSource.getBuffer(LyraRenderTypes.getModel());
+            writeModel(poseStack.last(), consumer, model, tintColor, packedLight);
         }
-        VertexConsumer consumer = bufferSource.getBuffer(LyraRenderTypes.getModel());
-        writeModel(poseStack.last().pose(), consumer, cached, tintColor, packedLight);
     }
 
     /**
-     * 模型批量写入（对齐 26.2：BLOCK 格式 32 字节/顶点——Position 12 + Color 4 + UV0 8 + UV2 4 + Normal 3 + 对齐 1；
-     * 兼容 ITEM 36B——额外 UV1 overlay 4）。
-     * consumer 为 BufferBuilder 时一次 reserve + Unsafe 直写（无检查、无 JNI 边界）；其他实现回退逐顶点。
+     * 渲染始终面向相机的贴图（1.21.1 对应 26.2 renderImage；召唤标记等使用）。
+     *
+     * @param texture      贴图路径
+     * @param center       世界坐标中心
+     * @param width        宽
+     * @param height       高
+     * @param bufferSource 渲染缓冲源
+     * @param alwaysVisible true = 自发光变体（不受光照变暗）
+     * @param tintColor    整体染色 ARGB
      */
-    private static void writeModel(Matrix4f poseMatrix, VertexConsumer consumer, CachedModel cached, int tintColor, int packedLight) {
+    public static void renderImage(ResourceLocation texture, Vec3 center, float width, float height, MultiBufferSource bufferSource, boolean alwaysVisible, int tintColor) {
+        Camera camera = Minecraft.getInstance().getEntityRenderDispatcher().camera;
+        VertexConsumer consumer = bufferSource.getBuffer(LyraRenderTypes.texture(texture, alwaysVisible));
+        Vec3 camPos = camera.getPosition();
+        // 相机朝向四元数（原版实体名牌同款）：rotation × XN(180)
+        Quaternionf rotation = new Quaternionf(camera.rotation()).mul(Axis.XN.rotationDegrees(180), new Quaternionf());
+        Matrix4f matrix = new Matrix4f().rotate(rotation).setTranslation((float) (center.x - camPos.x), (float) (center.y - camPos.y), (float) (center.z - camPos.z));
+        float halfWidth = width / 2f;
+        float halfHeight = height / 2f;
+        // 每顶点 5 float（已变换 x,y,z + u,v）+ 颜色
+        float[] xyzuvData = new float[4 * 5];
+        int[] colorData = new int[4];
+        Vector3f v = new Vector3f();
+        int vertexIndex = 0;
+        // 四边形顶点：x,y,z 偏移 + u,v（26.2 同序：u 随宽度、v 随高度）
+        float[][] corners = {
+                {-halfWidth, -halfHeight, 0f, 0f, 0f},
+                {-halfWidth, halfHeight, 0f, 0f, 1f},
+                {halfWidth, halfHeight, 0f, 1f, 1f},
+                {halfWidth, -halfHeight, 0f, 1f, 0f}
+        };
+        for (float[] corner : corners) {
+            matrix.transformPosition(corner[0], corner[1], corner[2], v);
+            int dataIndex = vertexIndex * 5;
+            xyzuvData[dataIndex] = v.x();
+            xyzuvData[dataIndex + 1] = v.y();
+            xyzuvData[dataIndex + 2] = v.z();
+            xyzuvData[dataIndex + 3] = corner[3];
+            xyzuvData[dataIndex + 4] = corner[4];
+            colorData[vertexIndex] = tintColor;
+            vertexIndex++;
+        }
+        writeVertices(consumer, xyzuvData, colorData, FULL_LIGHT, 4);
+    }
+
+    /**
+     * 模型写入：遍历模型全部 quads（6 方向 + unculled），
+     * 每 quad 以朝向为法线（经姿态 normal 矩阵变换），完整实体顶点格式写入。
+     */
+    private static void writeModel(PoseStack.Pose pose, VertexConsumer consumer, BakedModel model, int tintColor, int packedLight) {
+        RandomSource random = RandomSource.create();
+        for (Direction direction : Direction.values()) {
+            writeQuads(pose, consumer, model.getQuads(null, direction, random), tintColor, packedLight);
+        }
+        writeQuads(pose, consumer, model.getQuads(null, null, random), tintColor, packedLight);
+    }
+
+    /**
+     * 顶点写入：consumer 为 BufferBuilder 时走 Unsafe 批量直写（ENTITY 格式，含真实法线）；
+     * 其他实现回退逐顶点 addVertex。
+     */
+    private static void writeQuads(PoseStack.Pose pose, VertexConsumer consumer, List<BakedQuad> quads, int tintColor, int packedLight) {
+        if (quads.isEmpty()) {
+            return;
+        }
         if (consumer instanceof BufferBuilder builder) {
-            BufferBuilderAccessor accessor = (BufferBuilderAccessor) builder;
-            int vertexCount = cached.colors().length;
-            int vertexSize = accessor.getFormat().getVertexSize();
-            long totalBytes = (long) vertexCount * vertexSize;
-            long pointer = accessor.getBuffer().reserve((int) totalBytes);
-            float[] vertices = cached.vertices();
-            int[] colors = cached.colors();
-            boolean tinted = tintColor != -1;
-            boolean entityFormat = vertexSize == 36;
-            Vector3f position = new Vector3f();
-            Unsafe unsafe = UNSAFE;
-            long offset = 0;
-            for (int i = 0; i < vertexCount; i++) {
-                int sourceIndex = i * 5;
-                position.set(vertices[sourceIndex], vertices[sourceIndex + 1], vertices[sourceIndex + 2]);
-                poseMatrix.transformPosition(position);
-                int color = colors[i];
+            writeQuadsBatch(pose, builder, quads, tintColor, packedLight);
+        } else {
+            writeQuadsSingle(pose, consumer, quads, tintColor, packedLight);
+        }
+    }
+
+    /**
+     * 批量直写（BufferBuilder 快路径）。格式按目标自适应：
+     * ENTITY 36B（Position 12 + Color 4 + UV0 8 + UV1 overlay 4 + UV2 light 4 + Normal 3 + 对齐 1）
+     * 与 BLOCK 32B（无 UV1 overlay）。
+     * 法线取每 quad 自身朝向经姿态 normal 矩阵变换，量化写入 byte 三元组。
+     */
+    private static void writeQuadsBatch(PoseStack.Pose pose, BufferBuilder builder, List<BakedQuad> quads, int tintColor, int packedLight) {
+        int vertexCount = quads.size() * 4;
+        boolean tinted = tintColor != -1;
+        BufferBuilderAccessor accessor = (BufferBuilderAccessor) builder;
+        int vertexSize = accessor.getFormat().getVertexSize();
+        boolean entityFormat = vertexSize == 36;
+        long totalBytes = (long) vertexCount * vertexSize;
+        long pointer = accessor.getBuffer().reserve((int) totalBytes);
+        Unsafe unsafe = UNSAFE;
+        long offset = 0;
+        Vector3f position = new Vector3f();
+        Vector3f normal = new Vector3f();
+        for (BakedQuad quad : quads) {
+            // quad 自身朝向经姿态 normal 矩阵变换 → 真实法线（与 26.2 一致）
+            Direction quadDirection = quad.getDirection();
+            pose.transformNormal(quadDirection.step(), normal);
+            byte nx = normalByte(normal.x);
+            byte ny = normalByte(normal.y);
+            byte nz = normalByte(normal.z);
+            int[] packed = quad.getVertices();
+            for (int vertex = 0; vertex < 4; vertex++) {
+                int base = vertex * 8;
+                position.set(
+                        Float.intBitsToFloat(packed[base]),
+                        Float.intBitsToFloat(packed[base + 1]),
+                        Float.intBitsToFloat(packed[base + 2]));
+                pose.pose().transformPosition(position);
+                int color = packed[base + 3];
+                // ABGR32 → ARGB
+                color = (color & 0xFF00FF00) | ((color & 0xFF) << 16) | ((color >> 16) & 0xFF);
                 if (tinted) {
                     color = multiplyColor(tintColor, color);
                 }
@@ -101,9 +189,9 @@ public final class RenderUtil {
                 offset += 4;
                 unsafe.putInt(pointer + offset, FastColor.ABGR32.fromArgb32(color));
                 offset += 4;
-                unsafe.putFloat(pointer + offset, vertices[sourceIndex + 3]);
+                unsafe.putFloat(pointer + offset, Float.intBitsToFloat(packed[base + 4]));
                 offset += 4;
-                unsafe.putFloat(pointer + offset, vertices[sourceIndex + 4]);
+                unsafe.putFloat(pointer + offset, Float.intBitsToFloat(packed[base + 5]));
                 offset += 4;
                 if (entityFormat) {
                     unsafe.putInt(pointer + offset, OverlayTexture.NO_OVERLAY);
@@ -111,32 +199,48 @@ public final class RenderUtil {
                 }
                 unsafe.putInt(pointer + offset, packedLight);
                 offset += 4;
-                unsafe.putByte(pointer + offset, (byte) 0);
+                unsafe.putByte(pointer + offset, nx);
                 offset += 1;
-                unsafe.putByte(pointer + offset, (byte) 0);
+                unsafe.putByte(pointer + offset, ny);
                 offset += 1;
-                unsafe.putByte(pointer + offset, (byte) 127);
+                unsafe.putByte(pointer + offset, nz);
                 offset += 1;
                 offset += 1; // 对齐
             }
-            accessor.setVertices(accessor.getVertices() + vertexCount);
-            accessor.setElementsToFill(0);
-        } else {
-            // 回退：逐顶点写入（非 BufferBuilder consumer）
-            for (int i = 0; i < cached.colors().length; i++) {
-                int sourceIndex = i * 5;
-                int color = cached.colors()[i];
-                if (tintColor != -1) {
+        }
+        accessor.setVertices(accessor.getVertices() + vertexCount);
+        accessor.setElementsToFill(0);
+    }
+
+    /** 逐顶点回退路径（非 BufferBuilder consumer），法线取每 quad 自身朝向变换。 */
+    private static void writeQuadsSingle(PoseStack.Pose pose, VertexConsumer consumer, List<BakedQuad> quads, int tintColor, int packedLight) {
+        boolean tinted = tintColor != -1;
+        Vector3f normal = new Vector3f();
+        for (BakedQuad quad : quads) {
+            Direction quadDirection = quad.getDirection();
+            pose.transformNormal(quadDirection.step(), normal);
+            int[] packed = quad.getVertices();
+            for (int vertex = 0; vertex < 4; vertex++) {
+                int base = vertex * 8;
+                int color = packed[base + 3];
+                // ABGR32 → ARGB
+                color = (color & 0xFF00FF00) | ((color & 0xFF) << 16) | ((color >> 16) & 0xFF);
+                if (tinted) {
                     color = multiplyColor(tintColor, color);
                 }
-                consumer.addVertex(poseMatrix, cached.vertices()[sourceIndex], cached.vertices()[sourceIndex + 1], cached.vertices()[sourceIndex + 2])
+                consumer.addVertex(pose.pose(), Float.intBitsToFloat(packed[base]), Float.intBitsToFloat(packed[base + 1]), Float.intBitsToFloat(packed[base + 2]))
                         .setColor(color)
-                        .setUv(cached.vertices()[sourceIndex + 3], cached.vertices()[sourceIndex + 4])
+                        .setUv(Float.intBitsToFloat(packed[base + 4]), Float.intBitsToFloat(packed[base + 5]))
                         .setOverlay(OverlayTexture.NO_OVERLAY)
                         .setLight(packedLight)
-                        .setNormal(0, 0, 1);
+                        .setNormal(normal.x(), normal.y(), normal.z());
             }
         }
+    }
+
+    /** 法线量化（float [-1,1] → byte，与原版 putNormals 同款）。 */
+    private static byte normalByte(float value) {
+        return (byte) ((int) (Mth.clamp(value, -1.0F, 1.0F) * 127.0F) & 0xFF);
     }
 
     /**
@@ -175,29 +279,20 @@ public final class RenderUtil {
                 offset += 4;
                 unsafe.putFloat(pointer + offset, xyzuvData[sourceIndex + 4]);
                 offset += 4;
+                // BLOCK 32B = 28 数据 + Normal 3 + 对齐 1
                 if (entityFormat) {
                     unsafe.putInt(pointer + offset, OverlayTexture.NO_OVERLAY);
                     offset += 4;
-                    unsafe.putInt(pointer + offset, packedLight);
-                    offset += 4;
-                    unsafe.putByte(pointer + offset, (byte) 0);
-                    offset += 1;
-                    unsafe.putByte(pointer + offset, (byte) 0);
-                    offset += 1;
-                    unsafe.putByte(pointer + offset, (byte) 127);
-                    offset += 1;
-                    offset += 1; // 对齐
-                } else {
-                    unsafe.putInt(pointer + offset, packedLight);
-                    offset += 4;
-                    unsafe.putByte(pointer + offset, (byte) 0);
-                    offset += 1;
-                    unsafe.putByte(pointer + offset, (byte) 0);
-                    offset += 1;
-                    unsafe.putByte(pointer + offset, (byte) 127);
-                    offset += 1;
-                    offset += 1; // BLOCK 32B = 28 数据 + Normal 3 + 对齐 1
                 }
+                unsafe.putInt(pointer + offset, packedLight);
+                offset += 4;
+                unsafe.putByte(pointer + offset, (byte) 0);
+                offset += 1;
+                unsafe.putByte(pointer + offset, (byte) 0);
+                offset += 1;
+                unsafe.putByte(pointer + offset, (byte) 127);
+                offset += 1;
+                offset += 1; // 对齐
             }
             accessor.setVertices(accessor.getVertices() + vertexCount);
             accessor.setElementsToFill(0);
@@ -214,61 +309,7 @@ public final class RenderUtil {
 
     /** ARGB 逐通道相乘（tint × base）。 */
     private static int multiplyColor(int tintColor, int color) {
-        return FastColor.ARGB32.color(
-                FastColor.ARGB32.alpha(tintColor) * FastColor.ARGB32.alpha(color) / 255,
-                FastColor.ARGB32.red(tintColor) * FastColor.ARGB32.red(color) / 255,
-                FastColor.ARGB32.green(tintColor) * FastColor.ARGB32.green(color) / 255,
-                FastColor.ARGB32.blue(tintColor) * FastColor.ARGB32.blue(color) / 255);
-    }
-
-    private static CachedModel getCached(ModelResourceLocation key) {
-        Minecraft minecraft = Minecraft.getInstance();
-        ModelManager modelManager = minecraft.getModelManager();
-        BakedModel model = modelManager.getModel(key);
-        if (model == modelManager.getMissingModel()) {
-            return null;
-        }
-        CachedModel cached = CACHE.get(key);
-        if (cached == null || cached.model() != model) {
-            cached = buildCached(model);
-            CACHE.put(key, cached);
-        }
-        return cached;
-    }
-
-    /**
-     * 预烘焙：收集 6 方向 + unculled 的全部 quads（BLOCK 打包 int[]，每顶点 8 个：
-     * pos×3 + color(ABGR) + uv×2（0-16 像素）+ light + normal），
-     * 提取为紧凑数组（uv 经 sprite.getU/getV 换算为 atlas 坐标，颜色转 ARGB）。
-     */
-    private static CachedModel buildCached(BakedModel model) {
-        RandomSource random = RandomSource.create();
-        List<BakedQuad> quads = new ArrayList<>();
-        for (Direction direction : Direction.values()) {
-            quads.addAll(model.getQuads(null, direction, random));
-        }
-        quads.addAll(model.getQuads(null, null, random));
-        int count = quads.size();
-        float[] vertices = new float[count * 20];
-        int[] colors = new int[count * 4];
-        int vertexIndex = 0;
-        int colorIndex = 0;
-        for (BakedQuad quad : quads) {
-            int[] packed = quad.getVertices();
-            for (int vertex = 0; vertex < 4; vertex++) {
-                int base = vertex * 8;
-                vertices[vertexIndex++] = Float.intBitsToFloat(packed[base]);
-                vertices[vertexIndex++] = Float.intBitsToFloat(packed[base + 1]);
-                vertices[vertexIndex++] = Float.intBitsToFloat(packed[base + 2]);
-                // 1.21.1 烘焙 uv 已是 atlas 坐标（putBulkData 原样直传），不再经 sprite 换算
-                vertices[vertexIndex++] = Float.intBitsToFloat(packed[base + 4]);
-                vertices[vertexIndex++] = Float.intBitsToFloat(packed[base + 5]);
-                // ABGR32 → ARGB（1.21.1 无 toArgb32，手动换位）
-                int abgr = packed[base + 3];
-                colors[colorIndex++] = (abgr & 0xFF00FF00) | ((abgr & 0xFF) << 16) | ((abgr >> 16) & 0xFF);
-            }
-        }
-        return new CachedModel(model, vertices, colors);
+        return FastColor.ARGB32.color(FastColor.ARGB32.alpha(tintColor) * FastColor.ARGB32.alpha(color) / 255, FastColor.ARGB32.red(tintColor) * FastColor.ARGB32.red(color) / 255, FastColor.ARGB32.green(tintColor) * FastColor.ARGB32.green(color) / 255, FastColor.ARGB32.blue(tintColor) * FastColor.ARGB32.blue(color) / 255);
     }
 
     /** Unsafe（sun.misc，反射取 theUnsafe 实例；Java 21 无 java.lang.foreign 正式 API）。 */

@@ -78,19 +78,10 @@ public abstract class Minion extends AttachmentEntity {
             LyraHelper helper = LyraHelper.get(owner);
             TargetCache targetCache = helper.getTargetCache();
             if (!targetCache.isEmpty()) {
-                float searchRange = targetCache.getSummonSearchRange(this.getOwner(), distance);
-                List<LivingEntity> targets = new ArrayList<>();
-                List<LivingEntity> entities = targetCache.getEntities();
-                for (LivingEntity living : entities) {
-                    if (targetCache.isVisibility(owner, living)) {
-                        if (targetCache.getDistance(owner, living) < searchRange) {
-                            if (isTarget(living)) {
-                                targets.add(living);
-                            }
-                        }
-                    }
+                List<LivingEntity> targets = targetCache.getEntitiesInRadius(getPos(), targetCache.getSummonSearchRange(this.getOwner(), distance), living -> targetCache.isVisibility(owner, living) && isTarget(living));
+                if (!targets.isEmpty()) {
+                    return targetCache.getNewTarget(this, targets, 0, true);
                 }
-                return targetCache.getNewTarget(this, targets, 0, true);
             }
         }
         return null;

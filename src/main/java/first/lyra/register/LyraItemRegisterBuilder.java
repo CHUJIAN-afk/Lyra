@@ -2,16 +2,20 @@ package first.lyra.register;
 
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.AttachmentEntityType;
+import first.lyra.common.lootTable.LootTableManager;
 import first.lyra.compat.jei.LyraPlugin;
 import first.lyra.dataGenerator.provider.LyraItemModelProvider;
 import first.lyra.dataGenerator.provider.LyraItemTagsProvider;
 import first.lyra.dataGenerator.provider.LyraLanguageProvider;
 import first.lyra.dataGenerator.provider.LyraRecipeProvider;
 import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.storage.loot.LootPool;
+import net.minecraft.world.level.storage.loot.LootTable;
 import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredItem;
@@ -64,6 +68,16 @@ public class LyraItemRegisterBuilder<T extends Item> {
         return this;
     }
 
+    public LyraItemRegisterBuilder<T> lootTable(ResourceLocation identifier, Function<LootTable, LootPool> function) {
+        LootTableManager.register(identifier, function);
+        return this;
+    }
+
+    public LyraItemRegisterBuilder<T> lootTable(ResourceLocation identifier, Supplier<LootPool> supplier) {
+        LootTableManager.register(identifier, lootTable -> supplier.get());
+        return this;
+    }
+
     public LyraItemRegisterBuilder<T> itemLanguage(String en, String zh) {
         if (register != null) {
             ResourceLocation id = register.getId();
@@ -97,6 +111,14 @@ public class LyraItemRegisterBuilder<T extends Item> {
     public LyraItemRegisterBuilder<T> recipe(Consumer<RecipeOutput> outputConsumer) {
         if (!FMLLoader.isProduction()) {
             LyraRecipeProvider.RecipeGenerate.add(outputConsumer);
+        }
+        return this;
+    }
+
+    /** 注册配方（runData 时输出，回调额外提供 HolderLookup，供 ShapedRecipeBuilder 等需要 HolderGetter 的构建器使用）。 */
+    public LyraItemRegisterBuilder<T> recipeWithLookup(BiConsumer<HolderLookup.Provider, RecipeOutput> outputConsumer) {
+        if (!FMLLoader.isProduction()) {
+            LyraRecipeProvider.RecipeGenerateWithLookup.add(outputConsumer);
         }
         return this;
     }

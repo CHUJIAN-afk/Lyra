@@ -14,7 +14,7 @@ import java.util.*;
  *
  * @param <T> 附件实体类型
  */
-public interface ICollideAttack<T extends AttachmentEntity> {
+public interface IEntityCollision<T extends AttachmentEntity> extends ICollision {
 
     /**
      * 获取用于碰撞检测的局部碰撞盒
@@ -71,19 +71,24 @@ public interface ICollideAttack<T extends AttachmentEntity> {
         List<SampledOBB> sweepOBBs = buildSweepOBBs(prevPrevTick, prevTick, current, boxSize, boxCenterOffset, hasCenterOffset);
         if (sweepOBBs.isEmpty()) return;
 
-        // 粗筛潜在目标从缓存
+        // 粗筛潜在目标：以扫掠路径覆盖的包围盒为中心，按半径从空间分组查询
+        AABB sweepBounds = null;
+        for (SampledOBB sampled : sweepOBBs) {
+            AABB obbBox = sampled.obb.getBoundingBox();
+            sweepBounds = sweepBounds == null ? obbBox : sweepBounds.minmax(obbBox);
+        }
+        Vec3 sweepCenter = sweepBounds.getCenter();
+        double sweepRadius = sweepCenter.distanceTo(new Vec3(sweepBounds.maxX, sweepBounds.maxY, sweepBounds.maxZ));
         List<LivingEntity> potentialTargets = entity.getOwner()
                 .getData(LyraAttachmentRegister.TargetCache)
-                .getEntities();
+                .getEntitiesInRadius(sweepCenter, sweepRadius, target -> isValidCollisionTarget(entity, target));
 
         // 精确碰撞检测并收集碰撞点
         Map<LivingEntity, Vec3> hitPoints = new HashMap<>();
         for (LivingEntity target : potentialTargets) {
-            if (isValidCollisionTarget(entity, target)) {
-                Vec3 hitPoint = findHitPoint(sweepOBBs, target.getBoundingBox(), prevTick.pos());
-                if (hitPoint != null) {
-                    hitPoints.put(target, hitPoint);
-                }
+            Vec3 hitPoint = findHitPoint(sweepOBBs, target.getBoundingBox(), prevTick.pos());
+            if (hitPoint != null) {
+                hitPoints.put(target, hitPoint);
             }
         }
 

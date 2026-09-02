@@ -3,6 +3,7 @@ package first.lyra;
 import first.lyra.client.config.ClientConfig;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
+import first.lyra.register.LyraDataComponentRegister;
 import first.lyra.register.LyraParticleRegister;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
@@ -25,6 +26,7 @@ public class Lyra {
     public Lyra(IEventBus eventBus, Dist dist, ModContainer container) {
         LyraAttachmentRegister.register(eventBus);
         LyraAttributeRegister.register(eventBus);
+        LyraDataComponentRegister.register(eventBus);
         LyraParticleRegister.register(eventBus);
         if (dist.isClient()) {
             container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.Spec);

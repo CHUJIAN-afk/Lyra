@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.sugar.Local;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.minion.MinionDamageSource;
+import first.lyra.mixinHandler.MixinHandler;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.world.damagesource.DamageSource;
@@ -31,13 +32,10 @@ public class LivingEntityMixin {
 
     @WrapMethod(method = "hurt")
     public boolean hurt(DamageSource source, float amount, Operation<Boolean> original) {
-        if (source instanceof MinionDamageSource MinionDamageSource) {
-            Minion minion = MinionDamageSource.getMinion();
+        if (source instanceof MinionDamageSource minionDamageSource) {
+            Minion minion = minionDamageSource.getMinion();
             Player owner = minion.getOwner();
-            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonDamage);
-            float scale = instance != null ? (float) instance.getValue() : 1;
-            amount *= scale;
-            amount *= 0.85f + owner.getRandom().nextFloat() * 0.3f;
+            amount = MixinHandler.getModifyDamage((LivingEntity) (Object) this, owner, minion, amount, minionDamageSource);
         }
         return original.call(source, amount);
     }

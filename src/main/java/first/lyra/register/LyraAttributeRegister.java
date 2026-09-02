@@ -32,7 +32,7 @@ public class LyraAttributeRegister {
     public static final DeferredHolder<Attribute, Attribute> SentryMaxCount = register("sentry_max_count", 1, 0, 1000);
     public static final DeferredHolder<Attribute, Attribute> SummonDamage = register("summon_damage", 1, 0, 1000000);
     public static final DeferredHolder<Attribute, Attribute> SummonKnockback = register("summon_knockback", 1, 0, 10);
-    public static final DeferredHolder<Attribute, Attribute> SummonArmorPierce = register("summon_armor_pierce", 1, 0, 1000000);
+    public static final DeferredHolder<Attribute, Attribute> SummonArmorPierce = register("summon_armor_pierce", 0, 0, 1000000);
     public static final DeferredHolder<Attribute, Attribute> SummonSearchRange = register("summon_search_range", 1, 0, 10);
 
     private static DeferredHolder<Attribute, Attribute> register(String name, double defaultValue, double min, double max) {

@@ -27,6 +27,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import java.util.*;
 import java.util.function.IntToDoubleFunction;
+import java.util.function.Predicate;
 
 /**
  * 目标缓存，存储玩家周围的实体列表。
@@ -40,6 +41,7 @@ public class TargetCache {
     private static final double MAX_DISTANCE_SQ = 128.0 * 128.0;
     private static final int MAX_STEPS = 128;
     private static final double EPSILON = 1.0E-7;
+    private static final int CELL_SIZE = 16;
 
     /**
      * 缓存的实体列表
@@ -47,6 +49,87 @@ public class TargetCache {
     private final List<LivingEntity> entities = new ArrayList<>();
     private final Int2BooleanOpenHashMap visibilityCache = new Int2BooleanOpenHashMap();
     private final Int2FloatOpenHashMap distanceCache = new Int2FloatOpenHashMap();
+
+    // ==================== 16*16*16 空间分组缓存 ====================
+
+    private final Long2ObjectOpenHashMap<List<LivingEntity>> spatialGroups = new Long2ObjectOpenHashMap<>();
+
+    /**
+     * 将三维坐标映射到 16*16*16 分组的键。
+     */
+    private static long cellKey(int x, int y, int z) {
+        return ((long) x & 0x3FFFFFFL) << 38 | ((long) y & 0x3FFFFFFL) << 12 | ((long) z & 0x3FFFFFFL);
+    }
+
+    private static long cellKey(Vec3 pos) {
+        return cellKey(Mth.floor(pos.x) >> 4, Mth.floor(pos.y) >> 4, Mth.floor(pos.z) >> 4);
+    }
+
+    /**
+     * 将实体放入对应的 16*16*16 空间分组。
+     */
+    private void addToSpatialGroup(LivingEntity entity) {
+        spatialGroups.computeIfAbsent(cellKey(entity.position()), k -> new ArrayList<>()).add(entity);
+    }
+
+    /**
+     * 获取 (x,y,z) 所在分组内的所有实体。
+     */
+    public List<LivingEntity> getEntitiesInCell(int x, int y, int z) {
+        return spatialGroups.getOrDefault(cellKey(x, y, z), List.of());
+    }
+
+    /**
+     * 以指定位置和半径查询实体（走空间分组，不做全量遍历）。
+     * <p>仅返回存活实体，不含玩家自身。</p>
+     *
+     * @param pos      查询中心坐标
+     * @param radius   查询半径
+     * @return 半径内的存活实体列表
+     */
+    public List<LivingEntity> getEntitiesInRadius(Vec3 pos, double radius) {
+        return getEntitiesInRadius(pos, radius, null);
+    }
+
+    /**
+     * 以指定位置和半径查询实体（走空间分组，不做全量遍历），支持过滤条件。
+     *
+     * @param pos      查询中心坐标
+     * @param radius   查询半径
+     * @param filter   额外过滤条件，可为 null
+     * @return 半径内且满足过滤条件的存活实体列表
+     */
+    public List<LivingEntity> getEntitiesInRadius(Vec3 pos, double radius, Predicate<LivingEntity> filter) {
+        List<LivingEntity> result = new ArrayList<>();
+        if (radius <= 0) {
+            return result;
+        }
+        double radiusSq = radius * radius;
+        int minCellX = Mth.floor(pos.x - radius) >> 4;
+        int maxCellX = Mth.floor(pos.x + radius) >> 4;
+        int minCellY = Mth.floor(pos.y - radius) >> 4;
+        int maxCellY = Mth.floor(pos.y + radius) >> 4;
+        int minCellZ = Mth.floor(pos.z - radius) >> 4;
+        int maxCellZ = Mth.floor(pos.z + radius) >> 4;
+        for (int cellX = minCellX; cellX <= maxCellX; cellX++) {
+            for (int cellY = minCellY; cellY <= maxCellY; cellY++) {
+                for (int cellZ = minCellZ; cellZ <= maxCellZ; cellZ++) {
+                    List<LivingEntity> cell = spatialGroups.get(cellKey(cellX, cellY, cellZ));
+                    if (cell == null) {
+                        continue;
+                    }
+                    for (LivingEntity entity : cell) {
+                        if (entity.getBoundingBox().getCenter().distanceToSqr(pos) <= radiusSq) {
+                            if (filter == null || filter.test(entity)) {
+                                result.add(entity);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return result;
+    }
 
     // ==================== Chunk 缓存（每tick预加载） ====================
 
@@ -248,6 +331,7 @@ public class TargetCache {
      */
     public void tick(Player player) {
         entities.clear();
+        spatialGroups.clear();
         visibilityCache.clear();
         distanceCache.clear();
         chunkCache.clear();
@@ -290,6 +374,7 @@ public class TargetCache {
                 if (living != player && living.isAlive()) {
                     if (getDistance(player, living) <= distance) {
                         result.add(living);
+                        addToSpatialGroup(living);
                     }
                 }
             }

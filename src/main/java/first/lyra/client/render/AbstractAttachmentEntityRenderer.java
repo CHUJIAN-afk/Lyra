@@ -37,7 +37,7 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
     protected abstract RenderContext<T> createContext(T entity, float partialTick);
 
     /** 渲染附件实体本体（alpha：第一人称距离淡化透明度，模型渲染调用点直接使用） */
-    protected abstract void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick, float alpha);
+    protected abstract void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick, int packedLight, float alpha);
 
     @Override
     public void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, int packedLight, PathNode visualNode) {
@@ -48,7 +48,7 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
             if (context.hasTrail()) {
                 context.trail.render(entity, poseStack, bufferSource, partialTick, visualNode, LyraRenderTypes.getTrail());
             }
-            modelModify(entity, poseStack, bufferSource, visualNode, context, partialTick, alpha);
+            modelModify(entity, poseStack, bufferSource, visualNode, context, partialTick, packedLight, alpha);
             poseStack.popPose();
         }
     }
@@ -58,7 +58,7 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
         return ClientConfig.AlphaModify.isTrue() ? getAlphaModify(context, visualNode, partialTick) : 1.0f;
     }
 
-    protected void modelModify(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick, float alpha) {
+    protected void modelModify(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick, int packedLight, float alpha) {
         ModelConfig<T> model = context.model;
 
         // 绕过 PoseStack 的 6 次 mulPose + scale + translate，
@@ -95,7 +95,7 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
         poseStack.last().pose().mul(transform);
         poseStack.last().normal().mul(new Matrix3f().rotation(rotation));
 
-        render(entity, poseStack, bufferSource, visualNode, context, partialTick, alpha);
+        render(entity, poseStack, bufferSource, visualNode, context, partialTick, packedLight, alpha);
         poseStack.popPose();
     }
 

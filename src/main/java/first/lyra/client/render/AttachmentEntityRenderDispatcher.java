@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import first.lyra.client.config.ClientConfig;
+import first.lyra.client.dynamicLight.DynamicLightDispatcher;
 import first.lyra.common.entity.*;
 import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.client.Camera;
@@ -13,6 +14,9 @@ import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.HashMap;
@@ -50,22 +54,30 @@ public class AttachmentEntityRenderDispatcher {
         for (AbstractClientPlayer player : players) {
             List<AttachmentEntity> entities = player.getData(LyraAttachmentRegister.EntityData)
                     .getRenderCache();
+            Level level = player.level();
             Vec3 cameraPos = camera.getPosition();
             boolean showHitboxes = Minecraft.getInstance()
                     .getEntityRenderDispatcher()
                     .shouldRenderHitBoxes();
             VertexConsumer debugConsumer = showHitboxes ? bufferSource.getBuffer(RenderType.lines()) : null;
-            int packedLight = LightTexture.FULL_BRIGHT;
+            // 玩家基准光照:玩家光照探测点处真实光照(附件实体卡入实心方块时兜底,避免全黑)
+            int playerLightCoords = getLightCoords(level, BlockPos.containing(player.getLightProbePosition(partialTick)));
             for (AttachmentEntity entity : entities) {
                 entity.setOwner(player);
                 poseStack.pushPose();
                 PathNode renderNode = entity.getRenderNode(partialTick);
                 Vec3 pos = renderNode.pos();
                 poseStack.translate(pos.x() - cameraPos.x(), pos.y() - cameraPos.y(), pos.z() - cameraPos.z());
+                // 实体真实光照:所在位置非实心方块时按实体位置取光,否则沿用玩家光
+                int lightCoords = playerLightCoords;
+                BlockPos entityPos = BlockPos.containing(pos);
+                if (!level.getBlockState(entityPos).isSolidRender(level, entityPos)) {
+                    lightCoords = getLightCoords(level, entityPos);
+                }
                 // 渲染实体模型
                 IAttachmentEntityRenderer<AttachmentEntity> renderer = getRenderer(entity);
                 if (renderer != null) {
-                    renderer.render(entity, poseStack, bufferSource, partialTick, packedLight, renderNode);
+                    renderer.render(entity, poseStack, bufferSource, partialTick, lightCoords, renderNode);
                 }
                 if (ClientConfig.DebugMode.isTrue()) {
                     debugRender(poseStack, entity, showHitboxes, renderNode, debugConsumer);
@@ -73,6 +85,17 @@ public class AttachmentEntityRenderDispatcher {
                 poseStack.popPose();
             }
         }
+    }
+
+    /**
+     * 取世界坐标处的真实光照(pack 布局,等价 26.2 LightCoordsUtil.getLightCoords 的 1.21.1 适配):
+     * 方块亮度(含方块自发光)+ 天空亮度,再叠加动态光源(实体路径增强)。
+     */
+    private static int getLightCoords(Level level, BlockPos pos) {
+        int sky = level.getBrightness(LightLayer.SKY, pos);
+        int block = Math.max(level.getBrightness(LightLayer.BLOCK, pos), level.getBlockState(pos).getLightEmission(level, pos));
+        int packed = LightTexture.pack(block, sky);
+        return DynamicLightDispatcher.getDynamicLight(Vec3.atCenterOf(pos), packed);
     }
 
     private static void debugRender(PoseStack poseStack, AttachmentEntity entity, boolean showHitboxes, PathNode renderNode, VertexConsumer debugConsumer) {
@@ -85,7 +108,7 @@ public class AttachmentEntityRenderDispatcher {
             poseStack.mulPose(Axis.ZP.rotationDegrees(renderNode.roll()));
             LevelRenderer.renderLineBox(poseStack, debugConsumer, -0.0001, -0.0001, 0, 0.0001, 0.0001, 2, 0, 0, 1, 1.0F);
             LevelRenderer.renderLineBox(poseStack, debugConsumer, -0.0001, 0, -0.0001, 0.0001, 0.5, 0.0001, 0, 0, 1, 1.0F);
-            if (entity instanceof ICollideAttack<?> iCollideAttack) {
+            if (entity instanceof IEntityCollision<?> iCollideAttack) {
                 if (iCollideAttack.renderHitbox()) {
                     LevelRenderer.renderLineBox(poseStack, debugConsumer, iCollideAttack.getHitbox(), 1.0F, 0.0F, 0.0F, 1.0F);
                 }

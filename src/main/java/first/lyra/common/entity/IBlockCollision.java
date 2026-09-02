@@ -14,7 +14,7 @@ import java.util.List;
  *
  * @param <T> 附件实体类型
  */
-public interface IBlockCollision<T extends AttachmentEntity> {
+public interface IBlockCollision<T extends AttachmentEntity> extends ICollision {
 
     /**
      * 清零碰撞轴的速度分量
