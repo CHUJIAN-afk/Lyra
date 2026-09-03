@@ -113,15 +113,9 @@ public class SummonerWeaponItem<T extends Minion> extends Item {
     }
 
     public float getSummonArmorPierce(@Nullable Player player, @NotNull ItemStack itemStack) {
-        float armorPierce = itemStack.getOrDefault(LyraDataComponentRegister.MINION_WEAPON, MinionWeapon.Empty).armorPierce();
-        if (player != null) {
-            AttributeInstance attribute = player.getAttribute(LyraAttributeRegister.SummonArmorPierce);
-            if (attribute != null) {
-                armorPierce = (float) (armorPierce + attribute.getValue());
-            }
-        }
-        return armorPierce;
+        return itemStack.getOrDefault(LyraDataComponentRegister.MINION_WEAPON, MinionWeapon.Empty).armorPierce();
     }
+
     @Nullable
     public SoundEvent getSoundEvent(ItemStack itemStack) {
         Holder<SoundEvent> event = itemStack.getOrDefault(LyraDataComponentRegister.MINION_WEAPON, MinionWeapon.Empty).soundEvent();

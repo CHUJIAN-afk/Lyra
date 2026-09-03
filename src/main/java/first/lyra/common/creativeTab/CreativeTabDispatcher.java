@@ -47,10 +47,7 @@ public final class CreativeTabDispatcher {
     public static List<ItemStack> itemsOf(HolderLookup.Provider provider, Section section) {
         return SectionTabs.computeIfAbsent(section, key -> {
             List<ItemStack> list = new ArrayList<>();
-            list.addAll(BuiltInRegistries.ITEM.stream()
-                    .map(Item::getDefaultInstance)
-                    .filter(itemStack -> itemStack.is(section.tag()))
-                    .toList());
+            list.addAll(BuiltInRegistries.ITEM.stream().map(Item::getDefaultInstance).filter(itemStack -> itemStack.is(section.tag())).toList());
             list.addAll(section.function().apply(provider));
             return list;
         });

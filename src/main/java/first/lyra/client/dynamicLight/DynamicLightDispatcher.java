@@ -302,14 +302,19 @@ public final class DynamicLightDispatcher {
     }
 
     /**
-     * 将动态光照写入 block 位(bit 4-7)。掩码只清 block 位,sky 位原样保留——
-     * 兼容两条路径的不同布局(方块 sky<<20 | block<<4,实体 sky<<16 | block<<4),
-     * 26.2 同款位运算(0xfff00000 掩码)只适用于方块路径,实体路径会污染 sky 位,不可复用。
-     * 1.21.1 无 smooth 8-bit 格式,精度取整到整数级(Math.round)。
+     * 将动态光照写入 block 光通道(UV2 低 12 位,对齐 LDL 的 lightmap 坐标法)。
+     * <p>
+     * shader 侧 lightmap 采样为 {@code uv / 256.0} 映射到 16×16 lightmap 纹素:
+     * block 光值(0-15)在 UV2 中按 {@code value << 4} 落在低 12 位,小数(1/16 级)进入
+     * 更低 4 位后,texture() 双线性过滤会在相邻纹素间插值 → 平滑光照过渡。
+     * 因此这里直接写入 {@code (int)(dynamicLight * 16.0)}(0-240,保留 1/16 小数精度),
+     * 取代旧的 Math.round 整数取整(16 级跳变)。
+     * 掩码只清低 12 位(bit0-11),sky 位(方块 bit20+ / 实体 bit16+)原样保留。
+     * </p>
      */
     private static int withDynamicLight(int originalLight, double dynamicLight) {
-        int luminance = Math.round((float) dynamicLight);
-        return (originalLight & 0xFFFFFF0F) | (luminance << 4);
+        int luminance = (int) (dynamicLight * 16.0);
+        return (originalLight & 0xfffff000) | (luminance & 0x00000fff);
     }
 
     /** 光源影响区块:所在区块 + 沿位置偏移方向的最多 7 个邻居(半径 7.75 < 区块边长 16) */
