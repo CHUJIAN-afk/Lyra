@@ -92,8 +92,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                     Type type = entry.getKey();
                     for (List<AttachmentEntity> value : entry.getValue().values()) {
                         for (AttachmentEntity attachmentEntity : value) {
-                            List<AttachmentEntity> entities = groups.computeIfAbsent(type, key1 -> new HashMap<>())
-                                    .computeIfAbsent(attachmentEntity.getType(), key -> new ArrayList<>());
+                            List<AttachmentEntity> entities = groups.computeIfAbsent(type, key1 -> new HashMap<>()).computeIfAbsent(attachmentEntity.getType(), key -> new ArrayList<>());
                             entities.add(attachmentEntity);
                             for (AttachmentEntity entity : entities) {
                                 if (entity instanceof Minion minion) {

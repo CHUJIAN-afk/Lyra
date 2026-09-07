@@ -8,6 +8,7 @@
     "CombatRulesMixin",
     "CreativeModeTabMixin",
     "DamageSourceMixin",
+    "ItemMixin",
     "LevelRendererAccessor",
     "LivingEntityMixin",
     "PlayerMixin"

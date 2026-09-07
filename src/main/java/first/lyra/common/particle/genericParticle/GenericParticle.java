@@ -1,18 +1,13 @@
 package first.lyra.common.particle.genericParticle;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import net.minecraft.client.Camera;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleRenderType;
 import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
-import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
@@ -117,13 +112,11 @@ public class GenericParticle extends TextureSheetParticle {
         renderQuad(buffer, x, y, z, quaternion, -scale * 3, -scale * 3, scale * 3, scale * 3, uHalf, u1, v0, v1, edgeARGB, light, overlay);
     }
 
-    /**
-     * 渲染单个 quad：保留 quaternion 旋转保证正确朝向，用 10 参数 fast path 写顶点。
-     * <p>
-     * 自定义 {@link #GENERIC_PARTICLE_TYPE} 使用 NEW_ENTITY 格式，触发 BufferBuilder fastFormat 走 fast path，
-     * 单次 addVertex 完成全部元素写入，跳过逐元素 beginElement 校验。
-     * </p>
-     */
+    @Override
+    public @NotNull ParticleRenderType getRenderType() {
+        return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
+    }
+
     private void renderQuad(VertexConsumer buffer, float cx, float cy, float cz, Quaternionf quaternion, float minX, float minY, float maxX, float maxY, float u0, float u1, float v0, float v1, int color, int light, int overlay) {
         Vector3f v = new Vector3f();
         v.set(minX, minY, 0.0F).rotate(quaternion);
@@ -134,42 +127,6 @@ public class GenericParticle extends TextureSheetParticle {
         buffer.addVertex(cx + v.x, cy + v.y, cz + v.z, color, u1, v1, overlay, light, 0.0F, 0.0F, 1.0F);
         v.set(minX, maxY, 0.0F).rotate(quaternion);
         buffer.addVertex(cx + v.x, cy + v.y, cz + v.z, color, u0, v1, overlay, light, 0.0F, 0.0F, 1.0F);
-    }
-
-    /**
-     * 自定义粒子渲染类型：NEW_ENTITY 格式 + entity translucent shader，使 BufferBuilder 走 fastFormat fast path。
-     * <p>
-     * 原版 {@link ParticleRenderType#PARTICLE_SHEET_TRANSLUCENT} 使用 PARTICLE 格式（无 overlay/normal），
-     * BufferBuilder 对其 fastFormat=false，10 参数 addVertex 走慢路径。改用 NEW_ENTITY 后：
-     * <ul>
-     *   <li>fastFormat=true → 10 参数 addVertex 一次 beginVertex + 连续 memPut，跳过所有 beginElement</li>
-     *   <li>需匹配 renderTypeEntityTranslucent shader（支持 POSITION_COLOR_TEX_OVERLAY_LIGHT_NORMAL）</li>
-     *   <li>纹理仍用粒子 atlas（Sampler0）</li>
-     * </ul>
-     * </p>
-     */
-    public static final ParticleRenderType GENERIC_PARTICLE_TYPE = new ParticleRenderType() {
-        @Override
-        public BufferBuilder begin(Tesselator tesselator, @NotNull TextureManager textureManager) {
-            RenderSystem.depthMask(true);
-            RenderSystem.setShader(GameRenderer::getRendertypeEntityTranslucentShader);
-            RenderSystem.setShaderTexture(0, ResourceLocation.withDefaultNamespace("textures/atlas/particles.png"));
-            // entity translucent shader 需要 Sampler2 = 光照贴图，否则采样到残留纹理导致粒子闪烁变黑
-            Minecraft.getInstance().gameRenderer.lightTexture().turnOnLightLayer();
-            RenderSystem.enableBlend();
-            RenderSystem.defaultBlendFunc();
-            return tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY);
-        }
-
-        @Override
-        public String toString() {
-            return "GENERIC_PARTICLE";
-        }
-    };
-
-    @Override
-    public @NotNull ParticleRenderType getRenderType() {
-        return GENERIC_PARTICLE_TYPE;
     }
 
     @Override

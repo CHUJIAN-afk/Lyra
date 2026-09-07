@@ -1,6 +1,7 @@
 package first.lyra.register;
 
 import first.lyra.Lyra;
+import first.lyra.common.dataComponent.LyraRarity;
 import first.lyra.common.dataComponent.MinionWeapon;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
@@ -15,6 +16,9 @@ public class LyraDataComponentRegister {
 
     public static final DeferredHolder<DataComponentType<?>, DataComponentType<MinionWeapon>> MINION_WEAPON =
             Register.registerComponentType("minion_weapon", builder -> builder.persistent(MinionWeapon.CODEC).networkSynchronized(MinionWeapon.STREAM_CODEC));
+
+    public static final DeferredHolder<DataComponentType<?>, DataComponentType<LyraRarity>> RARITY =
+            Register.registerComponentType("rarity", builder -> builder.persistent(LyraRarity.CODEC).networkSynchronized(LyraRarity.STREAM_CODEC));
 
     public static void register(IEventBus eventBus) {
         Register.register(eventBus);
