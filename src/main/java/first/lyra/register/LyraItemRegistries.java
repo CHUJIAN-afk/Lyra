@@ -103,9 +103,9 @@ public class LyraItemRegistries {
         return this;
     }
 
-    public void register(IEventBus eventBus, @Nullable Consumer<Void> consumer) {
-        if (consumer != null) {
-            consumer.accept(null);
+    public void register(IEventBus eventBus, @Nullable Runnable runnable) {
+        if (runnable != null) {
+            runnable.run();
         }
         register.register(eventBus);
         eventBus.addListener((GatherDataEvent event) -> {
