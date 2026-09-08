@@ -8,11 +8,12 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.sounds.SoundEvent;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 
-public record MinionWeapon(float damage, float knockback, float armorPierce, AttachmentEntityData.Type type, @Nullable Holder<SoundEvent> soundEvent) {
+public record MinionWeapon(float damage, float knockback, float armorPierce, @NotNull AttachmentEntityData.Type type, @Nullable Holder<SoundEvent> soundEvent) {
 
     public static final MinionWeapon Empty = new MinionWeapon(0, 0, 0, AttachmentEntityData.Type.Minion, null);
 
