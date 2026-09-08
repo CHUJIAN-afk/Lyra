@@ -106,7 +106,7 @@ public final class TooltipHandler {
                 AttributeModifier modifier = entry.getValue();
                 lines.add(attr.toComponent(modifier, TooltipFlag.NORMAL).withStyle(descColor));
             }
-            String baseKey = Lyra.MODID + "." + id.getNamespace() + "." + id.getPath() + "." + "set" + ".";
+            String baseKey = id.toLanguageKey() + ".set.";
             int index = 1;
             while (I18n.exists(baseKey + index)) {
                 lines.add(Component.translatable(baseKey + index).withStyle(descColor));

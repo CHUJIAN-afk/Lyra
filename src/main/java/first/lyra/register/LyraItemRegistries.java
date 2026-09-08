@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
@@ -40,7 +41,7 @@ import java.util.function.Supplier;
 
 public class LyraItemRegistries {
 
-    public static final List<LyraItemRegistries> REGISTRIES = new CopyOnWriteArrayList<>();
+    public static final Map<String, LyraItemRegistries> REGISTRIES = new ConcurrentHashMap<>();
 
     public final Map<ItemLike, List<Component>> jeiInfoData = new HashMap<>();
     public final Map<ResourceLocation, List<Function<LootTable, LootPool>>> lootTableData = new HashMap<>();
@@ -57,7 +58,7 @@ public class LyraItemRegistries {
         this.modid = modid;
         this.register = DeferredRegister.createItems(modid);
         this.development = !FMLLoader.isProduction();
-        REGISTRIES.add(this);
+        REGISTRIES.put(modid, this);
     }
 
     public <T extends Item> LyraItemRegisterBuilder<T> build(String name, Function<ResourceLocation, T> function) {

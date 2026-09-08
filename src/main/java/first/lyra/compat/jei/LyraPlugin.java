@@ -25,6 +25,6 @@ public class LyraPlugin implements IModPlugin {
     @Override
     public void registerRecipes(@NotNull IRecipeRegistration registration) {
         LyraRegistries.ARMOR_SETS.forEach(armorSet -> registration.addItemStackInfo(armorSet.items().stream().map(ItemLike::asItem).map(Item::getDefaultInstance).toList(), Component.empty()));
-        LyraItemRegistries.REGISTRIES.forEach(lyraItemRegistries -> lyraItemRegistries.jeiInfoData.forEach((itemLike, components) -> registration.addIngredientInfo(itemLike, components.toArray(new Component[0]))));
+        LyraItemRegistries.REGISTRIES.values().forEach(lyraItemRegistries -> lyraItemRegistries.jeiInfoData.forEach((itemLike, components) -> registration.addIngredientInfo(itemLike, components.toArray(new Component[0]))));
     }
 }
