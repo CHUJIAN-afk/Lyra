@@ -1,8 +1,8 @@
 package first.lyra.register;
 
-public class LyraLanguageRegister {
+public class LyraLanguageRegister implements LyraItemRegistries.LanguageInit {
 
-    public static void init(LyraItemRegistries registries) {
+    public void init(LyraItemRegistries registries) {
         // ================= 工具提示 =================
         registries.language("item.lyra.tooltip.damage", "Summon Damage", "召唤伤害");
         registries.language("item.lyra.tooltip.knockback", "Knockback", "击退强度");

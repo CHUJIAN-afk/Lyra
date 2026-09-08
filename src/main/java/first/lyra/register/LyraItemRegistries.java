@@ -27,6 +27,7 @@ import net.neoforged.neoforge.common.data.LanguageProvider;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,8 +54,12 @@ public class LyraItemRegistries {
     private final String modid;
     private final DeferredRegister.Items register;
     private final boolean development;
-    private Consumer<LyraItemRegistries> languageInit = lyraItemRegistries -> {
-    };
+    private LanguageInit languageInit = null;
+
+    @FunctionalInterface
+    public interface LanguageInit {
+        void init(LyraItemRegistries registries);
+    }
 
     private LyraItemRegistries(String modid) {
         this.modid = modid;
@@ -93,12 +98,15 @@ public class LyraItemRegistries {
         }
     }
 
-    public LyraItemRegistries languageInit(Consumer<LyraItemRegistries> languageInit) {
+    public LyraItemRegistries languageInit(LanguageInit languageInit) {
         this.languageInit = languageInit;
         return this;
     }
 
-    public void register(IEventBus eventBus) {
+    public void register(IEventBus eventBus, @Nullable Consumer<Void> consumer) {
+        if (consumer != null) {
+            consumer.accept(null);
+        }
         register.register(eventBus);
         eventBus.addListener((GatherDataEvent event) -> {
             boolean client = event.includeClient();
@@ -124,7 +132,7 @@ public class LyraItemRegistries {
                     });
                 }
             };
-            languageInit.accept(this);
+            languageInit.init(this);
             generator.addProvider(client, function.apply("en_us"));
             generator.addProvider(client, function.apply("zh_cn"));
             generator.addProvider(client, new ItemModelProvider(packOutput, modid, existingFileHelper) {

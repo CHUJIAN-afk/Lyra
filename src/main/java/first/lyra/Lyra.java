@@ -15,14 +15,14 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 public class Lyra {
 
     public static final String MODID = "lyra";
-    public static final LyraItemRegistries Registries = LyraItemRegistries.create(MODID).languageInit(LyraLanguageRegister::init);
+    public static final LyraItemRegistries Registries = LyraItemRegistries.create(MODID).languageInit(new LyraLanguageRegister());
 
     public static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(MODID, path.toLowerCase());
     }
 
     public Lyra(IEventBus eventBus, Dist dist, ModContainer container) {
-        Registries.register(eventBus);
+        Registries.register(eventBus, null);
         LyraAttachmentRegister.register(eventBus);
         LyraAttributeRegister.register(eventBus);
         LyraDataComponentRegister.register(eventBus);

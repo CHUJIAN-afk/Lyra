@@ -155,6 +155,7 @@ publishing {
         }
     }
     repositories {
+        mavenLocal()
         maven {
             url "file://${project.projectDir}/repo"
         }
