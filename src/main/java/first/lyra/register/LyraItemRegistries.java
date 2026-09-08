@@ -34,8 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -53,12 +53,18 @@ public class LyraItemRegistries {
     private final String modid;
     private final DeferredRegister.Items register;
     private final boolean development;
+    private Consumer<LyraItemRegistries> languageInit = lyraItemRegistries -> {
+    };
 
-    public LyraItemRegistries(String modid) {
+    private LyraItemRegistries(String modid) {
         this.modid = modid;
         this.register = DeferredRegister.createItems(modid);
         this.development = !FMLLoader.isProduction();
         REGISTRIES.put(modid, this);
+    }
+
+    public static LyraItemRegistries create(String modid) {
+        return new LyraItemRegistries(modid);
     }
 
     public <T extends Item> LyraItemRegisterBuilder<T> build(String name, Function<ResourceLocation, T> function) {
@@ -79,6 +85,17 @@ public class LyraItemRegistries {
 
     public boolean isDevelopment() {
         return development;
+    }
+
+    public void language(String key, String en, String zh) {
+        if (isDevelopment()) {
+            languageGenerate.put(key, new String[]{en, zh});
+        }
+    }
+
+    public LyraItemRegistries languageInit(Consumer<LyraItemRegistries> languageInit) {
+        this.languageInit = languageInit;
+        return this;
     }
 
     public void register(IEventBus eventBus) {
@@ -107,6 +124,7 @@ public class LyraItemRegistries {
                     });
                 }
             };
+            languageInit.accept(this);
             generator.addProvider(client, function.apply("en_us"));
             generator.addProvider(client, function.apply("zh_cn"));
             generator.addProvider(client, new ItemModelProvider(packOutput, modid, existingFileHelper) {

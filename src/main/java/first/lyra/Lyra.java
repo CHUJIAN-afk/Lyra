@@ -1,10 +1,7 @@
 package first.lyra;
 
 import first.lyra.client.config.ClientConfig;
-import first.lyra.register.LyraAttachmentRegister;
-import first.lyra.register.LyraAttributeRegister;
-import first.lyra.register.LyraDataComponentRegister;
-import first.lyra.register.LyraParticleRegister;
+import first.lyra.register.*;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
@@ -18,12 +15,14 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 public class Lyra {
 
     public static final String MODID = "lyra";
+    public static final LyraItemRegistries Registries = LyraItemRegistries.create(MODID).languageInit(LyraLanguageRegister::init);
 
     public static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(MODID, path.toLowerCase());
     }
 
     public Lyra(IEventBus eventBus, Dist dist, ModContainer container) {
+        Registries.register(eventBus);
         LyraAttachmentRegister.register(eventBus);
         LyraAttributeRegister.register(eventBus);
         LyraDataComponentRegister.register(eventBus);

@@ -35,36 +35,34 @@ public class LyraItemRegisterBuilder<T extends Item> {
         return this;
     }
 
-    public LyraItemRegisterBuilder<T> language(String key, String enDesc, String zhDesc) {
-        if (lyraItemRegistries.isDevelopment()) {
-            lyraItemRegistries.languageGenerate.put(key, new String[]{enDesc, zhDesc});
-        }
-        return this;
-    }
-
     public LyraItemRegisterBuilder<T> jeiInfo(int index, String enDesc, String zhDesc) {
         ResourceLocation id = register.getId();
         String key = "item." + id.getNamespace() + "." + id.getPath() + "jei.description." + index;
         if (ModList.get().isLoaded("jei") && FMLLoader.getDist().isClient()) {
             lyraItemRegistries.jeiInfoData.computeIfAbsent(register, like -> new ArrayList<>()).add(Component.translatable(key));
         }
-        return language(key, enDesc, zhDesc);
+        lyraItemRegistries.language(key, enDesc, zhDesc);
+        return this;
     }
 
     public LyraItemRegisterBuilder<T> itemLanguage(String en, String zh) {
-        return language("item." + register.getId().toLanguageKey(), en, zh);
+        lyraItemRegistries.language("item." + register.getId().toLanguageKey(), en, zh);
+        return this;
     }
 
     public LyraItemRegisterBuilder<T> itemLanguageTooltip(int index, String en, String zh) {
-        return language("item." + register.getId().toLanguageKey() + ".tooltip." + index, en, zh);
+        lyraItemRegistries.language("item." + register.getId().toLanguageKey() + ".tooltip." + index, en, zh);
+        return this;
     }
 
     public <A extends AttachmentEntity> LyraItemRegisterBuilder<T> summonLanguage(DeferredHolder<AttachmentEntityType<?>, AttachmentEntityType<A>> holder, String en, String zh) {
-        return language("summon." + holder.getId().toLanguageKey(), en, zh);
+        lyraItemRegistries.language("summon." + holder.getId().toLanguageKey(), en, zh);
+        return this;
     }
 
     public LyraItemRegisterBuilder<T> blockLanguage(String en, String zh) {
-        return language("block." + register.getId().toLanguageKey(), en, zh);
+        lyraItemRegistries.language("block." + register.getId().toLanguageKey(), en, zh);
+        return this;
     }
     public LyraItemRegisterBuilder<T> recipeWithLookup(BiConsumer<HolderLookup.Provider, RecipeOutput> outputConsumer) {
         if (lyraItemRegistries.isDevelopment()) {
