@@ -40,7 +40,7 @@ public interface IEntityCollision<T extends AttachmentEntity> extends ICollision
      * 判断目标是否为有效的碰撞对象
      */
     default boolean isValidCollisionTarget(T entity, LivingEntity target) {
-        return target != null && target.isAlive() && target != entity.getOwner();
+        return entity.isTarget(target);
     }
 
     /**

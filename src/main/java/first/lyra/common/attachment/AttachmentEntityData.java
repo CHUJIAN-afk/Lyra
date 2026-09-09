@@ -220,8 +220,6 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                 for (AttachmentEntity entity : list) {
                     buf.writeUUID(entity.getUuid());
                     entity.syncFieldRegistrar().encode(buf, entity.getOwner().level());
-                    entity.writeBase(buf);
-                    entity.writeAdditional(buf);
                 }
             }
         }
@@ -277,12 +275,10 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                             entity.setUuid(uuid);
                             entity.setOwner(player);
                         }
+                        entity.syncFieldRegistrar().decode(buf, player.level());
                         if (firstSync) {
                             entity.init(entity.getCurrentPathNode());
                         }
-                        entity.syncFieldRegistrar().decode(buf, player.level());
-                        entity.readBase(buf);
-                        entity.readAdditional(buf);
                         list.add(entity);
                     }
                 }

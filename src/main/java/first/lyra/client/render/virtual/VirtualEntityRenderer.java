@@ -50,33 +50,17 @@ public final class VirtualEntityRenderer {
     }
 
     /** 通过原版实体注册 id 渲染，可用于运行时引用其它模组实体而无需编译期依赖。 */
-    public static boolean render(
-            ResourceLocation entityTypeId,
-            PoseStack poseStack,
-            MultiBufferSource bufferSource,
-            float partialTick
-    ) {
+    public static boolean render(ResourceLocation entityTypeId, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick) {
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(entityTypeId);
-        return type != null && render(type, poseStack, bufferSource, partialTick, VirtualEntityPose.create());
+        return render(type, poseStack, bufferSource, partialTick, VirtualEntityPose.create());
     }
 
-    public static boolean render(
-            ResourceLocation entityTypeId,
-            PoseStack poseStack,
-            MultiBufferSource bufferSource,
-            float partialTick,
-            VirtualEntityPose pose
-    ) {
+    public static boolean render(ResourceLocation entityTypeId, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, VirtualEntityPose pose) {
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(entityTypeId);
-        return type != null && render(type, poseStack, bufferSource, partialTick, pose);
+        return render(type, poseStack, bufferSource, partialTick, pose);
     }
 
-    public static boolean render(
-            EntityType<?> type,
-            PoseStack poseStack,
-            MultiBufferSource bufferSource,
-            float partialTick
-    ) {
+    public static boolean render(EntityType<?> type, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick) {
         return render(type, poseStack, bufferSource, partialTick, VirtualEntityPose.create());
     }
 
@@ -102,9 +86,6 @@ public final class VirtualEntityRenderer {
         }
 
         EntityRenderer<?> dispatcherRenderer = minecraft.getEntityRenderDispatcher().getRenderer(ghost);
-        if (dispatcherRenderer == null) {
-            return false;
-        }
 
         applyPose(ghost, pose);
 
@@ -115,22 +96,15 @@ public final class VirtualEntityRenderer {
                     .setAlpha(pose.alpha());
         }
 
-        @SuppressWarnings({"rawtypes", "unchecked"})
-        EntityRenderer renderer = (EntityRenderer) dispatcherRenderer;
+        @SuppressWarnings({"unchecked"})
+        EntityRenderer<Entity> renderer = (EntityRenderer<Entity>) dispatcherRenderer;
 
         poseStack.pushPose();
         if (pose.scale() != 1) {
             poseStack.scale(pose.scale(), pose.scale(), pose.scale());
         }
-        try {
-            renderer.render(ghost, pose.bodyYawDegrees(), partialTick, poseStack, source, pose.packedLight());
-        } catch (RuntimeException e) {
-            ResourceLocation key = EntityType.getKey(type);
-            LOGGER.warn("Virtual entity renderer failed for {}: {}", key, e.toString());
-            return false;
-        } finally {
-            poseStack.popPose();
-        }
+        renderer.render(ghost, pose.bodyYawDegrees(), partialTick, poseStack, source, pose.packedLight());
+        poseStack.popPose();
         return true;
     }
 
@@ -140,21 +114,16 @@ public final class VirtualEntityRenderer {
         if (ghost != null && ghost.level() == level && !freshRequired) {
             return ghost;
         }
-        try {
-            ghost = type.create(level);
-            if (ghost != null) {
-                GHOSTS.put(type, ghost);
-                if (pose.customizer() != null) {
-                    CUSTOMIZED.add(type);
-                } else {
-                    CUSTOMIZED.remove(type);
-                }
+        ghost = type.create(level);
+        if (ghost != null) {
+            GHOSTS.put(type, ghost);
+            if (pose.customizer() != null) {
+                CUSTOMIZED.add(type);
+            } else {
+                CUSTOMIZED.remove(type);
             }
-            return ghost;
-        } catch (RuntimeException e) {
-            LOGGER.warn("Cannot create virtual entity for {}: {}", EntityType.getKey(type), e.toString());
-            return null;
         }
+        return ghost;
     }
 
     private static void applyPose(Entity entity, VirtualEntityPose pose) {
@@ -202,7 +171,7 @@ public final class VirtualEntityRenderer {
     private static void applyWalk(LivingEntity living, VirtualEntityPose pose) {
         float amount = Math.max(0, pose.limbSwingAmount());
         float position = Math.max(0, pose.limbSwingPosition());
-        WalkAnimationStateAccessor accessor = (WalkAnimationStateAccessor) (Object) living.walkAnimation;
+        WalkAnimationStateAccessor accessor = (WalkAnimationStateAccessor) living.walkAnimation;
         accessor.setSpeedOld(amount);
         accessor.setPosition(position);
         living.walkAnimation.setSpeed(amount);

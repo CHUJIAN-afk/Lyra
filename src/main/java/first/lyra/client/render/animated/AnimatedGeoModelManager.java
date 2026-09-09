@@ -10,6 +10,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -44,7 +45,7 @@ public final class AnimatedGeoModelManager extends SimpleJsonResourceReloadListe
     }
 
     @Override
-    protected void apply(Map<ResourceLocation, JsonElement> resources, ResourceManager resourceManager, ProfilerFiller profiler) {
+    protected void apply(Map<ResourceLocation, JsonElement> resources, @NotNull ResourceManager resourceManager, @NotNull ProfilerFiller profiler) {
         Map<ResourceLocation, AnimatedGeoModel> parsed = new HashMap<>();
 
         for (Map.Entry<ResourceLocation, JsonElement> entry : resources.entrySet()) {
@@ -177,8 +178,7 @@ public final class AnimatedGeoModelManager extends SimpleJsonResourceReloadListe
         return new float[]{array.get(0).getAsFloat(), array.get(1).getAsFloat(), array.get(2).getAsFloat()};
     }
 
-    @Nullable
-    private static float[] vectorOrNull(JsonObject obj, String key) {
+    private static float @Nullable [] vectorOrNull(JsonObject obj, String key) {
         if (!obj.has(key) || !obj.get(key).isJsonArray()) {
             return null;
         }

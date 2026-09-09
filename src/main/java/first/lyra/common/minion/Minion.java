@@ -12,16 +12,13 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
-import java.util.function.Supplier;
 
-/**
- * 仆从实体抽象基类，代表由玩家拥有、AI驱动、自主行动的战斗单位。
- */
 public abstract class Minion extends AttachmentEntity {
 
     private final MinionGoalSelector goalSelector = new MinionGoalSelector();
     private LivingEntity target = null;
     private boolean targetChange = false;
+
     private int slotCost = 1;
     private int order = 0;
     private int sameSize = 1;
@@ -29,8 +26,6 @@ public abstract class Minion extends AttachmentEntity {
     @Override
     protected void registerSyncFields(SyncFieldDispatcher fields) {
         super.registerSyncFields(fields);
-        fields.field(ByteBufCodecs.INT, this.getTarget()::getId, (level, id) -> target = level.getEntity(id) instanceof LivingEntity living ? living : null);
-        fields.field(ByteBufCodecs.BOOL, this::isTargetChange, this::setTargetChange);
         fields.field(ByteBufCodecs.INT, this::getSlotCost, this::setSlotCost);
         fields.field(ByteBufCodecs.INT, this::getOrderCache, this::setOrder);
         fields.field(ByteBufCodecs.INT, this::getSameSizeCache, this::setSameSize);

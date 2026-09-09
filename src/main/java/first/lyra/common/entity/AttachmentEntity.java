@@ -206,7 +206,6 @@ public abstract class AttachmentEntity {
     }
 
     public void dimensionChange() {
-        syncFields = null;
     }
 
     public int getHistoryNodesSize() {
@@ -363,21 +362,5 @@ public abstract class AttachmentEntity {
 
     public AttachmentEntityType<?> getType(){
         return type.value();
-    }
-
-    @Deprecated
-    public void writeAdditional(RegistryFriendlyByteBuf buf) {
-    }
-
-    @Deprecated
-    public void readAdditional(RegistryFriendlyByteBuf buf) {
-    }
-
-    @Deprecated
-    public void writeBase(RegistryFriendlyByteBuf buf) {
-    }
-
-    @Deprecated
-    public void readBase(RegistryFriendlyByteBuf buf) {
     }
 }
