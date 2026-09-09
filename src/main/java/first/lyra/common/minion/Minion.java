@@ -2,41 +2,46 @@ package first.lyra.common.minion;
 
 import first.lyra.api.LyraHelper;
 import first.lyra.common.attachment.AttachmentEntityData;
-import first.lyra.common.attachment.InvincibleData;
 import first.lyra.common.attachment.TargetCache;
 import first.lyra.common.entity.AttachmentEntity;
+import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.common.entity.PathNode;
-import first.lyra.register.LyraDamageRegister;
+import first.lyra.common.entity.SyncFieldDispatcher;
 import net.minecraft.core.Holder;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.world.damagesource.DamageType;
+import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Targeting;
-import net.minecraft.world.entity.monster.Enemy;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * 仆从实体抽象基类，代表由玩家拥有、AI驱动、自主行动的战斗单位。
  */
 public abstract class Minion extends AttachmentEntity {
 
-    // ===================== AI系统 =====================
-
     private final MinionGoalSelector goalSelector = new MinionGoalSelector();
     private LivingEntity target = null;
-    private int slotCost = 1;
     private boolean targetChange = false;
+    private int slotCost = 1;
     private int order = 0;
     private int sameSize = 1;
 
-    public Minion() {
-        super();
+    @Override
+    protected void registerSyncFields(SyncFieldDispatcher fields) {
+        super.registerSyncFields(fields);
+        fields.field(ByteBufCodecs.INT, this.getTarget()::getId, (level, id) -> target = level.getEntity(id) instanceof LivingEntity living ? living : null);
+        fields.field(ByteBufCodecs.BOOL, this::isTargetChange, this::setTargetChange);
+        fields.field(ByteBufCodecs.INT, this::getSlotCost, this::setSlotCost);
+        fields.field(ByteBufCodecs.INT, this::getOrderCache, this::setOrder);
+        fields.field(ByteBufCodecs.INT, this::getSameSizeCache, this::setSameSize);
+    }
+
+    public Minion(Holder<AttachmentEntityType<?>> type) {
+        super(type);
         registerGoals(goalSelector);
     }
 
-    // ===================== 抽象方法 =====================
+    public abstract int getSearchDistance();
 
     /**
      * 注册AI目标
@@ -55,8 +60,6 @@ public abstract class Minion extends AttachmentEntity {
         this.slotCost = slotCost;
     }
 
-    // ===================== 生命周期 =====================
-
     @Override
     public void tick() {
         if (!owner.level().isClientSide()) {
@@ -66,8 +69,6 @@ public abstract class Minion extends AttachmentEntity {
         }
         super.tick();
     }
-
-    // ===================== 目标搜索 =====================
 
     /**
      * 在所有者周围搜索有效目标
@@ -87,48 +88,10 @@ public abstract class Minion extends AttachmentEntity {
         return null;
     }
 
-    public abstract int getSearchDistance();
-
-    /**
-     * 判断生物是否为有效攻击目标
-     */
-    public boolean isTarget(LivingEntity target) {
-        if (target != null && owner != target && target.isAlive()) {
-            if (target instanceof Enemy) {
-                return true;
-            }
-            if (target instanceof Targeting targeting && targeting.getTarget() == owner) {
-                return true;
-            }
-            if (InvincibleData.get(target).hasAttack(owner.getUUID())) {
-                return true;
-            }
-            if (InvincibleData.get(owner).hasAttack(target.getUUID())) {
-                return true;
-            }
-            if (InvincibleData.get(target).hasAttack(this.getUuid())) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     @Override
     public void dimensionChange() {
         init(new PathNode(owner.getBoundingBox().getCenter(), 0, 0, 0));
     }
-
-    // ===================== 伤害来源 =====================
-
-    /**
-     * 构造仆从专属伤害来源
-     */
-    public MinionDamageSource getDamageSource() {
-        Holder<DamageType> holder = LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, owner.level());
-        return new MinionDamageSource(holder, null, owner, getCurrentPathNode().pos(), this);
-    }
-
-    // ===================== 排序 =====================
 
     /**
      * 获取目标仆从在其 AttachmentEntityType 分组中的未移除顺序缓存
@@ -164,24 +127,6 @@ public abstract class Minion extends AttachmentEntity {
                 .size();
     }
 
-    @Override
-    public void writeBase(RegistryFriendlyByteBuf buf) {
-        super.writeBase(buf);
-        buf.writeInt(slotCost);
-        buf.writeInt(order);
-        buf.writeInt(sameSize);
-    }
-
-    @Override
-    public void readBase(RegistryFriendlyByteBuf buf) {
-        super.readBase(buf);
-        slotCost = buf.readInt();
-        order = buf.readInt();
-        sameSize = buf.readInt();
-    }
-
-    // ===================== 目标访问器 =====================
-
     public LivingEntity getTarget() { return target; }
 
     public void setTarget(LivingEntity target) {
@@ -199,7 +144,9 @@ public abstract class Minion extends AttachmentEntity {
         this.targetChange = targetChange;
     }
 
-    public MinionGoalSelector getGoalSelector() { return goalSelector; }
+    public MinionGoalSelector getGoalSelector() {
+        return goalSelector;
+    }
 
     public void setOrder(int order) {
         this.order = order;

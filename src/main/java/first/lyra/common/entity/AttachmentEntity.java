@@ -1,46 +1,75 @@
 package first.lyra.common.entity;
 
+import first.lyra.common.attachment.InvincibleData;
+import first.lyra.register.LyraDamageRegister;
+import first.lyra.utils.LyraStreamCodecs;
+import net.minecraft.core.Holder;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Targeting;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
 
-/**
- * 附件实体抽象基类，为仆从和射弹提供统一的存储架构和渲染支持。
- */
 public abstract class AttachmentEntity {
 
-    // ===================== 基础标识 =====================
+    protected UUID uuid = UUID.randomUUID();
+    protected final Holder<AttachmentEntityType<?>> type;
+    protected Player owner = null;
+    protected PlannedPath currentPlannedPath = null;
+    protected final ArrayList<PathNode> historyNodes = new ArrayList<>();
+    protected boolean remove = false;
+    protected SyncFieldDispatcher syncFields = null;
+    protected @NotNull Function<Player, DamageSource> DamageSourceSupplier = player -> new AttachmentEntityDamageSource(LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, player.level()), null, player, getCurrentPathNode().pos(), this);
 
-    protected UUID uuid;
-    protected Player owner;
     protected float damage = 0;
     protected float knockback = 0;
     protected float armorPierce = 0;
     protected int tickCount = 0;
+    protected PathNode currentPathNode = null;
 
-    // ===================== 路径与轨迹 =====================
-
-    protected PlannedPath currentPlannedPath = null;
-    protected final ArrayList<PathNode> historyNodes = new ArrayList<>();
-    protected PathNode currentPathNode;
-    protected PathNode clientTargetNode;
-    protected boolean clientInitialized = false;
-    protected boolean remove = false;
-
-    public AttachmentEntity() {
-        this.uuid = UUID.randomUUID();
-        this.currentPathNode = new PathNode(Vec3.ZERO, 0, 0, 0);
-        historyNodes.addFirst(currentPathNode);
-        historyNodes.addFirst(currentPathNode);
+    protected void registerSyncFields(SyncFieldDispatcher fields) {
+        fields.field(LyraStreamCodecs.FLOAT, this::getDamage, this::setDamage);
+        fields.field(LyraStreamCodecs.FLOAT, this::getKnockback, this::setKnockback);
+        fields.field(LyraStreamCodecs.FLOAT, this::getArmorPierce, this::setArmorPierce);
+        fields.field(LyraStreamCodecs.INT, this::getTickCount, this::setTickCount);
+        fields.field(LyraStreamCodecs.PATH_NODE, this::getCurrentPathNode, this::setCurrentPathNode);
     }
 
-    // ===================== 抽象方法 =====================
+    public AttachmentEntity(Holder<AttachmentEntityType<?>> type) {
+        this.type = type;
+        init(new PathNode(Vec3.ZERO, 0, 0, 0));
+    }
+
+    @Nullable
+    public DamageSource getDamageSource() {
+        return getOwner() != null ? DamageSourceSupplier.apply(getOwner()) : null;
+    }
+
+    public void copyDamageSource(AttachmentEntity other) {
+        setDamageSourceSupplier(other.getDamageSourceSupplier());
+        setDamage(other.getDamage());
+        setKnockback(other.getKnockback());
+        setArmorPierce(other.getArmorPierce());
+    }
+
+    public @NotNull Function<Player, DamageSource> getDamageSourceSupplier() {
+        return DamageSourceSupplier;
+    }
+
+    public void setDamageSourceSupplier(@NotNull Function<Player, DamageSource> damageSourceSupplier) {
+        DamageSourceSupplier = damageSourceSupplier;
+    }
 
     public float getDamage() {
         return damage;
@@ -66,22 +95,14 @@ public abstract class AttachmentEntity {
         this.knockback = knockback;
     }
 
-    public abstract AttachmentEntityType<? extends AttachmentEntity> getType();
-
-    public void writeAdditional(RegistryFriendlyByteBuf buf) {
+    public SyncFieldDispatcher syncFieldRegistrar() {
+        if (syncFields == null) {
+            syncFields = new SyncFieldDispatcher();
+            registerSyncFields(syncFields);
+        }
+        return syncFields;
     }
 
-    public void readAdditional(RegistryFriendlyByteBuf buf) {
-    }
-
-    public void onRemove() {
-    }
-
-    // ===================== 生命周期 =====================
-
-    /**
-     * 每tick更新方法，由附件数据管理器调用。
-     */
     public void tick() {
         boolean clientSide = owner.level().isClientSide();
         if (!clientSide) {
@@ -103,9 +124,6 @@ public abstract class AttachmentEntity {
                     }
                 }
             }
-        } else {
-            // 客户端：使用同步数据更新位置
-            currentPathNode = clientTargetNode;
         }
         tickCount++;
         // 更新历史轨迹
@@ -119,48 +137,45 @@ public abstract class AttachmentEntity {
         }
     }
 
-    /**
-     * 设置当前要执行的计划路径。
-     *
-     * @param path 计划路径
-     */
+    public boolean isTarget(LivingEntity target) {
+        if (target != null && owner != target && target.isAlive()) {
+            if (target instanceof Enemy) {
+                return true;
+            }
+            if (target instanceof Targeting targeting && targeting.getTarget() == owner) {
+                return true;
+            }
+            if (InvincibleData.get(target).hasAttack(owner.getUUID())) {
+                return true;
+            }
+            if (InvincibleData.get(owner).hasAttack(target.getUUID())) {
+                return true;
+            }
+            return InvincibleData.get(target).hasAttack(this.getUuid());
+        }
+        return false;
+    }
+
+    public void onRemove() {
+    }
+
     public void setPlannedPath(PlannedPath path) {
         this.currentPlannedPath = path;
     }
 
-    /**
-     * 获取当前正在执行的路径。
-     *
-     * @return 当前路径，可能为 null
-     */
     public PlannedPath getCurrentPath() {
         return this.currentPlannedPath;
     }
 
-    /**
-     * 获取当前所在的路径节点。
-     *
-     * @return 当前节点
-     */
     public PathNode getCurrentPathNode() {
         return currentPathNode;
     }
 
-    /**
-     * 检查是否正在执行路径且未完成。
-     *
-     * @return 是否正在执行路径
-     */
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public boolean isExecutingPath() {
         return this.currentPlannedPath != null && !this.currentPlannedPath.isFinished();
     }
 
-    /**
-     * 设置一组路径节点，创建默认计划路径。
-     *
-     * @param nodes 路径节点列表
-     */
     public void setPath(List<PathNode> nodes) {
         this.currentPlannedPath = new PlannedPath("default", nodes);
         if (!nodes.isEmpty()) {
@@ -183,61 +198,25 @@ public abstract class AttachmentEntity {
         this.remove = true;
     }
 
-    /**
-     * 初始化实体的路径节点和历史队列。
-     * <p>
-     * 通常在实体创建或重新定位时调用。
-     * </p>
-     *
-     * @param node 初始节点
-     */
     public void init(PathNode node) {
         this.currentPathNode = node;
         this.historyNodes.clear();
-        this.historyNodes.addFirst(node);
-        this.historyNodes.addFirst(node);
+        this.historyNodes.add(node);
+        this.historyNodes.add(node);
     }
 
     public void dimensionChange() {
-
+        syncFields = null;
     }
 
-    // ===================== 历史轨迹 =====================
-
-    /**
-     * 返回历史节点队列的最大容量。
-     * <p>
-     * 子类可重写以改变拖尾渲染的历史长度。
-     * 默认 16，射弹通常使用较小的值（如 8）。
-     * </p>
-     *
-     * @return 队列最大长度
-     */
     public int getHistoryNodesSize() {
         return 16;
     }
 
-    /**
-     * 获取历史节点队列。
-     *
-     * @return 历史节点队列
-     */
     public ArrayList<PathNode> getHistoryNodes() {
         return historyNodes;
     }
 
-    // ===================== 渲染支持 =====================
-
-    /**
-     * 获取用于渲染的插值节点。
-     * <p>
-     * 使用历史队列中最近两个节点进行线性插值，
-     * 使视觉运动更平滑，消除帧间跳跃。
-     * </p>
-     *
-     * @param partialTick 部分 tick 进度（0~1）
-     * @return 插值后的渲染节点
-     */
     public PathNode getRenderNode(float partialTick) {
         if (historyNodes.size() < 2) {
             return currentPathNode;
@@ -249,43 +228,13 @@ public abstract class AttachmentEntity {
         this.currentPathNode = currentPathNode;
     }
 
-    /**
-     * 写入实体的基础同步数据（位置与朝向），并调用子类的附加数据写入。
-     * <p>
-     * 基础数据包含：位置（x, y, z）、旋转（yaw, pitch, roll）。
-     * </p>
-     *
-     * @param buf 数据包缓冲区
-     */
-    public void writeBase(RegistryFriendlyByteBuf buf) {
-        buf.writeVec3(currentPathNode.pos());
-        buf.writeFloat(currentPathNode.yaw());
-        buf.writeFloat(currentPathNode.pitch());
-        buf.writeFloat(currentPathNode.roll());
-    }
-
-    /**
-     * 读取实体的基础同步数据，并调用子类的附加数据读取。
-     * <p>
-     * 首次同步时，会初始化当前位置和历史队列。
-     * </p>
-     *
-     * @param buf 数据包缓冲区
-     */
-    public void readBase(RegistryFriendlyByteBuf buf) {
-        this.clientTargetNode = new PathNode(buf.readVec3(), buf.readFloat(), buf.readFloat(), buf.readFloat());
-        // 首次同步时初始化位置
-        if (!clientInitialized) {
-            clientInitialized = true;
-            init(clientTargetNode);
-        }
-    }
-
-    // ===================== 便捷访问器 =====================
-
     /** @return 当前位置 */
     public Vec3 getPos() {
         return currentPathNode.pos();
+    }
+
+    public void setPos(Vec3 pos) {
+        currentPathNode = new PathNode(pos, getYaw(), getPitch(), getRoll());
     }
 
     /** @return 当前偏航角（度） */
@@ -324,6 +273,10 @@ public abstract class AttachmentEntity {
 
     public int getTickCount() {
         return tickCount;
+    }
+
+    public void setTickCount(int tickCount) {
+        this.tickCount = tickCount;
     }
 
     /**
@@ -406,5 +359,25 @@ public abstract class AttachmentEntity {
         Vec3 c = projLocalY.cross(projNormal);
         float roll = (float) Math.toDegrees(Math.atan2(c.dot(direction), d));
         return new PathNode(pos, yaw, pitch, roll);
+    }
+
+    public AttachmentEntityType<?> getType(){
+        return type.value();
+    }
+
+    @Deprecated
+    public void writeAdditional(RegistryFriendlyByteBuf buf) {
+    }
+
+    @Deprecated
+    public void readAdditional(RegistryFriendlyByteBuf buf) {
+    }
+
+    @Deprecated
+    public void writeBase(RegistryFriendlyByteBuf buf) {
+    }
+
+    @Deprecated
+    public void readBase(RegistryFriendlyByteBuf buf) {
     }
 }

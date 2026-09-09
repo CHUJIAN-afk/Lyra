@@ -3,8 +3,8 @@ package first.lyra.mixin;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.sugar.Local;
-import first.lyra.common.minion.Minion;
-import first.lyra.common.minion.MinionDamageSource;
+import first.lyra.common.entity.AttachmentEntity;
+import first.lyra.common.entity.AttachmentEntityDamageSource;
 import first.lyra.mixinHandler.MixinHandler;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
@@ -32,10 +32,10 @@ public class LivingEntityMixin {
 
     @WrapMethod(method = "hurt")
     public boolean hurt(DamageSource source, float amount, Operation<Boolean> original) {
-        if (source instanceof MinionDamageSource minionDamageSource) {
-            Minion minion = minionDamageSource.getMinion();
+        if (source instanceof AttachmentEntityDamageSource attachmentEntityDamageSource) {
+            AttachmentEntity minion = attachmentEntityDamageSource.getAttachmentEntity();
             Player owner = minion.getOwner();
-            amount = MixinHandler.getModifyDamage((LivingEntity) (Object) this, owner, minion, amount, minionDamageSource);
+            amount = MixinHandler.getModifyDamage((LivingEntity) (Object) this, owner, minion, amount, attachmentEntityDamageSource);
         }
         return original.call(source, amount);
     }
@@ -49,8 +49,8 @@ public class LivingEntityMixin {
             index = 0
     )
     private double knockback(double strength, @Local(argsOnly = true) DamageSource damageSource) {
-        if (damageSource instanceof MinionDamageSource MinionDamageSource) {
-            Minion minion = MinionDamageSource.getMinion();
+        if (damageSource instanceof AttachmentEntityDamageSource AttachmentEntityDamageSource) {
+            AttachmentEntity minion = AttachmentEntityDamageSource.getAttachmentEntity();
             Player owner = minion.getOwner();
             AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonKnockback);
             double scale = instance != null ? instance.getValue() : 1;

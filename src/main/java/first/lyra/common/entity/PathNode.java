@@ -4,7 +4,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 public record PathNode(Vec3 pos, float yaw, float pitch, float roll) {
-
+    
     public PathNode lerp(PathNode to, float partialTick) {
         return new PathNode(
                 this.pos().lerp(to.pos(), partialTick),

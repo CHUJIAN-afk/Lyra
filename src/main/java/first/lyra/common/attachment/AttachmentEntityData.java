@@ -6,6 +6,8 @@ import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.common.minion.Minion;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraRegistries;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -13,6 +15,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.attachment.AttachmentSyncHandler;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
+import net.neoforged.neoforge.network.connection.ConnectionType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,8 +36,12 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     private ResourceKey<Level> dimension = null;
     private boolean changed = false;
 
+    /** 尚未应用到客户端 tick 的原始同步载荷 */
+    private byte[] pendingPayload;
+
     public void tick(Player player) {
         if (isRunning()) {
+            applyPendingSync(player);
             updateLevel(player);
             updateMinionSlot(player);
             tickEntity(player);
@@ -58,7 +65,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     }
 
     public boolean isRunning() {
-        return !groups.isEmpty() || !pendingAdd.isEmpty() || changed;
+        return pendingPayload != null || !groups.isEmpty() || !pendingAdd.isEmpty() || changed;
     }
 
     private void syncToClient(Player player) {
@@ -212,6 +219,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                 buf.writeVarInt(list.size());
                 for (AttachmentEntity entity : list) {
                     buf.writeUUID(entity.getUuid());
+                    entity.syncFieldRegistrar().encode(buf, entity.getOwner().level());
                     entity.writeBase(buf);
                     entity.writeAdditional(buf);
                 }
@@ -224,48 +232,63 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     @Override
     public AttachmentEntityData read(@NotNull IAttachmentHolder holder, @NotNull RegistryFriendlyByteBuf buf, @Nullable AttachmentEntityData oldData) {
         AttachmentEntityData data = oldData != null ? oldData : new AttachmentEntityData();
-
-        // 保留现有实体的缓存引用
-        Map<UUID, AttachmentEntity> existing = new HashMap<>();
-        for (Map<AttachmentEntityType<?>, List<AttachmentEntity>> inner : data.groups.values()) {
-            for (List<AttachmentEntity> list : inner.values()) {
-                for (AttachmentEntity e : list) {
-                    existing.put(e.getUuid(), e);
-                }
-            }
-        }
-
-        // 清空分组和待添加队列
-        data.groups.clear();
-        data.pendingAdd.clear();
-
-        // 读取 Type → AttachmentEntityType → 实体列表的三层结构
-        int typeCount = buf.readVarInt();
-        for (int i = 0; i < typeCount; i++) {
-            Type type = buf.readEnum(Type.class);
-            Map<AttachmentEntityType<?>, List<AttachmentEntity>> inner = data.groups.computeIfAbsent(type, k -> new HashMap<>());
-            int entityCount = buf.readVarInt();
-            for (int j = 0; j < entityCount; j++) {
-                ResourceLocation typeId = buf.readResourceLocation();
-                AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.get(typeId);
-                assert entityType != null;
-                List<AttachmentEntity> list = inner.computeIfAbsent(entityType, k -> new ArrayList<>());
-                int listSize = buf.readVarInt();
-                for (int k = 0; k < listSize; k++) {
-                    UUID uuid = buf.readUUID();
-                    AttachmentEntity entity = existing.get(uuid);
-                    if (entity == null) {
-                        entity = entityType.factory().get();
-                        entity.setUuid(uuid);
-                    }
-                    entity.readBase(buf);
-                    entity.readAdditional(buf);
-                    list.add(entity);
-                }
-            }
-        }
-
+        ByteBuf copy = buf.copy();
+        data.pendingPayload = new byte[copy.readableBytes()];
+        copy.readBytes(data.pendingPayload);
         return data;
+    }
+
+    /** 网络包到达时只暂存载荷，在客户端 tick 起点执行真实解码。 */
+    private void applyPendingSync(Player player) {
+        if (this.pendingPayload != null) {
+            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(this.pendingPayload), player.registryAccess(), ConnectionType.NEOFORGE);
+            // 保留现有实体的缓存引用
+            Map<UUID, AttachmentEntity> existing = new HashMap<>();
+            for (Map<AttachmentEntityType<?>, List<AttachmentEntity>> inner : groups.values()) {
+                for (List<AttachmentEntity> list : inner.values()) {
+                    for (AttachmentEntity e : list) {
+                        existing.put(e.getUuid(), e);
+                    }
+                }
+            }
+
+            // 清空分组和待添加队列
+            groups.clear();
+            pendingAdd.clear();
+
+            // 读取 Type → AttachmentEntityType → 实体列表的三层结构
+            int typeCount = buf.readVarInt();
+            for (int i = 0; i < typeCount; i++) {
+                Type type = buf.readEnum(Type.class);
+                Map<AttachmentEntityType<?>, List<AttachmentEntity>> inner = groups.computeIfAbsent(type, k -> new HashMap<>());
+                int entityCount = buf.readVarInt();
+                for (int j = 0; j < entityCount; j++) {
+                    ResourceLocation typeId = buf.readResourceLocation();
+                    AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.get(typeId);
+                    assert entityType != null;
+                    List<AttachmentEntity> list = inner.computeIfAbsent(entityType, k -> new ArrayList<>());
+                    int listSize = buf.readVarInt();
+                    for (int k = 0; k < listSize; k++) {
+                        UUID uuid = buf.readUUID();
+                        AttachmentEntity entity = existing.get(uuid);
+                        boolean firstSync = entity == null;
+                        if (entity == null) {
+                            entity = entityType.factory().get();
+                            entity.setUuid(uuid);
+                            entity.setOwner(player);
+                        }
+                        if (firstSync) {
+                            entity.init(entity.getCurrentPathNode());
+                        }
+                        entity.syncFieldRegistrar().decode(buf, player.level());
+                        entity.readBase(buf);
+                        entity.readAdditional(buf);
+                        list.add(entity);
+                    }
+                }
+            }
+            this.pendingPayload = null;
+        }
     }
 
     public Map<Type, Map<AttachmentEntityType<?>, List<AttachmentEntity>>> getGroups() {

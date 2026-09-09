@@ -1,33 +1,32 @@
 package first.lyra.common.minion;
 
+import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.common.entity.PathNode;
 import first.lyra.common.entity.PlannedPath;
+import net.minecraft.core.Holder;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * 基于动量物理的仆从抽象基类。
  */
 public abstract class MomentumMinion extends Minion {
 
-    // ===================== 动量状态 =====================
-
     private Vec3 velocity = Vec3.ZERO;
     private float drag = 0.95f;
     private float gravity = 0;
-    // ===================== 视角状态 =====================
-
     private float desiredYaw;
     private float desiredPitch;
     private float desiredRoll;
     private float rotationSpeed = 1f;
 
-    public MomentumMinion() {
-        super();
+    public MomentumMinion(Holder<AttachmentEntityType<?>> type) {
+        super(type);
     }
 
     // ===================== 生命周期 =====================

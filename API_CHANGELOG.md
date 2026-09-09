@@ -15,7 +15,7 @@
 | `IMinionWeaponItem.getMinionArmorPierce` | `getSummonArmorPierce` | — |
 | `LyraAttributeRegister.SentryMaxCount` 注册 ID | 不变 | `sentry__max_count` → `sentry_max_count`（修正双下划线） |
 
-**保持不变的命名**：`MinionMaxCount`/`SentryMaxCount`（各类型专属计数）、`Minion` 实体类、`MinionDamageSource`、`AttachmentEntityData.Type.Minion/Sentry`、`MinionWeaponItemBuilder`。
+**保持不变的命名**：`MinionMaxCount`/`SentryMaxCount`（各类型专属计数）、`Minion` 实体类、`AttachmentEntityDamageSource`、`AttachmentEntityData.Type.Minion/Sentry`、`MinionWeaponItemBuilder`。
 
 > 注意：注册 ID 变化（`minion_damage` → `summon_damage` 等）会重置旧存档中的属性修饰符（由装备/药水重新应用）。
 
@@ -61,7 +61,7 @@ weapon.summonLanguage(HORNET, "Hornet", "黄蜂");
 | 旧 | 新 |
 |---|---|
 | `Servant` | `Minion` |
-| `ServantDamageSource` | `MinionDamageSource` |
+| `ServantDamageSource` | `AttachmentEntityDamageSource` |
 | `ServantGoal` | `MinionGoal` |
 | `ServantGoalSelector` | `MinionGoalSelector` |
 | `MomentumServant` | `MomentumMinion` |
