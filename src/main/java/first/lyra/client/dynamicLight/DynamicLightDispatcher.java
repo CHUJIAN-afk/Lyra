@@ -1,6 +1,5 @@
 package first.lyra.client.dynamicLight;
 
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import first.lyra.common.entity.PathNode;
 import first.lyra.mixin.LevelRendererAccessor;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
@@ -38,10 +37,11 @@ import java.util.Comparator;
  * 命中且相同(静止)→ 跳过;旧缓存未被命中的(移除)→ 刷新。静止帧短路复用快照,零分配零排序。
  * </p>
  * <p>
- * 与 26.2 差异:1.21.1 无 smooth 8-bit 格式,精度取整到整数级(Math.round)。
- * 布局:方块路径(getLightColor)返回 sky&lt;&lt;20 | block&lt;&lt;4(与 26.2 LightCoordsUtil 相同);
- * 实体路径(getPackedLightCoords)为 LightTexture.pack 布局 sky&lt;&lt;16 | block&lt;&lt;4。
- * 两条路径 sky 位不同,提升只用掩码改 block 位(bit 4-7),sky 位原样保留。
+ * 与 26.2 差异:1.21.1 无 smooth 8-bit 格式,但采用 LDL 1.21.1 同款位运算,
+ * 把 dynamic light ×16 写入 block 光通道低 20 位(1.21.1 实际值 0-240 占用低 12 位),借助 16×16 lightmap 的
+ * 双线性过滤实现 1/16 级平滑过渡。
+ * 布局:LevelRenderer.getLightColor 与 EntityRenderer.getPackedLightCoords
+ * 均为 LightTexture.pack 布局 sky&lt;&lt;20 | block&lt;&lt;4。
  * </p>
  */
 public final class DynamicLightDispatcher {
@@ -113,6 +113,7 @@ public final class DynamicLightDispatcher {
 
     /** 写入点光源:O(1) 追加,写入时计算身份哈希(跨帧跟踪用)与分组区块 key */
     public static void addLightSources(Vec3 pos, int light) {
+        light = Mth.clamp(light, 0, 15);
         if (light <= 0) {
             return;
         }
@@ -126,8 +127,8 @@ public final class DynamicLightDispatcher {
     /**
      * 帧末调度(renderLevel TAIL):构建空间查找快照并跨帧对比光源,重编译位置变化/新增/移除的光源影响区块。
      * <p>
-     * 区块编译频率不做限制;静止光源(身份命中且位置亮度相同)零刷新;
-     * 全静止帧短路复用快照(零分配零排序)。
+     * 区块编译每帧触发,光源位置/亮度变化的 section 立即重建以获得最佳跟手效果;
+     * 静止光源(身份命中且位置亮度相同)零刷新,全静止帧短路复用快照。
      * </p>
      */
     public static void update(LevelRendererAccessor levelRenderer) {
@@ -214,8 +215,7 @@ public final class DynamicLightDispatcher {
     /**
      * 方块路径:由 {@code LevelRendererMixin} 在 getLightColor 调用,返回提升后的 packed light。
      */
-    public static int getDynamicLight(BlockAndTintGetter level, BlockState state, BlockPos blockPos, Operation<Integer> original) {
-        int originalLight = original.call(level, state, blockPos);
+    public static int getDynamicLight(BlockAndTintGetter level, BlockState state, BlockPos blockPos, int originalLight) {
         if (state.isSolidRender(level, blockPos)) {
             return originalLight;
         }
@@ -298,23 +298,23 @@ public final class DynamicLightDispatcher {
                 }
             }
         }
-        return result;
+        return Mth.clamp(result, 0.0, 15.0);
     }
 
     /**
-     * 将动态光照写入 block 光通道(UV2 低 12 位,对齐 LDL 的 lightmap 坐标法)。
+     * 将动态光照写入 block 光通道(UV2 低 20 位,对齐 LDL 的 lightmap 坐标法)。
      * <p>
      * shader 侧 lightmap 采样为 {@code uv / 256.0} 映射到 16×16 lightmap 纹素:
      * block 光值(0-15)在 UV2 中按 {@code value << 4} 落在低 12 位,小数(1/16 级)进入
      * 更低 4 位后,texture() 双线性过滤会在相邻纹素间插值 → 平滑光照过渡。
      * 因此这里直接写入 {@code (int)(dynamicLight * 16.0)}(0-240,保留 1/16 小数精度),
      * 取代旧的 Math.round 整数取整(16 级跳变)。
-     * 掩码只清低 12 位(bit0-11),sky 位(方块 bit20+ / 实体 bit16+)原样保留。
+     * 掩码保留 sky 位(bit20+),清除 block 光通道低 20 位;与 LDL 1.21.1 完全一致。
      * </p>
      */
     private static int withDynamicLight(int originalLight, double dynamicLight) {
         int luminance = (int) (dynamicLight * 16.0);
-        return (originalLight & 0xfffff000) | (luminance & 0x00000fff);
+        return (originalLight & 0xfff00000) | (luminance & 0x000fffff);
     }
 
     /** 光源影响区块:所在区块 + 沿位置偏移方向的最多 7 个邻居(半径 7.75 < 区块边长 16) */

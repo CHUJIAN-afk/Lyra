@@ -1,7 +1,6 @@
 package first.lyra.mixin;
 
-import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
 import first.lyra.client.dynamicLight.DynamicLightDispatcher;
@@ -35,8 +34,11 @@ public class LevelRendererMixin {
     @Final
     private RenderBuffers renderBuffers;
 
-    @WrapMethod(method = "getLightColor(Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;)I")
-    private static int getLightColor(BlockAndTintGetter level, BlockState state, BlockPos pos, Operation<Integer> original) {
+    @ModifyReturnValue(
+            method = "getLightColor(Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;)I",
+            at = @At("RETURN")
+    )
+    private static int getLightColor(int original, BlockAndTintGetter level, BlockState state, BlockPos pos) {
         return DynamicLightDispatcher.getDynamicLight(level, state, pos, original);
     }
 
