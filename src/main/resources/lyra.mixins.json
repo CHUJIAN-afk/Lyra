@@ -16,7 +16,8 @@
   "client": [
     "CreativeModeInventoryScreenMixin",
     "EntityRendererMixin",
-    "LevelRendererMixin"
+    "LevelRendererMixin",
+    "WalkAnimationStateAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
