@@ -10,7 +10,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.attachment.AttachmentSyncHandler;
@@ -20,6 +19,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * 统一的附件实体数据附件。
@@ -35,11 +35,13 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     private final List<AttachmentEntity> renderCache = new ArrayList<>();
     private ResourceKey<Level> dimension = null;
     private boolean changed = false;
-    private byte[] pendingPayload;
+    private final AtomicReference<List<byte[]>> pendingPayloads = new AtomicReference<>(List.of());
 
     public void tick(Player player) {
-        if (isRunning()) {
+        if (player.level().isClientSide()) {
             applyPendingSync(player);
+        }
+        if (isRunning()) {
             updateLevel(player);
             updateMinionSlot(player);
             tickEntity(player);
@@ -63,7 +65,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     }
 
     public boolean isRunning() {
-        return pendingPayload != null || !groups.isEmpty() || !pendingAdd.isEmpty() || changed;
+        return !groups.isEmpty() || !pendingAdd.isEmpty() || changed;
     }
 
     private void syncToClient(Player player) {
@@ -202,7 +204,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     }
 
     @Override
-    public void write(RegistryFriendlyByteBuf buf, AttachmentEntityData data, boolean isSelf) {
+    public void write(RegistryFriendlyByteBuf buf, AttachmentEntityData data, boolean initialSync) {
         // 写入 Type → AttachmentEntityType → 实体列表的三层结构
         buf.writeVarInt(data.groups.size());
         for (Map.Entry<Type, Map<AttachmentEntityType<?>, List<AttachmentEntity>>> typeEntry : data.groups.entrySet()) {
@@ -215,7 +217,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                 buf.writeVarInt(list.size());
                 for (AttachmentEntity entity : list) {
                     buf.writeUUID(entity.getUuid());
-                    entity.syncFieldRegistrar().encode(buf, entity.getOwner().level());
+                    entity.syncFieldRegistrar().encode(buf, entity.getOwner().level(), initialSync);
                 }
             }
         }
@@ -227,15 +229,27 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     public AttachmentEntityData read(@NotNull IAttachmentHolder holder, @NotNull RegistryFriendlyByteBuf buf, @Nullable AttachmentEntityData oldData) {
         AttachmentEntityData data = oldData != null ? oldData : new AttachmentEntityData();
         ByteBuf copy = buf.copy();
-        data.pendingPayload = new byte[copy.readableBytes()];
-        copy.readBytes(data.pendingPayload);
+        byte[] payload = new byte[copy.readableBytes()];
+        copy.readBytes(payload);
+        if (payload.length == 0) {
+            return data;
+        }
+        data.pendingPayloads.updateAndGet(payloads -> {
+            List<byte[]> updated = new ArrayList<>(payloads.size() + 1);
+            updated.addAll(payloads);
+            updated.add(payload);
+            return List.copyOf(updated);
+        });
         return data;
     }
 
-    /** 网络包到达时只暂存载荷，在客户端 tick 起点执行真实解码。 */
+    /**
+     * 网络包到达时只暂存载荷，在客户端 tick 起点执行真实解码。
+     */
     private void applyPendingSync(Player player) {
-        if (this.pendingPayload != null) {
-            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(this.pendingPayload), player.registryAccess(), ConnectionType.NEOFORGE);
+        List<byte[]> snapshot = pendingPayloads.getAndSet(List.of());
+        for (byte[] payload : snapshot) {
+            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(payload), player.registryAccess(), ConnectionType.NEOFORGE);
             // 保留现有实体的缓存引用
             Map<UUID, AttachmentEntity> existing = new HashMap<>();
             groups.values().forEach(group -> group.values().forEach(list -> list.forEach(entity -> existing.put(entity.getUuid(), entity))));
@@ -269,7 +283,6 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                     }
                 }
             }
-            this.pendingPayload = null;
         }
     }
 

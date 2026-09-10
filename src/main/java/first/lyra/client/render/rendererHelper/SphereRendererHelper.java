@@ -104,7 +104,7 @@ public class SphereRendererHelper {
      * 最内层相对半径 0~1（内层越小，核心越锐利）。
      */
     public SphereRendererHelper innerRatio(float ratio) {
-        this.innerRatio = Math.max(0f, Math.min(1f, ratio));
+        this.innerRatio = Math.clamp(ratio, 0f, 1f);
         return this;
     }
 
@@ -149,10 +149,9 @@ public class SphereRendererHelper {
      */
     private void renderLayer(VertexConsumer consumer, Matrix4f pose, float r,
                              float layerAlpha, int baseR, int baseG, int baseB, int baseA, int sides) {
-        int a = Math.max(0, Math.min(255, Math.round(baseA * layerAlpha)));
+        int a = Math.clamp(Math.round(baseA * layerAlpha), 0, 255);
         int vertexColor = FastColor.ARGB32.color(a, baseR, baseG, baseB);
 
-        int slices = sides;
         int stacks = Math.max(2, sides / 2);
 
         // 预算每条纬线的顶点环（共 stacks+1 个环，每环 slices+1 个点，末点与首点重合以闭合）
@@ -165,15 +164,15 @@ public class SphereRendererHelper {
             float xz0 = (float) Math.sin(phi0);
             float xz1 = (float) Math.sin(phi1);
 
-            for (int seg = 0; seg < slices; seg++) {
-                float theta0 = (float) seg / slices * (float) (Math.PI * 2.0);
-                float theta1 = (float) (seg + 1) / slices * (float) (Math.PI * 2.0);
+            for (int seg = 0; seg < sides; seg++) {
+                float theta0 = (float) seg / sides * (float) (Math.PI * 2.0);
+                float theta1 = (float) (seg + 1) / sides * (float) (Math.PI * 2.0);
                 float ct0 = (float) Math.cos(theta0), st0 = (float) Math.sin(theta0);
                 float ct1 = (float) Math.cos(theta1), st1 = (float) Math.sin(theta1);
 
                 // 四边形四顶点（两相邻纬线 × 两相邻经线），球心为原点
-                float u0 = (float) seg / slices;
-                float u1 = (float) (seg + 1) / slices;
+                float u0 = (float) seg / sides;
+                float u1 = (float) (seg + 1) / sides;
                 float v0 = (float) ring / stacks;
                 float v1 = (float) (ring + 1) / stacks;
 
@@ -191,14 +190,8 @@ public class SphereRendererHelper {
         }
     }
 
-    private void emitVertex(VertexConsumer consumer, Matrix4f pose, float x, float y, float z,
-                            int color, float u, float v, float nx, float ny, float nz) {
-        consumer.addVertex(pose, x, y, z)
-                .setColor(color)
-                .setUv(u, v)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT)
-                .setNormal(nx, ny, nz);
+    private void emitVertex(VertexConsumer consumer, Matrix4f pose, float x, float y, float z, int color, float u, float v, float nx, float ny, float nz) {
+        consumer.addVertex(pose, x, y, z).setColor(color).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(nx, ny, nz);
     }
 
     private static float mix(float a, float b, float t) {
