@@ -79,7 +79,7 @@ public interface IEntityCollision<T extends AttachmentEntity> extends ICollision
         }
         Vec3 sweepCenter = sweepBounds.getCenter();
         double sweepRadius = sweepCenter.distanceTo(new Vec3(sweepBounds.maxX, sweepBounds.maxY, sweepBounds.maxZ));
-        List<LivingEntity> potentialTargets = entity.getOwner()
+        List<LivingEntity> potentialTargets = entity.getLevel()
                 .getData(LyraAttachmentRegister.TargetCache)
                 .getEntitiesInRadius(sweepCenter, sweepRadius, target -> isValidCollisionTarget(entity, target));
 

@@ -52,9 +52,11 @@ public class LivingEntityMixin {
         if (damageSource instanceof AttachmentEntityDamageSource AttachmentEntityDamageSource) {
             AttachmentEntity minion = AttachmentEntityDamageSource.getAttachmentEntity();
             Player owner = minion.getOwner();
-            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonKnockback);
+            AttributeInstance instance = owner != null ? owner.getAttribute(LyraAttributeRegister.SummonKnockback) : null;
             double scale = instance != null ? instance.getValue() : 1;
-            scale *= 0.8 + (0.4 * owner.getRandom().nextDouble());
+            if (owner != null) {
+                scale *= 0.8 + (0.4 * owner.getRandom().nextDouble());
+            }
             return minion.getKnockback() * scale;
         }
         return strength;

@@ -8,9 +8,12 @@ import first.lyra.common.attachment.InvincibleData;
 import first.lyra.common.attachment.ParticlesData;
 import first.lyra.common.dataComponent.MinionWeapon;
 import first.lyra.register.LyraAttributeRegister;
+import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraDataComponentRegister;
 import first.lyra.register.LyraItemRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.neoforged.bus.api.EventPriority;
@@ -60,6 +63,11 @@ public class Event {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void tick(LevelTickEvent.Post event) {
+        Level level = event.getLevel();
+        if (!level.isClientSide()) {
+            level.getData(LyraAttachmentRegister.TargetCache).tick((ServerLevel) level);
+        }
+        level.getData(LyraAttachmentRegister.EntityData).tick(level);
         ParticlesData.tick(event);
         DamageInfoData.tick(event);
     }

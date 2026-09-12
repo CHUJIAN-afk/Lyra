@@ -13,7 +13,7 @@ public class LyraAttachmentRegister {
     private static final DeferredRegister<AttachmentType<?>> Register =
             DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, Lyra.MODID);
 
-    /** 统一的实体数据附件 */
+    /** 世界级虚拟实体数据附件 */
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AttachmentEntityData>> EntityData =
             Register.register("entity_data", () -> AttachmentType.builder(AttachmentEntityData::new)
                     .sync(new AttachmentEntityData())

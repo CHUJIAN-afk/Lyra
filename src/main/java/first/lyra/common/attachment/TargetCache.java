@@ -1,9 +1,7 @@
 package first.lyra.common.attachment;
 
 import first.lyra.common.entity.AttachmentEntity;
-import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.common.minion.Minion;
-import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
@@ -16,7 +14,6 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
@@ -24,6 +21,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.IntToDoubleFunction;
@@ -33,26 +31,30 @@ import java.util.function.Predicate;
  * 目标缓存，存储玩家周围的实体列表。
  * <p>
  * 每tick更新一次，所有仆从共享同一份缓存，避免重复查询。
- * 存储为玩家附件，仅服务端使用。
+ * 存储为世界附件，仅服务端使用。
  * </p>
  */
 public class TargetCache {
 
-    private static final double MAX_DISTANCE_SQ = 128.0 * 128.0;
-    private static final int MAX_STEPS = 128;
-    private static final double EPSILON = 1.0E-7;
-    private static final int CELL_SIZE = 16;
-
-    /**
-     * 缓存的实体列表
-     */
-    private final List<LivingEntity> entities = new ArrayList<>();
     private final Int2BooleanOpenHashMap visibilityCache = new Int2BooleanOpenHashMap();
     private final Int2FloatOpenHashMap distanceCache = new Int2FloatOpenHashMap();
-
-    // ==================== 16*16*16 空间分组缓存 ====================
-
     private final Long2ObjectOpenHashMap<List<LivingEntity>> spatialGroups = new Long2ObjectOpenHashMap<>();
+    private final Long2ObjectOpenHashMap<LevelChunk> chunkCache = new Long2ObjectOpenHashMap<>();
+    private final BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+    private ServerLevel level;
+
+    /**
+     * 更新缓存。每tick调用一次。
+     *
+     * @param level 世界
+     */
+    public void tick(ServerLevel level) {
+        spatialGroups.clear();
+        visibilityCache.clear();
+        distanceCache.clear();
+        chunkCache.clear();
+        this.level = level;
+    }
 
     /**
      * 将三维坐标映射到 16*16*16 分组的键。
@@ -61,47 +63,17 @@ public class TargetCache {
         return ((long) x & 0x3FFFFFFL) << 38 | ((long) y & 0x3FFFFFFL) << 12 | ((long) z & 0x3FFFFFFL);
     }
 
-    private static long cellKey(Vec3 pos) {
-        return cellKey(Mth.floor(pos.x) >> 4, Mth.floor(pos.y) >> 4, Mth.floor(pos.z) >> 4);
-    }
-
-    /**
-     * 将实体放入对应的 16*16*16 空间分组。
-     */
-    private void addToSpatialGroup(LivingEntity entity) {
-        spatialGroups.computeIfAbsent(cellKey(entity.position()), k -> new ArrayList<>()).add(entity);
-    }
-
-    /**
-     * 获取 (x,y,z) 所在分组内的所有实体。
-     */
-    public List<LivingEntity> getEntitiesInCell(int x, int y, int z) {
-        return spatialGroups.getOrDefault(cellKey(x, y, z), List.of());
-    }
-
-    /**
-     * 以指定位置和半径查询实体（走空间分组，不做全量遍历）。
-     * <p>仅返回存活实体，不含玩家自身。</p>
-     *
-     * @param pos      查询中心坐标
-     * @param radius   查询半径
-     * @return 半径内的存活实体列表
-     */
-    public List<LivingEntity> getEntitiesInRadius(Vec3 pos, double radius) {
-        return getEntitiesInRadius(pos, radius, null);
-    }
-
     /**
      * 以指定位置和半径查询实体（走空间分组，不做全量遍历），支持过滤条件。
      *
-     * @param pos      查询中心坐标
-     * @param radius   查询半径
-     * @param filter   额外过滤条件，可为 null
+     * @param pos    查询中心坐标
+     * @param radius 查询半径
+     * @param filter 额外过滤条件，可为 null
      * @return 半径内且满足过滤条件的存活实体列表
      */
-    public List<LivingEntity> getEntitiesInRadius(Vec3 pos, double radius, Predicate<LivingEntity> filter) {
+    public List<LivingEntity> getEntitiesInRadius(Vec3 pos, double radius, @Nullable Predicate<LivingEntity> filter) {
         List<LivingEntity> result = new ArrayList<>();
-        if (radius <= 0) {
+        if (radius <= 0 || level == null) {
             return result;
         }
         double radiusSq = radius * radius;
@@ -111,6 +83,32 @@ public class TargetCache {
         int maxCellY = Mth.floor(pos.y + radius) >> 4;
         int minCellZ = Mth.floor(pos.z - radius) >> 4;
         int maxCellZ = Mth.floor(pos.z + radius) >> 4;
+        AABB searchBox = null;
+        for (int cellX = minCellX; cellX <= maxCellX; cellX++) {
+            for (int cellY = minCellY; cellY <= maxCellY; cellY++) {
+                for (int cellZ = minCellZ; cellZ <= maxCellZ; cellZ++) {
+                    if (!spatialGroups.containsKey(cellKey(cellX, cellY, cellZ))) {
+                        AABB cellBox = cellBox(cellX, cellY, cellZ);
+                        searchBox = searchBox == null ? cellBox : searchBox.minmax(cellBox);
+                    }
+                }
+            }
+        }
+        if (searchBox != null) {
+            for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, searchBox)) {
+                if (entity.isAlive()) {
+                    int entityCellX = Mth.floor(entity.getX()) >> 4;
+                    int entityCellY = Mth.floor(entity.getY()) >> 4;
+                    int entityCellZ = Mth.floor(entity.getZ()) >> 4;
+                    if (entityCellX >= minCellX && entityCellX <= maxCellX && entityCellY >= minCellY && entityCellY <= maxCellY && entityCellZ >= minCellZ && entityCellZ <= maxCellZ) {
+                        List<LivingEntity> cell = spatialGroups.computeIfAbsent(cellKey(entityCellX, entityCellY, entityCellZ), key -> new ArrayList<>());
+                        if (cell.stream().noneMatch(existing -> existing.getUUID().equals(entity.getUUID()))) {
+                            cell.add(entity);
+                        }
+                    }
+                }
+            }
+        }
         for (int cellX = minCellX; cellX <= maxCellX; cellX++) {
             for (int cellY = minCellY; cellY <= maxCellY; cellY++) {
                 for (int cellZ = minCellZ; cellZ <= maxCellZ; cellZ++) {
@@ -119,7 +117,7 @@ public class TargetCache {
                         continue;
                     }
                     for (LivingEntity entity : cell) {
-                        if (entity.getBoundingBox().getCenter().distanceToSqr(pos) <= radiusSq) {
+                        if (entity.isAlive() && entity.getBoundingBox().getCenter().distanceToSqr(pos) <= radiusSq) {
                             if (filter == null || filter.test(entity)) {
                                 result.add(entity);
                             }
@@ -131,11 +129,11 @@ public class TargetCache {
         return result;
     }
 
-    // ==================== Chunk 缓存（每tick预加载） ====================
+    private static AABB cellBox(int cellX, int cellY, int cellZ) {
+        return new AABB(cellX << 4, cellY << 4, cellZ << 4, (cellX + 1) << 4, (cellY + 1) << 4, (cellZ + 1) << 4);
+    }
 
-    private ServerLevel cachedLevel;
-    private final Long2ObjectOpenHashMap<LevelChunk> chunkCache = new Long2ObjectOpenHashMap<>();
-    private final BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+    // ==================== Chunk 缓存（每tick预加载） ====================
 
     public LivingEntity getNewTarget(Minion minion, List<LivingEntity> targets, float ownerWarningDistance, boolean selfCenter) {
         Player owner = minion.getOwner();
@@ -143,8 +141,8 @@ public class TargetCache {
         LivingEntity newTarget = null;
         double bestScore = Double.MAX_VALUE;
         for (LivingEntity entity : targets) {
-            double score = selfCenter ? getDistance(minion, entity) : getDistance(owner, entity);
-            if (ownerWarningDistance > 0 && getDistance(owner, entity) < ownerWarningDistance) {
+            double score = selfCenter || owner == null ? getDistance(minion, entity) : getDistance(owner, entity);
+            if (owner != null && ownerWarningDistance > 0 && getDistance(owner, entity) < ownerWarningDistance) {
                 score -= 10000.0;
             }
             if (entity == currentTarget) {
@@ -169,23 +167,25 @@ public class TargetCache {
         return distanceCache.computeIfAbsent(key, (IntToDoubleFunction)(k -> (float) player.getEyePosition().distanceTo(living.getBoundingBox().getCenter())));
     }
 
-    public float getSummonSearchRange(Player player, float distance) {
-        AttributeInstance instance = player.getAttribute(LyraAttributeRegister.SummonSearchRange);
-        if (instance != null) {
-            distance *= (float) instance.getValue();
+    public float getSummonSearchRange(@Nullable Player player, float distance) {
+        if (player != null) {
+            AttributeInstance instance = player.getAttribute(LyraAttributeRegister.SummonSearchRange);
+            if (instance != null) {
+                distance *= (float) instance.getValue();
+            }
         }
         return distance;
     }
 
     //此缓存不能被共享，极易卡顿
-    public boolean isVisibility(Minion minion, LivingEntity living) {
-        Integer key = minion.getUuid().hashCode() + living.getUUID().hashCode();
-        return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(minion.getPos(), living.getBoundingBox().getCenter()));
+    public boolean isVisibility(AttachmentEntity attachmentEntity, LivingEntity living) {
+        Integer key = attachmentEntity.getUuid().hashCode() + living.getUUID().hashCode();
+        return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(attachmentEntity.getPos(), living.getBoundingBox().getCenter()));
     }
 
-    public boolean isVisibility(Player player, LivingEntity living) {
-        Integer key = player.getUUID().hashCode() + living.getUUID().hashCode();
-        return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(player.getBoundingBox().getCenter(), living.getBoundingBox().getCenter()));
+    public boolean isVisibility(LivingEntity living1, LivingEntity living2) {
+        Integer key = living1.getUUID().hashCode() + living2.getUUID().hashCode();
+        return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(living1.getBoundingBox().getCenter(), living2.getBoundingBox().getCenter()));
     }
 
     /**
@@ -196,19 +196,19 @@ public class TargetCache {
      * @return true = 无遮挡（可见）
      */
     private boolean hasLineOfSight(Vec3 from, Vec3 to) {
-        if (cachedLevel == null) {
+        if (level == null) {
             return false;
         }
-        if (from.distanceToSqr(to) > MAX_DISTANCE_SQ) {
+        if (from.distanceToSqr(to) > 128.0 * 128.0) {
             return false;
         }
 
-        double startX = Mth.lerp(-EPSILON, from.x, to.x);
-        double startY = Mth.lerp(-EPSILON, from.y, to.y);
-        double startZ = Mth.lerp(-EPSILON, from.z, to.z);
-        double endX = Mth.lerp(-EPSILON, to.x, from.x);
-        double endY = Mth.lerp(-EPSILON, to.y, from.y);
-        double endZ = Mth.lerp(-EPSILON, to.z, from.z);
+        double startX = Mth.lerp(-1.0E-7, from.x, to.x);
+        double startY = Mth.lerp(-1.0E-7, from.y, to.y);
+        double startZ = Mth.lerp(-1.0E-7, from.z, to.z);
+        double endX = Mth.lerp(-1.0E-7, to.x, from.x);
+        double endY = Mth.lerp(-1.0E-7, to.y, from.y);
+        double endZ = Mth.lerp(-1.0E-7, to.z, from.z);
 
         int curX = Mth.floor(endX);
         int curY = Mth.floor(endY);
@@ -230,7 +230,7 @@ public class TargetCache {
         double tMaxY = tDeltaY * (stepY > 0 ? 1.0 - Mth.frac(endY) : Mth.frac(endY));
         double tMaxZ = tDeltaZ * (stepZ > 0 ? 1.0 - Mth.frac(endZ) : Mth.frac(endZ));
 
-        ServerLevel level = cachedLevel;
+        ServerLevel level = this.level;
         int minBuildHeight = level.getMinBuildHeight();
         int maxBuildHeight = level.getMaxBuildHeight();
 
@@ -240,7 +240,7 @@ public class TargetCache {
         int lastSectionY = Integer.MIN_VALUE;
         LevelChunkSection section = null;
 
-        for (int steps = 0; steps < MAX_STEPS; steps++) {
+        for (int steps = 0; steps < 128; steps++) {
             if (tMaxX > 1.0 && tMaxY > 1.0 && tMaxZ > 1.0) {
                 return true;
             }
@@ -322,81 +322,5 @@ public class TargetCache {
         }
 
         return true;
-    }
-
-    /**
-     * 更新缓存。每tick调用一次。
-     *
-     * @param player 玩家
-     */
-    public void tick(Player player) {
-        entities.clear();
-        spatialGroups.clear();
-        visibilityCache.clear();
-        distanceCache.clear();
-        chunkCache.clear();
-        AttachmentEntityData data = player.getData(LyraAttachmentRegister.EntityData);
-        if (data.isRunning()) {
-            Level level = player.level();
-            if (level instanceof ServerLevel serverLevel) {
-                cachedLevel = serverLevel;
-            } else {
-                cachedLevel = null;
-                return;
-            }
-            AABB box = player.getBoundingBox();
-            Vec3 center = box.getCenter();
-            Vec3 maxVec3 = null;
-            float maxDistance = 0;
-            Map<AttachmentEntityData.Type, Map<AttachmentEntityType<?>, List<AttachmentEntity>>> groups = data.getGroups();
-            Set<Map.Entry<AttachmentEntityData.Type, Map<AttachmentEntityType<?>, List<AttachmentEntity>>>> entries = groups.entrySet();
-            for (Map.Entry<AttachmentEntityData.Type, Map<AttachmentEntityType<?>, List<AttachmentEntity>>> entry : entries) {
-                Map<AttachmentEntityType<?>, List<AttachmentEntity>> entryValue = entry.getValue();
-                Collection<List<AttachmentEntity>> values = entryValue.values();
-                for (List<AttachmentEntity> value : values) {
-                    for (AttachmentEntity entity : value) {
-                        Vec3 pos = entity.getPos();
-                        if (pos.distanceToSqr(center) > maxDistance) {
-                            maxVec3 = pos;
-                        }
-                    }
-                }
-            }
-            double distance;
-            if (maxVec3 != null) {
-                distance = getSummonSearchRange(player, Math.max(32, (float) maxVec3.distanceTo(center) + 4));
-            } else {
-                distance = getSummonSearchRange(player, 32);
-            }
-            List<LivingEntity> result = new ArrayList<>();
-            List<LivingEntity> livingEntityList = level.getEntitiesOfClass(LivingEntity.class, box.inflate(distance));
-            for (LivingEntity living : livingEntityList) {
-                if (living != player && living.isAlive()) {
-                    if (getDistance(player, living) <= distance) {
-                        result.add(living);
-                        addToSpatialGroup(living);
-                    }
-                }
-            }
-            entities.addAll(result);
-        }
-    }
-
-    /**
-     * 获取缓存的实体列表。
-     *
-     * @return 实体列表（只读）
-     */
-    public List<LivingEntity> getEntities() {
-        return entities;
-    }
-
-    /**
-     * 检查缓存是否为空。
-     *
-     * @return 是否为空
-     */
-    public boolean isEmpty() {
-        return entities.isEmpty();
     }
 }

@@ -1,7 +1,6 @@
 package first.lyra.common.projectile;
 
 import first.lyra.api.LyraHelper;
-import first.lyra.common.attachment.AttachmentEntityData;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.common.entity.PathNode;
@@ -10,9 +9,9 @@ import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import java.util.Collections;
-import java.util.function.Supplier;
 
 /**
  * 射弹实体抽象基类，代表由玩家拥有、动量驱动的飞行攻击物。
@@ -44,7 +43,7 @@ public abstract class Projectile extends AttachmentEntity {
 
     @Override
     public void tick() {
-        if (!owner.level().isClientSide()) {
+        if (!level.isClientSide()) {
             tickPhysics();
             checkAlive();
         }
@@ -53,9 +52,6 @@ public abstract class Projectile extends AttachmentEntity {
 
     public void checkAlive() {
         if (maxLife > 0 && tickCount > maxLife) {
-            setRemove();
-        }
-        if (getPos().distanceTo(owner.getBoundingBox().getCenter()) > 128) {
             setRemove();
         }
     }
@@ -71,13 +67,14 @@ public abstract class Projectile extends AttachmentEntity {
         setPath(Collections.singletonList(new PathNode(getPos().add(velocity), getYaw(), getPitch(), getRoll())));
     }
 
-    @Override
-    public void dimensionChange() {
-        setRemove();
+    public void join(Player owner) {
+        setOwner(owner);
+        join(owner.level());
     }
 
-    public void join(Player owner) {
-        LyraHelper.get(owner).add(AttachmentEntityData.Type.Projectile, this);
+    public void join(Level level) {
+        setLevel(level);
+        LyraHelper.get(level).add(this);
     }
 
     public Vec3 getVelocity() {

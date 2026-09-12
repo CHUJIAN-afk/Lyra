@@ -77,7 +77,7 @@ public interface IBlockCollision<T extends AttachmentEntity> extends ICollision 
         if (motion.lengthSqr() < 1e-10) return;
 
         AABB box = getBlockCollisionBox().move(from);
-        Level level = entity.getOwner().level();
+        Level level = entity.getLevel();
 
         // 使用原版碰撞检测算法
         Vec3 correctedMotion = collideBoundingBox(box, motion, level);

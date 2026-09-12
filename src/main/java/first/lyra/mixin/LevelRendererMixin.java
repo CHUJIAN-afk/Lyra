@@ -54,7 +54,7 @@ public class LevelRendererMixin {
         assert level != null;
         MultiBufferSource.BufferSource bufferSource = renderBuffers.bufferSource();
         float partialTick = deltaTracker.getGameTimeDeltaPartialTick(true);
-        AttachmentEntityRenderDispatcher.render(level.players(), camera, poseStack, bufferSource, partialTick);
+        AttachmentEntityRenderDispatcher.render(level, camera, poseStack, bufferSource, partialTick);
         DamageInfoRenderDispatcher.render(level, camera, bufferSource, partialTick);
     }
 

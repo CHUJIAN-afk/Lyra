@@ -1,17 +1,17 @@
 package first.lyra.common.minion;
 
-import first.lyra.api.LyraHelper;
-import first.lyra.common.attachment.AttachmentEntityData;
 import first.lyra.common.attachment.TargetCache;
 import first.lyra.common.entity.AttachmentEntity;
 import first.lyra.common.entity.AttachmentEntityType;
-import first.lyra.common.entity.PathNode;
 import first.lyra.common.entity.SyncFieldDispatcher;
+import first.lyra.register.LyraAttachmentRegister;
+import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
-import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.data.HashCache;
 import net.minecraft.world.entity.LivingEntity;
 
 import java.util.List;
+import java.util.Objects;
 
 public abstract class Minion extends AttachmentEntity {
 
@@ -19,6 +19,7 @@ public abstract class Minion extends AttachmentEntity {
     private LivingEntity target = null;
     private boolean targetChange = false;
 
+    private MinionSlotType slotType = MinionSlotType.None;
     private int slotCost = 1;
     private int order = 0;
     private int sameSize = 1;
@@ -26,9 +27,10 @@ public abstract class Minion extends AttachmentEntity {
     @Override
     protected void registerSyncFields(SyncFieldDispatcher fields) {
         super.registerSyncFields(fields);
-        fields.field(ByteBufCodecs.INT, this::getSlotCost, this::setSlotCost);
-        fields.field(ByteBufCodecs.INT, this::getOrderCache, this::setOrder);
-        fields.field(ByteBufCodecs.INT, this::getSameSizeCache, this::setSameSize);
+        fields.field(LyraStreamCodecs.MINION_SLOT_TYPE, this::getSlotType, this::setSlotType);
+        fields.field(LyraStreamCodecs.INT, this::getSlotCost, this::setSlotCost);
+        fields.field(LyraStreamCodecs.INT, this::getSameOrder, this::setOrder);
+        fields.field(LyraStreamCodecs.INT, this::getSameSize, this::setSameSize);
     }
 
     public Minion(Holder<AttachmentEntityType<?>> type) {
@@ -57,10 +59,13 @@ public abstract class Minion extends AttachmentEntity {
 
     @Override
     public void tick() {
-        if (!owner.level().isClientSide()) {
+        if (!level.isClientSide()) {
             setTargetChange(false);
             setTarget(searchTarget());
             goalSelector.tick();
+            if (owner == null || !owner.isAlive()) {
+                setRemove();
+            }
         }
         super.tick();
     }
@@ -70,59 +75,31 @@ public abstract class Minion extends AttachmentEntity {
      */
     public LivingEntity searchTarget() {
         int distance = this.getSearchDistance();
-        if (distance > 0) {
-            LyraHelper helper = LyraHelper.get(owner);
-            TargetCache targetCache = helper.getTargetCache();
-            if (!targetCache.isEmpty()) {
-                List<LivingEntity> targets = targetCache.getEntitiesInRadius(getPos(), targetCache.getSummonSearchRange(this.getOwner(), distance), living -> targetCache.isVisibility(owner, living) && isTarget(living));
-                if (!targets.isEmpty()) {
-                    return targetCache.getNewTarget(this, targets, 0, true);
-                }
+        if (distance > 0 && owner != null) {
+            TargetCache targetCache = level.getData(LyraAttachmentRegister.TargetCache);
+            List<LivingEntity> targets = targetCache.getEntitiesInRadius(owner.getBoundingBox().getCenter(), targetCache.getSummonSearchRange(getOwner(), distance), living -> targetCache.isVisibility(owner, living) && isTarget(living));
+            if (!targets.isEmpty()) {
+                return targetCache.getNewTarget(this, targets, 0, true);
             }
         }
         return null;
     }
 
-    @Override
-    public void dimensionChange() {
-        init(new PathNode(owner.getBoundingBox().getCenter(), 0, 0, 0));
+    public long getSameHash() {
+        return Objects.hash(this.getType()) * 43L;
     }
 
-    /**
-     * 获取目标仆从在其 AttachmentEntityType 分组中的未移除顺序缓存
-     */
-    public int getOrderCache() {
+    public int getSameOrder() {
         return order;
     }
 
-    /**
-     * 获取目标仆从在其 AttachmentEntityType 分组中的未移除顺序
-     */
-    public int getOrder() {
-        return LyraHelper.get(owner)
-                .getEntityData()
-                .get(AttachmentEntityData.Type.Minion, getType())
-                .indexOf(this);
-    }
-
-    /**
-     * 获取目标仆从在其 AttachmentEntityType 分组中的未移除数量缓存
-     */
-    public int getSameSizeCache() {
+    public int getSameSize() {
         return sameSize;
     }
 
-    /**
-     * 获取目标仆从在其 AttachmentEntityType 分组中的未移除数量
-     */
-    public int getSameSize() {
-        return LyraHelper.get(owner)
-                .getEntityData()
-                .get(AttachmentEntityData.Type.Minion, getType())
-                .size();
+    public LivingEntity getTarget() {
+        return target;
     }
-
-    public LivingEntity getTarget() { return target; }
 
     public void setTarget(LivingEntity target) {
         if (this.target != null && this.target != target) {
@@ -149,5 +126,13 @@ public abstract class Minion extends AttachmentEntity {
 
     public void setSameSize(int sameSize) {
         this.sameSize = sameSize;
+    }
+
+    public MinionSlotType getSlotType() {
+        return slotType;
+    }
+
+    public void setSlotType(MinionSlotType slotType) {
+        this.slotType = slotType;
     }
 }

@@ -1,10 +1,10 @@
 package first.lyra.common.builder;
 
-import first.lyra.common.attachment.AttachmentEntityData;
 import first.lyra.common.dataComponent.MinionWeapon;
 import first.lyra.common.item.SummonerWeaponItem;
 import first.lyra.common.entity.AttachmentEntityType;
 import first.lyra.common.minion.Minion;
+import first.lyra.common.minion.MinionSlotType;
 import first.lyra.register.LyraDataComponentRegister;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
@@ -28,7 +28,7 @@ public class MinionWeaponItemBuilder<T extends Minion> {
     private float damage = 0;
     private float knockback = 0;
     private float armorPierce = 0;
-    private AttachmentEntityData.Type slotType = AttachmentEntityData.Type.Minion;
+    private MinionSlotType slotType = MinionSlotType.Minion;
     private Holder<SoundEvent> soundEventHolder = null;
     private TriConsumer<@NotNull SummonerWeaponItem<T>, @NotNull Player, @NotNull ItemStack> summonConsumer = null;
     private TriConsumer<@NotNull SummonerWeaponItem<T>, @NotNull Player, @NotNull ItemStack> removeConsumer = null;
@@ -66,7 +66,7 @@ public class MinionWeaponItemBuilder<T extends Minion> {
     /**
      * 设置为哨兵。
      */
-    public MinionWeaponItemBuilder<T> slotType(AttachmentEntityData.Type slotType) {
+    public MinionWeaponItemBuilder<T> slotType(MinionSlotType slotType) {
         this.slotType = slotType;
         return this;
     }

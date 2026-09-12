@@ -33,7 +33,7 @@ public abstract class MomentumMinion extends Minion {
 
     @Override
     public void tick() {
-        if (!owner.level().isClientSide()) {
+        if (!level.isClientSide()) {
             tickOrientation();
             if (!isExecutingPath()) {
                 tickPhysics();
@@ -135,8 +135,8 @@ public abstract class MomentumMinion extends Minion {
     }
 
     public Vec3 getWanderPos(Vec3 lastWanderPos, Vec3 targetPos, float distance, float height) {
-        if (lastWanderPos.equals(Vec3.ZERO) || owner.getRandom().nextDouble() < 0.025 || lastWanderPos.distanceToSqr(targetPos) > distance * distance) {
-            Vec3 newPos = targetPos.add(targetPos.offsetRandom(owner.getRandom(), 1).subtract(targetPos).normalize().scale(distance));
+        if (lastWanderPos.equals(Vec3.ZERO) || getRandom().nextDouble() < 0.025 || lastWanderPos.distanceToSqr(targetPos) > distance * distance) {
+            Vec3 newPos = targetPos.add(targetPos.offsetRandom(getRandom(), 1).subtract(targetPos).normalize().scale(distance));
             while (newPos.y() < targetPos.y() + height) {
                 newPos = newPos.add(0, 1, 0);
             }
