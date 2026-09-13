@@ -23,6 +23,7 @@ public class Lyra {
 
     public Lyra(IEventBus eventBus, Dist dist, ModContainer container) {
         Registries.register(eventBus, null);
+        LyraEntityRegister.register(eventBus);
         LyraAttachmentRegister.register(eventBus);
         LyraAttributeRegister.register(eventBus);
         LyraDataComponentRegister.register(eventBus);

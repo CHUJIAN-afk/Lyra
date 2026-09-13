@@ -7,10 +7,13 @@ import first.lyra.client.render.animated.AnimatedGeoModelManager;
 import first.lyra.common.damageInfo.DamageInfoStyleManager;
 import first.lyra.common.particle.genericParticle.GenericParticleProvider;
 import first.lyra.register.LyraParticleRegister;
+import first.lyra.register.LyraEntityRegister;
+import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 
@@ -32,5 +35,10 @@ public class ClientEvent {
     @SubscribeEvent
     public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(LyraParticleRegister.Generic.get(), GenericParticleProvider::new);
+    }
+
+    @SubscribeEvent
+    public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerEntityRenderer(LyraEntityRegister.HurtEntity.get(), NoopRenderer::new);
     }
 }
