@@ -1,10 +1,11 @@
 package first.lyra.common.attachmentEntity;
 
-import first.lyra.register.LyraDamageRegister;
+import first.lyra.common.attachment.InvincibleData;
 import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
@@ -25,7 +26,6 @@ public abstract class AttachmentEntity {
     protected boolean remove = false;
     protected SyncFieldDispatcher syncFields = null;
     protected final AttachmentEntityGoalSelector goalSelector = new AttachmentEntityGoalSelector();
-    protected DamageSourceProvider damageSourceProvider = (level, living) -> new AttachmentEntityDamageSource(LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, level), null, living, getPos(), this);
 
     protected float damage = 0;
     protected float knockback = 0;
@@ -39,6 +39,7 @@ public abstract class AttachmentEntity {
         fields.field(LyraStreamCodecs.FLOAT, this::getArmorPierce, this::setArmorPierce);
         fields.field(LyraStreamCodecs.INT, this::getTickCount, this::setTickCount);
         fields.field(LyraStreamCodecs.PATH_NODE, this::getCurrentPathNode, this::setCurrentPathNode);
+        fields.field(LyraStreamCodecs.PATH_NODE, historyNodes::getFirst, this::updateLastPathNode);
     }
 
     public AttachmentEntity(Holder<AttachmentEntityType<?>> type) {
@@ -52,22 +53,21 @@ public abstract class AttachmentEntity {
 
     @NotNull
     public DamageSource getDamageSource() {
-        return damageSourceProvider.getDamageSource(level, null);
+        return new AttachmentEntityDamageSource(level.damageSources().generic().typeHolder(), null, null, getPos(), this);
     }
 
-    public void copyDamageSource(AttachmentEntity other) {
-        setDamageSourceSupplier(other.getDamageSourceSupplier());
+    public void attack(LivingEntity target, float damageAmount, int invincibleTime) {
+        InvincibleData.attack(target)
+                .damageSource(getDamageSource())
+                .damageAmount(damageAmount)
+                .invincibleTime(invincibleTime)
+                .apply();
+    }
+
+    public void copyAttributes(AttachmentEntity other) {
         setDamage(other.getDamage());
         setKnockback(other.getKnockback());
         setArmorPierce(other.getArmorPierce());
-    }
-
-    public DamageSourceProvider getDamageSourceSupplier() {
-        return damageSourceProvider;
-    }
-
-    public void setDamageSourceSupplier(DamageSourceProvider damageSourceProvider) {
-        this.damageSourceProvider = damageSourceProvider;
     }
 
     public float getDamage() {
@@ -114,15 +114,17 @@ public abstract class AttachmentEntity {
             if (!isRemove() && this instanceof IEntityCollision<?> iEntityCollision) {
                 iEntityCollision.processCollision(this);
             }
+            updateLastPathNode(currentPathNode);
+            if (currentPlannedPath != null && !currentPlannedPath.isFinished()) {
+                currentPathNode = currentPlannedPath.advance();
+            }
         }
-        // 更新历史轨迹
-        this.historyNodes.addFirst(this.currentPathNode);
-        if (this.historyNodes.size() > getHistoryNodesSize()) {
-            this.historyNodes.removeLast();
-        }
-        // 路径推进
-        if (!level.isClientSide() && currentPlannedPath != null && !currentPlannedPath.isFinished()) {
-            currentPathNode = currentPlannedPath.advance();
+    }
+
+    public final void updateLastPathNode(PathNode node) {
+        historyNodes.addFirst(node);
+        if (historyNodes.size() > 16) {
+            historyNodes.removeLast();
         }
     }
 
@@ -130,11 +132,11 @@ public abstract class AttachmentEntity {
     }
 
     public void setPlannedPath(PlannedPath path) {
-        this.currentPlannedPath = path;
+        currentPlannedPath = path;
     }
 
     public PlannedPath getCurrentPath() {
-        return this.currentPlannedPath;
+        return currentPlannedPath;
     }
 
     public PathNode getCurrentPathNode() {
@@ -173,10 +175,6 @@ public abstract class AttachmentEntity {
         this.historyNodes.clear();
         this.historyNodes.add(node);
         this.historyNodes.add(node);
-    }
-
-    public int getHistoryNodesSize() {
-        return 16;
     }
 
     public ArrayList<PathNode> getHistoryNodes() {

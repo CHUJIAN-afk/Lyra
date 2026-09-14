@@ -2,6 +2,7 @@ package first.lyra.common.projectile;
 
 import first.lyra.common.attachmentEntity.*;
 import first.lyra.mixin.ClientLevelAccessor;
+import first.lyra.register.LyraDamageRegister;
 import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.world.damagesource.DamageSource;
@@ -35,14 +36,14 @@ public abstract class Projectile extends MomentumAttachmentEntity {
 
     @Override
     public @NotNull DamageSource getDamageSource() {
-        return damageSourceProvider.getDamageSource(level, owner);
+        return new AttachmentEntityDamageSource(LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, level), null, owner, getPos(), this);
     }
 
     @Override
     public void tick() {
         super.tick();
         if (!level.isClientSide()) {
-            if (getTickCount() >= getMaxTickCount()) {
+            if (getMaxTickCount() > 0 && getTickCount() >= getMaxTickCount()) {
                 setRemove();
             }
         }

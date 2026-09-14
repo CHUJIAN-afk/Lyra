@@ -21,7 +21,7 @@ public class InvincibleData {
         DamageSource damageSource = event.getSource();
         LivingEntity entity = event.getEntity();
         Level level = entity.level();
-        if (!level.isClientSide() && damageSource.getEntity() instanceof Player attacker) {
+        if (!level.isClientSide() && damageSource.getEntity() instanceof LivingEntity attacker) {
             InvincibleData.get(entity).recordHit(attacker.getUUID(), 100);
         }
     }

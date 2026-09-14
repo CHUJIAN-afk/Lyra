@@ -1,20 +1,16 @@
 package first.lyra.common.minion;
 
+import first.lyra.api.LyraHelper;
 import first.lyra.common.attachment.InvincibleData;
 import first.lyra.common.attachment.TargetCache;
-import first.lyra.common.attachmentEntity.AttachmentEntity;
-import first.lyra.common.attachmentEntity.AttachmentEntityGoalSelector;
-import first.lyra.common.attachmentEntity.AttachmentEntityType;
-import first.lyra.common.attachmentEntity.SyncFieldDispatcher;
+import first.lyra.common.attachmentEntity.*;
 import first.lyra.mixin.ClientLevelAccessor;
 import first.lyra.register.LyraAttachmentRegister;
+import first.lyra.register.LyraDamageRegister;
 import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Targeting;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,6 +22,7 @@ public abstract class Minion extends AttachmentEntity {
 
     protected LivingEntity owner = null;
     protected LivingEntity target = null;
+    protected boolean targetChange = false;
     protected MinionSlotType slotType = MinionSlotType.None;
     protected int slotCost = 1;
     protected int order = 0;
@@ -34,6 +31,8 @@ public abstract class Minion extends AttachmentEntity {
     public Minion(Holder<AttachmentEntityType<?>> type) {
         super(type);
     }
+
+    public abstract int getSearchDistance();
 
     @Override
     protected void registerSyncFields(SyncFieldDispatcher fields) {
@@ -55,10 +54,8 @@ public abstract class Minion extends AttachmentEntity {
 
     @Override
     public @NotNull DamageSource getDamageSource() {
-        return damageSourceProvider.getDamageSource(level, owner);
+        return new AttachmentEntityDamageSource(LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, level), null, owner, getPos(), this);
     }
-
-    public abstract int getSearchDistance();
 
     public long getSameHash() {
         return Objects.hash(this.getType()) * 43L;
@@ -92,6 +89,7 @@ public abstract class Minion extends AttachmentEntity {
     public void tick() {
         super.tick();
         if (!level.isClientSide()) {
+            setTargetChange(false);
             setTarget(searchTarget());
             goalSelector.tick();
             if (owner == null || !owner.isAlive()) {
@@ -107,35 +105,12 @@ public abstract class Minion extends AttachmentEntity {
         int distance = this.getSearchDistance();
         if (distance > 0 && owner != null) {
             TargetCache targetCache = level.getData(LyraAttachmentRegister.TargetCache);
-            List<LivingEntity> targets = targetCache.getEntitiesInRadius(owner.getBoundingBox().getCenter(), distance, living -> targetCache.isVisibility(owner, living) && isTarget(living));
+            List<LivingEntity> targets = targetCache.getEntitiesInRadius(owner.getBoundingBox().getCenter(), distance, living -> targetCache.isVisibility(owner, living) && targetCache.isTarget(owner, living));
             if (!targets.isEmpty()) {
                 return targetCache.getNewTarget(this, targets, 0, true);
             }
         }
         return null;
-    }
-
-    public boolean isTarget(LivingEntity target) {
-        if (owner != target && target != null && target.isAlive()) {
-            if (owner instanceof Player && target instanceof Enemy) {
-                return true;
-            }
-            if (owner instanceof Targeting targeting && targeting.getTarget() == target) {
-                return true;
-            }
-            if (target instanceof Targeting targeting && targeting.getTarget() == owner) {
-                return true;
-            }
-            if (owner != null) {
-                if (InvincibleData.get(target).hasAttack(owner.getUUID())) {
-                    return true;
-                }
-                if (InvincibleData.get(owner).hasAttack(target.getUUID())) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     public @Nullable LivingEntity getOwner() {
@@ -151,7 +126,18 @@ public abstract class Minion extends AttachmentEntity {
     }
 
     public void setTarget(LivingEntity target) {
+        if (this.target != target) {
+            setTargetChange(true);
+        }
         this.target = target;
+    }
+
+    public boolean isTargetChange() {
+        return targetChange;
+    }
+
+    public void setTargetChange(boolean targetChange) {
+        this.targetChange = targetChange;
     }
 
     public AttachmentEntityGoalSelector getGoalSelector() {

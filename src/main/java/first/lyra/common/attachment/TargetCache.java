@@ -11,7 +11,9 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Targeting;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
@@ -30,6 +32,7 @@ import java.util.function.Predicate;
 public class TargetCache {
 
     private final Int2BooleanOpenHashMap visibilityCache = new Int2BooleanOpenHashMap();
+    private final Int2BooleanOpenHashMap targetCache = new Int2BooleanOpenHashMap();
     private final Int2FloatOpenHashMap distanceCache = new Int2FloatOpenHashMap();
     private final Long2ObjectOpenHashMap<List<LivingEntity>> spatialGroups = new Long2ObjectOpenHashMap<>();
     private final Long2ObjectOpenHashMap<LevelChunk> chunkCache = new Long2ObjectOpenHashMap<>();
@@ -37,11 +40,36 @@ public class TargetCache {
     private ServerLevel level;
 
     public void tick(ServerLevel level) {
-        spatialGroups.clear();
         visibilityCache.clear();
+        targetCache.clear();
         distanceCache.clear();
+        spatialGroups.clear();
         chunkCache.clear();
         this.level = level;
+    }
+
+    public boolean isTarget(@Nullable LivingEntity owner, @Nullable LivingEntity target) {
+        if (owner != null && target != null && owner != target && target.isAlive()) {
+            return targetCache.computeIfAbsent(owner.getUUID().hashCode() + target.getUUID().hashCode(), k -> {
+                if (owner instanceof Player && target instanceof Enemy) {
+                    return true;
+                }
+                if (owner instanceof Targeting targeting && targeting.getTarget() == target) {
+                    return true;
+                }
+                if (target instanceof Targeting targeting && targeting.getTarget() == owner) {
+                    return true;
+                }
+                if (InvincibleData.get(target).hasAttack(owner.getUUID())) {
+                    return true;
+                }
+                if (InvincibleData.get(owner).hasAttack(target.getUUID())) {
+                    return true;
+                }
+                return false;
+            });
+        }
+        return false;
     }
 
     private static long cellKey(int x, int y, int z) {
