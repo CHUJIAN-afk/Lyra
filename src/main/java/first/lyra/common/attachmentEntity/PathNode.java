@@ -5,6 +5,10 @@ import net.minecraft.world.phys.Vec3;
 
 public record PathNode(Vec3 pos, float yaw, float pitch, float roll) {
 
+    public PathNode(Vec3 pos, Vec3 direction) {
+        this(pos, (float) Math.toDegrees(Math.atan2(-direction.x, direction.z)), (float) Math.toDegrees(Math.asin(-direction.y)), 0);
+    }
+
     public PathNode lerp(PathNode to, float partialTick) {
         return new PathNode(this.pos().lerp(to.pos(), partialTick), Mth.rotLerp(partialTick, this.yaw(), to.yaw()), Mth.rotLerp(partialTick, this.pitch(), to.pitch()), Mth.rotLerp(partialTick, this.roll(), to.roll()));
     }

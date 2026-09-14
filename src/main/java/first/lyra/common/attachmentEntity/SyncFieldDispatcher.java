@@ -22,6 +22,12 @@ import java.util.function.Supplier;
  */
 public final class SyncFieldDispatcher {
 
+    public static SyncFieldDispatcher create(Consumer<SyncFieldDispatcher> consumer) {
+        SyncFieldDispatcher dispatcher = new SyncFieldDispatcher();
+        consumer.accept(dispatcher);
+        return dispatcher;
+    }
+
     private interface SyncEntry {
         boolean encode(RegistryFriendlyByteBuf buf, Level level, boolean initialSync);
 

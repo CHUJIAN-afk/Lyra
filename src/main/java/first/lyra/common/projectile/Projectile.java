@@ -55,7 +55,7 @@ public abstract class Projectile extends MomentumAttachmentEntity {
         if (isPhysics()) {
             Vec3 velocity = getVelocity();
             float yaw = (float) Math.toDegrees(Math.atan2(-velocity.x, velocity.z));
-            float pitch = (float) Math.toDegrees(Math.asin(-velocity.y));
+            float pitch = (float) Math.toDegrees(Math.atan2(-velocity.y, Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z)));
             PathNode pathNode = getCurrentPathNode();
             setCurrentPathNode(pathNode.modifyEuler(yaw, pitch, pathNode.roll()));
         }

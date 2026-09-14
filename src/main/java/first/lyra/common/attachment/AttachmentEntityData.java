@@ -2,11 +2,13 @@ package first.lyra.common.attachment;
 
 import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.attachmentEntity.AttachmentEntityType;
+import first.lyra.common.attachmentEntity.PathNode;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.minion.MinionSlotType;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import first.lyra.register.LyraRegistries;
+import first.lyra.utils.LyraStreamCodecs;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -33,6 +35,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
 
     private final Map<AttachmentEntityType<?>, List<AttachmentEntity>> pendingAdd = new HashMap<>();
     private final Map<AttachmentEntityType<?>, List<AttachmentEntity>> groups = new HashMap<>();
+    private final Map<UUID, AttachmentEntity> uuidData = new HashMap<>();
     private final List<AttachmentEntity> renderCache = new ArrayList<>();
     private boolean changed = false;
     private final AtomicReference<List<byte[]>> pendingPayloads = new AtomicReference<>(List.of());
@@ -46,8 +49,8 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
             }
         }
         if (isRunning()) {
-            updateEntities(level);
             tickEntity(level);
+            updateEntities(level);
             syncToClient(level);
         }
     }
@@ -67,7 +70,6 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
         renderCache.clear();
         for (List<AttachmentEntity> list : groups.values()) {
             for (AttachmentEntity entity : list) {
-                entity.setLevel(level);
                 entity.tick();
                 entity.tickCurrentPathNode();
                 if (level.isClientSide()) {
@@ -92,11 +94,46 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                 pendingAdd.clear();
                 changed = true;
             }
-            enforceMinionLimits();
+            Map<OwnerSlotKey, List<Minion>> minionsByOwner = new HashMap<>();
+            for (Minion minion1 : get(Minion.class)) {
+                LivingEntity owner = minion1.getOwner();
+                MinionSlotType slotType = minion1.getSlotType();
+                if (owner != null && slotType != MinionSlotType.None) {
+                    minionsByOwner.computeIfAbsent(new OwnerSlotKey(owner.getUUID(), slotType), key -> new ArrayList<>()).add(minion1);
+                }
+            }
+            for (Map.Entry<OwnerSlotKey, List<Minion>> entry : minionsByOwner.entrySet()) {
+                List<Minion> minions = entry.getValue();
+                LivingEntity owner = minions.getFirst().getOwner();
+                if (owner != null) {
+                    AttributeInstance limit = switch (entry.getKey().slotType()) {
+                        case Minion -> owner.getAttribute(LyraAttributeRegister.MinionMaxCount);
+                        case Sentry -> owner.getAttribute(LyraAttributeRegister.SentryMaxCount);
+                        case None -> null;
+                    };
+                    if (limit != null) {
+                        int used = minions.stream().filter(minion1 -> !minion1.isRemove()).mapToInt(Minion::getSlotCost).sum();
+                        int max = (int) limit.getValue();
+                        for (Minion minion1 : minions) {
+                            if (used <= max) {
+                                break;
+                            }
+                            if (!minion1.isRemove()) {
+                                minion1.setRemove();
+                                used -= minion1.getSlotCost();
+                                changed = true;
+                            }
+                        }
+                    }
+                }
+            }
             // 清理所有分组中标记移除的实体
             groups.values().removeIf(list -> {
                 while (true) {
                     list.removeIf(entity -> {
+                        if (!entity.isAlive()) {
+                            entity.setRemove();
+                        }
                         if (entity.isRemove()) {
                             entity.onRemove();
                             changed = true;
@@ -123,42 +160,6 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                 minion.setOrder(list.indexOf(minion));
                 minion.setSameSize(list.size());
             }));
-        }
-    }
-
-    private void enforceMinionLimits() {
-        Map<OwnerSlotKey, List<Minion>> minionsByOwner = new HashMap<>();
-        for (Minion minion : get(Minion.class)) {
-            LivingEntity owner = minion.getOwner();
-            MinionSlotType slotType = minion.getSlotType();
-            if (owner != null && slotType != MinionSlotType.None) {
-                minionsByOwner.computeIfAbsent(new OwnerSlotKey(owner.getUUID(), slotType), key -> new ArrayList<>()).add(minion);
-            }
-        }
-        for (Map.Entry<OwnerSlotKey, List<Minion>> entry : minionsByOwner.entrySet()) {
-            List<Minion> minions = entry.getValue();
-            LivingEntity owner = minions.getFirst().getOwner();
-            if (owner != null) {
-                AttributeInstance limit = switch (entry.getKey().slotType()) {
-                    case Minion -> owner.getAttribute(LyraAttributeRegister.MinionMaxCount);
-                    case Sentry -> owner.getAttribute(LyraAttributeRegister.SentryMaxCount);
-                    case None -> null;
-                };
-                if (limit != null) {
-                    int used = minions.stream().filter(minion -> !minion.isRemove()).mapToInt(Minion::getSlotCost).sum();
-                    int max = (int) limit.getValue();
-                    for (Minion minion : minions) {
-                        if (used <= max) {
-                            break;
-                        }
-                        if (!minion.isRemove()) {
-                            minion.setRemove();
-                            used -= minion.getSlotCost();
-                            changed = true;
-                        }
-                    }
-                }
-            }
         }
     }
 
@@ -204,7 +205,12 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
             buf.writeVarInt(list.size());
             for (AttachmentEntity entity : list) {
                 buf.writeUUID(entity.getUuid());
-                entity.syncFieldRegistrar().encode(buf, entity.getLevel(), initialSync);
+                entity.getSyncFieldDispatcher().encode(buf, entity.getLevel(), initialSync);
+                buf.writeBoolean(entity.isClientInit());
+                if (!entity.isClientInit()) {
+                    entity.setClientInit(true);
+                    LyraStreamCodecs.PATH_NODE.encode(buf, entity.getHistoryNodes().getFirst());
+                }
             }
         }
     }
@@ -250,16 +256,18 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                 for (int k = 0; k < listSize; k++) {
                     UUID uuid = buf.readUUID();
                     AttachmentEntity entity = existing.get(uuid);
-                    boolean firstSync = false;
                     if (entity == null) {
-                        firstSync = true;
                         entity = entityType.factory().get();
                         entity.setUuid(uuid);
                     }
                     entity.setLevel(level);
-                    entity.syncFieldRegistrar().decode(buf, level);
-                    if (firstSync) {
-                        entity.init(entity.getCurrentPathNode());
+                    entity.getSyncFieldDispatcher().decode(buf, level);
+                    if (!buf.readBoolean()) {
+                        PathNode pathNode = LyraStreamCodecs.PATH_NODE.decode(buf);
+                        ArrayList<PathNode> historyNodes = entity.getHistoryNodes();
+                        historyNodes.clear();
+                        historyNodes.add(pathNode);
+                        historyNodes.add(pathNode);
                     }
                     list.add(entity);
                 }

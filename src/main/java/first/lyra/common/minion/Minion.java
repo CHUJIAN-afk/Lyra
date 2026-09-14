@@ -1,7 +1,5 @@
 package first.lyra.common.minion;
 
-import first.lyra.api.LyraHelper;
-import first.lyra.common.attachment.InvincibleData;
 import first.lyra.common.attachment.TargetCache;
 import first.lyra.common.attachmentEntity.*;
 import first.lyra.mixin.ClientLevelAccessor;
@@ -9,6 +7,7 @@ import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraDamageRegister;
 import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
@@ -20,8 +19,8 @@ import java.util.Optional;
 
 public abstract class Minion extends AttachmentEntity {
 
-    protected LivingEntity owner = null;
-    protected LivingEntity target = null;
+    protected @Nullable LivingEntity owner = null;
+    protected @Nullable LivingEntity target = null;
     protected boolean targetChange = false;
     protected MinionSlotType slotType = MinionSlotType.None;
     protected int slotCost = 1;
@@ -55,6 +54,11 @@ public abstract class Minion extends AttachmentEntity {
     @Override
     public @NotNull DamageSource getDamageSource() {
         return new AttachmentEntityDamageSource(LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, level), null, owner, getPos(), this);
+    }
+
+    @Override
+    public boolean isAlive() {
+        return owner != null && owner.isAlive();
     }
 
     public long getSameHash() {
@@ -92,9 +96,6 @@ public abstract class Minion extends AttachmentEntity {
             setTargetChange(false);
             setTarget(searchTarget());
             goalSelector.tick();
-            if (owner == null || !owner.isAlive()) {
-                setRemove();
-            }
         }
     }
 
@@ -121,7 +122,7 @@ public abstract class Minion extends AttachmentEntity {
         this.owner = owner;
     }
 
-    public LivingEntity getTarget() {
+    public @Nullable LivingEntity getTarget() {
         return target;
     }
 
@@ -150,5 +151,9 @@ public abstract class Minion extends AttachmentEntity {
 
     public void setSlotType(MinionSlotType slotType) {
         this.slotType = slotType;
+    }
+
+    public SoundSource getSoundSource() {
+        return owner != null ? owner.getSoundSource() : SoundSource.MASTER;
     }
 }

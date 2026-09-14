@@ -1,5 +1,6 @@
 package first.lyra.utils;
 
+import com.mojang.datafixers.util.Pair;
 import first.lyra.common.attachmentEntity.PathNode;
 import first.lyra.common.minion.MinionSlotType;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -7,6 +8,7 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 

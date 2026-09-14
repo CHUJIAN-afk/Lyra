@@ -189,9 +189,12 @@ public class TargetCache {
         return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(attachmentEntity.getPos(), living.getBoundingBox().getCenter()));
     }
 
-    public boolean isVisibility(LivingEntity living1, LivingEntity living2) {
-        Integer key = living1.getUUID().hashCode() + living2.getUUID().hashCode();
-        return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(living1.getBoundingBox().getCenter(), living2.getBoundingBox().getCenter()));
+    public boolean isVisibility(@Nullable LivingEntity living1, @Nullable LivingEntity living2) {
+        if (living1 != null && living2 != null) {
+            Integer key = living1.getUUID().hashCode() + living2.getUUID().hashCode();
+            return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(living1.getBoundingBox().getCenter(), living2.getBoundingBox().getCenter()));
+        }
+        return false;
     }
 
     private boolean hasLineOfSight(Vec3 from, Vec3 to) {

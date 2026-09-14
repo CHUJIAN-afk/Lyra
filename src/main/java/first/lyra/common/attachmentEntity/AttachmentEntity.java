@@ -24,9 +24,10 @@ public abstract class AttachmentEntity {
     protected PlannedPath currentPlannedPath = null;
     protected final ArrayList<PathNode> historyNodes = new ArrayList<>();
     protected boolean remove = false;
-    protected SyncFieldDispatcher syncFields = null;
+    protected SyncFieldDispatcher syncFields = SyncFieldDispatcher.create(this::registerSyncFields);
     protected final AttachmentEntityGoalSelector goalSelector = new AttachmentEntityGoalSelector();
 
+    protected boolean clientInit = false;
     protected float damage = 0;
     protected float knockback = 0;
     protected float armorPierce = 0;
@@ -39,7 +40,6 @@ public abstract class AttachmentEntity {
         fields.field(LyraStreamCodecs.FLOAT, this::getArmorPierce, this::setArmorPierce);
         fields.field(LyraStreamCodecs.INT, this::getTickCount, this::setTickCount);
         fields.field(LyraStreamCodecs.PATH_NODE, this::getCurrentPathNode, this::setCurrentPathNode);
-        fields.field(LyraStreamCodecs.PATH_NODE, historyNodes::getFirst, this::updateLastPathNode);
     }
 
     public AttachmentEntity(Holder<AttachmentEntityType<?>> type) {
@@ -94,11 +94,7 @@ public abstract class AttachmentEntity {
         this.knockback = knockback;
     }
 
-    public SyncFieldDispatcher syncFieldRegistrar() {
-        if (syncFields == null) {
-            syncFields = new SyncFieldDispatcher();
-            registerSyncFields(syncFields);
-        }
+    public SyncFieldDispatcher getSyncFieldDispatcher() {
         return syncFields;
     }
 
@@ -114,17 +110,13 @@ public abstract class AttachmentEntity {
             if (!isRemove() && this instanceof IEntityCollision<?> iEntityCollision) {
                 iEntityCollision.processCollision(this);
             }
-            updateLastPathNode(currentPathNode);
-            if (currentPlannedPath != null && !currentPlannedPath.isFinished()) {
-                currentPathNode = currentPlannedPath.advance();
-            }
         }
-    }
-
-    public final void updateLastPathNode(PathNode node) {
-        historyNodes.addFirst(node);
+        historyNodes.addFirst(currentPathNode);
         if (historyNodes.size() > 16) {
             historyNodes.removeLast();
+        }
+        if (!level.isClientSide() && currentPlannedPath != null && !currentPlannedPath.isFinished()) {
+            currentPathNode = currentPlannedPath.advance();
         }
     }
 
@@ -174,7 +166,6 @@ public abstract class AttachmentEntity {
         this.currentPathNode = node;
         this.historyNodes.clear();
         this.historyNodes.add(node);
-        this.historyNodes.add(node);
     }
 
     public ArrayList<PathNode> getHistoryNodes() {
@@ -182,14 +173,21 @@ public abstract class AttachmentEntity {
     }
 
     public PathNode getRenderNode(float partialTick) {
-        if (historyNodes.size() < 2) {
-            return currentPathNode;
+        if (historyNodes.size() > 1) {
+            return historyNodes.get(1).lerp(currentPathNode, partialTick);
         }
-        return historyNodes.get(1).lerp(currentPathNode, partialTick);
+        return currentPathNode;
     }
 
     public void setCurrentPathNode(PathNode currentPathNode) {
         this.currentPathNode = currentPathNode;
+    }
+
+    /**
+     * tick前进行的存在性检查，返回false会跳过tick并在tick末移除
+     */
+    public boolean isAlive() {
+        return true;
     }
 
     /**
@@ -269,6 +267,14 @@ public abstract class AttachmentEntity {
 
     public void setTickCount(int tickCount) {
         this.tickCount = tickCount;
+    }
+
+    public boolean isClientInit() {
+        return clientInit;
+    }
+
+    public void setClientInit(boolean clientInit) {
+        this.clientInit = clientInit;
     }
 
     /**
