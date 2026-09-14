@@ -1,6 +1,8 @@
 package first.lyra.common.minion;
 
-public abstract class MinionGoal<T extends Minion> {
+import first.lyra.common.entity.AttachmentEntity;
+
+public abstract class MinionGoal<T extends AttachmentEntity> {
 
     protected final T minion;
 

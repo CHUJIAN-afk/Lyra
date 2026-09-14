@@ -10,6 +10,7 @@ import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -44,7 +45,7 @@ public abstract class MomentumMinion extends Minion {
 
     @Override
     public boolean isExecutingPath() {
-        return super.isExecutingPath() && currentPlannedPath.getIdentifier() != "physics";
+        return super.isExecutingPath() && !Objects.equals(currentPlannedPath.getIdentifier(), "physics");
     }
 
     // ===================== 物理更新 =====================

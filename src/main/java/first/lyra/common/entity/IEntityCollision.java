@@ -191,11 +191,7 @@ public interface IEntityCollision<T extends AttachmentEntity> extends ICollision
      * 获取点到 AABB 的最近点
      */
     private Vec3 getClosestPointOnAABB(Vec3 point, AABB box) {
-        return new Vec3(
-                Mth.clamp(point.x, box.minX, box.maxX),
-                Mth.clamp(point.y, box.minY, box.maxY),
-                Mth.clamp(point.z, box.minZ, box.maxZ)
-        );
+        return new Vec3(Mth.clamp(point.x, box.minX, box.maxX), Mth.clamp(point.y, box.minY, box.maxY), Mth.clamp(point.z, box.minZ, box.maxZ));
     }
 
     /**
