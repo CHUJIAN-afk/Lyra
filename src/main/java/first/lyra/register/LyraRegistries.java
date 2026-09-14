@@ -2,8 +2,8 @@ package first.lyra.register;
 
 import first.lyra.Lyra;
 import first.lyra.common.armorSet.ArmorSet;
-import first.lyra.common.entity.AttachmentEntity;
-import first.lyra.common.entity.AttachmentEntityType;
+import first.lyra.common.attachmentEntity.AttachmentEntity;
+import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.neoforged.bus.api.SubscribeEvent;

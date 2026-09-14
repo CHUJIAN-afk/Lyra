@@ -62,8 +62,8 @@ weapon.summonLanguage(HORNET, "Hornet", "黄蜂");
 |---|---|
 | `Servant` | `Minion` |
 | `ServantDamageSource` | `AttachmentEntityDamageSource` |
-| `ServantGoal` | `MinionGoal` |
-| `ServantGoalSelector` | `MinionGoalSelector` |
+| `ServantGoal` | `AttachmentEntityGoal` |
+| `ServantGoalSelector` | `AttachmentEntityGoalSelector` |
 | `MomentumServant` | `MomentumMinion` |
 | `PathfinderServant` | `PathfinderMinion` |
 | `PathNavigator` | 类名不变（仅换包） |

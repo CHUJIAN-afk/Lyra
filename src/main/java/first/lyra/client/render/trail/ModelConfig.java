@@ -1,6 +1,6 @@
 package first.lyra.client.render.trail;
 
-import first.lyra.common.entity.AttachmentEntity;
+import first.lyra.common.attachmentEntity.AttachmentEntity;
 
 /**
  * 模型渲染配置。

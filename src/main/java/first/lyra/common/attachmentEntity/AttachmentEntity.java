@@ -1,25 +1,18 @@
-package first.lyra.common.entity;
+package first.lyra.common.attachmentEntity;
 
-import first.lyra.common.attachment.InvincibleData;
 import first.lyra.register.LyraDamageRegister;
 import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.Targeting;
-import net.minecraft.world.entity.monster.Enemy;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 public abstract class AttachmentEntity {
@@ -31,9 +24,9 @@ public abstract class AttachmentEntity {
     protected final ArrayList<PathNode> historyNodes = new ArrayList<>();
     protected boolean remove = false;
     protected SyncFieldDispatcher syncFields = null;
-    protected DamageSourceProvider damageSourceProvider = (level, player) -> new AttachmentEntityDamageSource(LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, level), null, player, getPos(), this);
+    protected final AttachmentEntityGoalSelector goalSelector = new AttachmentEntityGoalSelector();
+    protected DamageSourceProvider damageSourceProvider = (level, living) -> new AttachmentEntityDamageSource(LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, level), null, living, getPos(), this);
 
-    protected Player owner = null;
     protected float damage = 0;
     protected float knockback = 0;
     protected float armorPierce = 0;
@@ -41,14 +34,6 @@ public abstract class AttachmentEntity {
     protected PathNode currentPathNode = null;
 
     protected void registerSyncFields(SyncFieldDispatcher fields) {
-        fields.field(LyraStreamCodecs.OPTIONAL_UUID, () -> Optional.ofNullable(owner).map(Player::getUUID), (level, optional) -> {
-            owner = null;
-            optional.ifPresent(uuid -> {
-                if (level.getPlayerByUUID(uuid) instanceof Player player) {
-                    owner = player;
-                }
-            });
-        });
         fields.field(LyraStreamCodecs.FLOAT, this::getDamage, this::setDamage);
         fields.field(LyraStreamCodecs.FLOAT, this::getKnockback, this::setKnockback);
         fields.field(LyraStreamCodecs.FLOAT, this::getArmorPierce, this::setArmorPierce);
@@ -59,15 +44,15 @@ public abstract class AttachmentEntity {
     public AttachmentEntity(Holder<AttachmentEntityType<?>> type) {
         this.type = type;
         init(new PathNode(Vec3.ZERO, 0, 0, 0));
+        registerGoals(goalSelector);
+    }
+
+    public void registerGoals(AttachmentEntityGoalSelector goalSelector) {
     }
 
     @NotNull
     public DamageSource getDamageSource() {
-        if (owner != null) {
-            return damageSourceProvider.getDamageSource(level, owner);
-        } else {
-            return damageSourceProvider.getDamageSource(level, null);
-        }
+        return damageSourceProvider.getDamageSource(level, null);
     }
 
     public void copyDamageSource(AttachmentEntity other) {
@@ -118,58 +103,27 @@ public abstract class AttachmentEntity {
     }
 
     public void tick() {
-        boolean clientSide = level.isClientSide();
-        if (!clientSide) {
-            if (!isRemove()) {
-                // 方块碰撞检测
-                if (this instanceof IBlockCollision<?>) {
-                    @SuppressWarnings("unchecked") IBlockCollision<AttachmentEntity> blockCollision = (IBlockCollision<AttachmentEntity>) this;
-                    if (blockCollision.canCollideWithBlocks()) {
-                        blockCollision.processBlockCollision(this);
-                    }
-                }
+    }
+
+    public final void tickCurrentPathNode() {
+        if (!level.isClientSide()) {
+            tickCount++;
+            if (!isRemove() && this instanceof IBlockCollision<?> blockCollision) {
+                blockCollision.blockCollision(this);
             }
-            if (!isRemove()) {
-                // 碰撞攻击检测
-                if (this instanceof IEntityCollision<?>) {
-                    @SuppressWarnings("unchecked") IEntityCollision<AttachmentEntity> collideAttack = (IEntityCollision<AttachmentEntity>) this;
-                    if (collideAttack.canCollideAttack()) {
-                        collideAttack.processCollision(this);
-                    }
-                }
+            if (!isRemove() && this instanceof IEntityCollision<?> iEntityCollision) {
+                iEntityCollision.processCollision(this);
             }
         }
-        tickCount++;
         // 更新历史轨迹
         this.historyNodes.addFirst(this.currentPathNode);
         if (this.historyNodes.size() > getHistoryNodesSize()) {
             this.historyNodes.removeLast();
         }
         // 路径推进
-        if (!clientSide && currentPlannedPath != null && !currentPlannedPath.isFinished()) {
+        if (!level.isClientSide() && currentPlannedPath != null && !currentPlannedPath.isFinished()) {
             currentPathNode = currentPlannedPath.advance();
         }
-    }
-
-    public boolean isTarget(LivingEntity target) {
-        if (target != null && (owner == null || !target.getUUID().equals(owner.getUUID())) && target.isAlive()) {
-            if (target instanceof Enemy) {
-                return true;
-            }
-            if (owner != null && target instanceof Targeting targeting && targeting.getTarget() == owner) {
-                return true;
-            }
-            if (owner != null) {
-                if (InvincibleData.get(target).hasAttack(owner.getUUID())) {
-                    return true;
-                }
-                if (InvincibleData.get(owner).hasAttack(target.getUUID())) {
-                    return true;
-                }
-            }
-            return InvincibleData.get(target).hasAttack(this.getUuid());
-        }
-        return false;
     }
 
     public void onRemove() {
@@ -309,20 +263,6 @@ public abstract class AttachmentEntity {
      */
     public RandomSource getRandom() {
         return level.getRandom();
-    }
-
-    /**
-     * @return 可选 owner，世界驱动的虚拟实体不要求绑定玩家
-     */
-    public @Nullable Player getOwner() {
-        return owner;
-    }
-
-    /**
-     * 设置可选 owner。owner 不参与 tick 驱动，仅用于伤害归属和玩家属性计算。
-     */
-    public void setOwner(@Nullable Player owner) {
-        this.owner = owner;
     }
 
     public int getTickCount() {

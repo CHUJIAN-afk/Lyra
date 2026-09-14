@@ -1,8 +1,8 @@
 package first.lyra.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import first.lyra.common.entity.AttachmentEntity;
-import first.lyra.common.entity.PathNode;
+import first.lyra.common.attachmentEntity.AttachmentEntity;
+import first.lyra.common.attachmentEntity.PathNode;
 import first.lyra.register.LyraRegistries;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;

@@ -2,7 +2,7 @@ package first.lyra.client.render;
 
 import first.lyra.client.render.trail.ModelConfig;
 import first.lyra.client.render.trail.TrailConfig;
-import first.lyra.common.entity.AttachmentEntity;
+import first.lyra.common.attachmentEntity.AttachmentEntity;
 
 /**
  * 渲染上下文，封装附件实体渲染所需的所有参数和配置。

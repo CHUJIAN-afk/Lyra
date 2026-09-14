@@ -1,7 +1,7 @@
 package first.lyra.register;
 
 import first.lyra.Lyra;
-import first.lyra.common.entity.LivingAttachmentEntity;
+import first.lyra.common.attachmentEntity.LivingAttachmentEntity;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;

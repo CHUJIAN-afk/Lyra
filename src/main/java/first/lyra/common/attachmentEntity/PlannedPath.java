@@ -1,4 +1,4 @@
-package first.lyra.common.entity;
+package first.lyra.common.attachmentEntity;
 
 import java.util.List;
 

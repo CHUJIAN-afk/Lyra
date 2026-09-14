@@ -1,6 +1,6 @@
 package first.lyra.common.attachment;
 
-import first.lyra.common.entity.AttachmentEntity;
+import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.minion.Minion;
 import first.lyra.register.LyraAttributeRegister;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
@@ -27,13 +27,6 @@ import java.util.*;
 import java.util.function.IntToDoubleFunction;
 import java.util.function.Predicate;
 
-/**
- * 目标缓存，存储玩家周围的实体列表。
- * <p>
- * 每tick更新一次，所有仆从共享同一份缓存，避免重复查询。
- * 存储为世界附件，仅服务端使用。
- * </p>
- */
 public class TargetCache {
 
     private final Int2BooleanOpenHashMap visibilityCache = new Int2BooleanOpenHashMap();
@@ -43,11 +36,6 @@ public class TargetCache {
     private final BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
     private ServerLevel level;
 
-    /**
-     * 更新缓存。每tick调用一次。
-     *
-     * @param level 世界
-     */
     public void tick(ServerLevel level) {
         spatialGroups.clear();
         visibilityCache.clear();
@@ -56,21 +44,10 @@ public class TargetCache {
         this.level = level;
     }
 
-    /**
-     * 将三维坐标映射到 16*16*16 分组的键。
-     */
     private static long cellKey(int x, int y, int z) {
         return ((long) x & 0x3FFFFFFL) << 38 | ((long) y & 0x3FFFFFFL) << 12 | ((long) z & 0x3FFFFFFL);
     }
 
-    /**
-     * 以指定位置和半径查询实体（走空间分组，不做全量遍历），支持过滤条件。
-     *
-     * @param pos    查询中心坐标
-     * @param radius 查询半径
-     * @param filter 额外过滤条件，可为 null
-     * @return 半径内且满足过滤条件的存活实体列表
-     */
     public List<LivingEntity> getEntitiesInRadius(Vec3 pos, double radius, @Nullable Predicate<LivingEntity> filter) {
         List<LivingEntity> result = new ArrayList<>();
         if (radius <= 0 || level == null) {
@@ -136,7 +113,7 @@ public class TargetCache {
     // ==================== Chunk 缓存（每tick预加载） ====================
 
     public LivingEntity getNewTarget(Minion minion, List<LivingEntity> targets, float ownerWarningDistance, boolean selfCenter) {
-        Player owner = minion.getOwner();
+        LivingEntity owner = minion.getOwner();
         LivingEntity currentTarget = minion.getTarget();
         LivingEntity newTarget = null;
         double bestScore = Double.MAX_VALUE;
@@ -159,12 +136,12 @@ public class TargetCache {
 
     public float getDistance(Minion minion, LivingEntity living) {
         int key = minion.getUuid().hashCode() + living.getUUID().hashCode();
-        return distanceCache.computeIfAbsent(key,  (IntToDoubleFunction)(k -> (float) minion.getPos().distanceTo(living.getBoundingBox().getCenter())));
+        return distanceCache.computeIfAbsent(key, (IntToDoubleFunction) (k -> (float) minion.getPos().distanceTo(living.getBoundingBox().getCenter())));
     }
 
-    public float getDistance(Player player, LivingEntity living) {
-        int key = player.getUUID().hashCode() + living.getUUID().hashCode();
-        return distanceCache.computeIfAbsent(key, (IntToDoubleFunction)(k -> (float) player.getEyePosition().distanceTo(living.getBoundingBox().getCenter())));
+    public float getDistance(LivingEntity living1, LivingEntity living2) {
+        int key = living1.getUUID().hashCode() + living2.getUUID().hashCode();
+        return distanceCache.computeIfAbsent(key, (IntToDoubleFunction)(k -> (float) living1.getEyePosition().distanceTo(living2.getBoundingBox().getCenter())));
     }
 
     public float getSummonSearchRange(@Nullable Player player, float distance) {
@@ -177,7 +154,8 @@ public class TargetCache {
         return distance;
     }
 
-    //此缓存不能被共享，极易卡顿
+    //此缓存不能被共享，极易卡顿，不建议使用
+    @Deprecated
     public boolean isVisibility(AttachmentEntity attachmentEntity, LivingEntity living) {
         Integer key = attachmentEntity.getUuid().hashCode() + living.getUUID().hashCode();
         return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(attachmentEntity.getPos(), living.getBoundingBox().getCenter()));
@@ -188,13 +166,6 @@ public class TargetCache {
         return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(living1.getBoundingBox().getCenter(), living2.getBoundingBox().getCenter()));
     }
 
-    /**
-     * DDA 光线步进视线检测，使用预加载的 chunk 缓存。
-     *
-     * @param from 起点坐标
-     * @param to   终点坐标
-     * @return true = 无遮挡（可见）
-     */
     private boolean hasLineOfSight(Vec3 from, Vec3 to) {
         if (level == null) {
             return false;

@@ -1,9 +1,11 @@
 package first.lyra.common.item;
 
 import first.lyra.api.LyraHelper;
+import first.lyra.common.attachment.AttachmentEntityData;
+import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.dataComponent.MinionWeapon;
-import first.lyra.common.entity.AttachmentEntityType;
-import first.lyra.common.entity.PathNode;
+import first.lyra.common.attachmentEntity.AttachmentEntityType;
+import first.lyra.common.attachmentEntity.PathNode;
 import first.lyra.common.sound.Playable;
 import first.lyra.register.LyraDataComponentRegister;
 import first.lyra.common.minion.Minion;
@@ -16,7 +18,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
@@ -48,9 +49,9 @@ public class SummonerWeaponItem<T extends Minion> extends Item {
         this.typeSupplier = typeSupplier;
         this.summonConsumer = summonAction != null ? summonAction : (weapon, player, itemStack) -> {
             T minion = weapon.createMinion(player, itemStack);
-            LyraHelper lyraHelper = LyraHelper.get(player);
+            LyraHelper lyraHelper = LyraHelper.get(player.level());
             MinionSlotType slotType = weapon.getSlotType(itemStack);
-            if (lyraHelper.canSummon(slotType, minion.getSlotCost())) {
+            if (lyraHelper.canSummon(player, slotType, minion.getSlotCost())) {
                 AABB box = player.getBoundingBox();
                 Vec3 pos = box.getCenter();
                 minion.init(new PathNode(pos.offsetRandom(player.getRandom(), 2), 0, 0, 0));
@@ -58,7 +59,14 @@ public class SummonerWeaponItem<T extends Minion> extends Item {
             }
         };
         this.removeConsumer = removeConsumer != null ? removeConsumer : (weapon, player, itemStack) -> {
-            LyraHelper.get(player).remove(weapon.getEntityType());
+            AttachmentEntityData entityData = LyraHelper.get(player.level()).getEntityData();
+            entityData.getGroups()
+                    .getOrDefault(getEntityType(), List.of())
+                    .stream()
+                    .filter(entity -> entity instanceof Minion minion)
+                    .map(entity -> (Minion) entity)
+                    .filter(minion -> minion.getOwner() == player && !minion.isRemove())
+                    .forEach(AttachmentEntity::setRemove);
         };
     }
 
@@ -172,13 +180,13 @@ public class SummonerWeaponItem<T extends Minion> extends Item {
             toolTips.add(Component.literal(String.format("%.1f ", armor_pierce)).withStyle(ChatFormatting.BLUE).append(Component.translatable("item.lyra.tooltip.armor_pierce").withStyle(ChatFormatting.GRAY)));
         }
         toolTips.add(Component.translatable("item.lyra.tooltip.summon", Component.translatable("summon." + location.getNamespace() + "." + location.getPath())).withStyle(ChatFormatting.GRAY));
-        LyraHelper lyraHelper = LyraHelper.get(player);
+        LyraHelper lyraHelper = LyraHelper.get(player.level());
         MinionSlotType slotType = getSlotType(itemStack);
         switch (slotType) {
             case Minion ->
-                    toolTips.add(Component.translatable("item.lyra.tooltip.minion_slots", Component.literal(String.valueOf(lyraHelper.getUsedSlots(MinionSlotType.Minion))).withStyle(ChatFormatting.BLUE), Component.literal(String.valueOf(lyraHelper.getMaxCount(MinionSlotType.Minion))).withStyle(ChatFormatting.BLUE)).withStyle(ChatFormatting.GRAY));
+                    toolTips.add(Component.translatable("item.lyra.tooltip.minion_slots", Component.literal(String.valueOf(lyraHelper.getUsedSlots(player, MinionSlotType.Minion))).withStyle(ChatFormatting.BLUE), Component.literal(String.valueOf(lyraHelper.getMaxCount(player, MinionSlotType.Minion))).withStyle(ChatFormatting.BLUE)).withStyle(ChatFormatting.GRAY));
             case Sentry ->
-                    toolTips.add(Component.translatable("item.lyra.tooltip.sentry_slots", Component.literal(String.valueOf(lyraHelper.getUsedSlots(MinionSlotType.Sentry))).withStyle(ChatFormatting.BLUE), Component.literal(String.valueOf(lyraHelper.getMaxCount(MinionSlotType.Sentry))).withStyle(ChatFormatting.BLUE)).withStyle(ChatFormatting.GRAY));
+                    toolTips.add(Component.translatable("item.lyra.tooltip.sentry_slots", Component.literal(String.valueOf(lyraHelper.getUsedSlots(player, MinionSlotType.Sentry))).withStyle(ChatFormatting.BLUE), Component.literal(String.valueOf(lyraHelper.getMaxCount(player, MinionSlotType.Sentry))).withStyle(ChatFormatting.BLUE)).withStyle(ChatFormatting.GRAY));
             default -> {
             }
         }

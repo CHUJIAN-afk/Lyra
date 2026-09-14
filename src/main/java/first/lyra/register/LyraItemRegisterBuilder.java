@@ -1,14 +1,13 @@
 package first.lyra.register;
 
-import first.lyra.common.entity.AttachmentEntity;
-import first.lyra.common.entity.AttachmentEntityType;
+import first.lyra.common.attachmentEntity.AttachmentEntity;
+import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.neoforged.fml.ModList;

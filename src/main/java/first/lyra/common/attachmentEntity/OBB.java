@@ -1,4 +1,4 @@
-package first.lyra.common.entity;
+package first.lyra.common.attachmentEntity;
 
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;

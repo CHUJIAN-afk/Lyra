@@ -1,6 +1,6 @@
 package first.lyra.client.dynamicLight;
 
-import first.lyra.common.entity.PathNode;
+import first.lyra.common.attachmentEntity.PathNode;
 import first.lyra.mixin.LevelRendererAccessor;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;

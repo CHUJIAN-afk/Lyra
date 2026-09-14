@@ -270,7 +270,7 @@ public enum AttachmentEntityData.Type {
 ```java
 import first.lyra.api.LyraHelper;
 import first.lyra.common.attachment.AttachmentEntityData;
-import first.lyra.common.entity.AttachmentEntity;
+import first.lyra.common.attachmentEntity.AttachmentEntity;
 import net.minecraft.world.entity.player.Player;
 
 LyraHelper helper = LyraHelper.get(player);
@@ -280,11 +280,13 @@ AttachmentEntityData data = helper.getEntityData();
 
 // 查询仆从栏位
 boolean ok = helper.canSummon(AttachmentEntityData.Type.Servant, 1); // 剩余 >= 1 格
-int max   = helper.getMaxCount(AttachmentEntityData.Type.Servant);   // 栏位上限（属性驱动）
-int used  = helper.getUsedSlots(AttachmentEntityData.Type.Servant);  // 已用栏位
+int max = helper.getMaxCount(AttachmentEntityData.Type.Servant);   // 栏位上限（属性驱动）
+int used = helper.getUsedSlots(AttachmentEntityData.Type.Servant);  // 已用栏位
 
 // 添加虚拟实体（延迟队列，tick 后生效）
-helper.add(AttachmentEntityData.Type.Servant, myServant);
+helper.
+
+add(AttachmentEntityData.Type.Servant, myServant);
 // 添加的实体会被自动 setOwner(player)
 
 // 目标缓存（索敌用）
@@ -302,13 +304,15 @@ Player p = helper.getPlayer();
 `AttachmentEntityType<T>` 是一个 record：`new AttachmentEntityType<>(factory)`。
 
 ```java
-import first.lyra.common.entity.AttachmentEntityType;
+import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import first.lyra.register.LyraRegistries;
 import net.minecraft.resources.ResourceLocation;
 
 // 在任何初始化阶段（如 mod 构造器或 RegisterEvent）：
 ResourceLocation id = ResourceLocation.fromNamespaceAndPath("my_mod", "sword_servant");
-LyraRegistries.ATTACHMENT_ENTITY_TYPES.register(id, new AttachmentEntityType<>(MyServant::new));
+LyraRegistries.ATTACHMENT_ENTITY_TYPES.
+
+        register(id, new AttachmentEntityType<>(MyServant::new));
 ```
 
 > 新注册表条目无顺序依赖，宿主任意时机注册即可。可用 `DeferredRegister.create(LyraRegistries.ATTACHMENT_ENTITY_TYPES.key(), ...)` 或直接 `register`。
@@ -399,7 +403,7 @@ public class MyServant extends Servant {
 
 ```java
 import first.lyra.common.builder.ServantWeaponItemBuilder;
-import first.lyra.common.entity.AttachmentEntityType;
+import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import first.lyra.register.LyraItemRegisterBuilder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.sounds.SoundEvents;
@@ -409,8 +413,10 @@ DeferredRegister.Items items = DeferredRegister.createItems("my_mod");
 
 // 注册仆从类型
 AttachmentEntityType<MyServant> type = new AttachmentEntityType<>(MyServant::new);
-LyraRegistries.ATTACHMENT_ENTITY_TYPES.register(
-        ResourceLocation.fromNamespaceAndPath("my_mod", "my_servant"), type);
+LyraRegistries.ATTACHMENT_ENTITY_TYPES.
+
+register(
+        ResourceLocation.fromNamespaceAndPath("my_mod", "my_servant"),type);
 
 // 构建武器
 ServantWeaponItemBuilder<MyServant> weaponBuilder = new ServantWeaponItemBuilder<>(() -> type)
@@ -423,10 +429,18 @@ ServantWeaponItemBuilder<MyServant> weaponBuilder = new ServantWeaponItemBuilder
         .properties(p -> p.durability(1000));
 
 // 注册物品 + 自动生成语言/模型
-LyraItemRegisterBuilder.build(items, "my_weapon", weaponBuilder::build)
-        .itemLanguage("My Weapon", "我的武器")
-        .itemModel(LyraItemRegisterBuilder::handheldItem)
-        .build();
+LyraItemRegisterBuilder.
+
+build(items, "my_weapon",weaponBuilder::build)
+        .
+
+itemLanguage("My Weapon","我的武器")
+        .
+
+itemModel(LyraItemRegisterBuilder::handheldItem)
+        .
+
+build();
 ```
 
 **交互逻辑（Lyra 已自动挂接 `PlayerInteractEvent.RightClickItem`）**：
@@ -465,7 +479,7 @@ float getServantArmorPierce(@Nullable Player player, @Nullable ItemStack itemSta
 
 ```java
 import first.lyra.common.projectile.Projectile;
-import first.lyra.common.entity.PathNode;
+import first.lyra.common.attachmentEntity.PathNode;
 import net.minecraft.world.phys.Vec3;
 
 public class MyProjectile extends Projectile {
@@ -487,13 +501,24 @@ public class MyProjectile extends Projectile {
     }
 
     @Override
-    public float getSpinSpeed() { return 0f; }        // 自旋（弧度/tick）
+    public float getSpinSpeed() {
+        return 0f;
+    }        // 自旋（弧度/tick）
+
     @Override
-    public int getTrailDuration() { return 15; }       // 拖尾时长（tick）
+    public int getTrailDuration() {
+        return 15;
+    }       // 拖尾时长（tick）
+
     @Override
-    public double getMaxDistance() { return 128.0; }   // 最大飞行距离
+    public double getMaxDistance() {
+        return 128.0;
+    }   // 最大飞行距离
+
     @Override
-    public int getHistoryNodesSize() { return 8; }     // 轨迹历史长度（默认 8）
+    public int getHistoryNodesSize() {
+        return 8;
+    }     // 轨迹历史长度（默认 8）
 }
 ```
 

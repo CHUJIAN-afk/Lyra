@@ -1,11 +1,10 @@
-package first.lyra.common.entity;
+package first.lyra.common.attachmentEntity;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**

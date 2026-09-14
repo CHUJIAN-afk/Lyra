@@ -2,39 +2,33 @@ package first.lyra.api;
 
 import first.lyra.common.attachment.AttachmentEntityData;
 import first.lyra.common.attachment.TargetCache;
-import first.lyra.common.entity.AttachmentEntity;
-import first.lyra.common.entity.AttachmentEntityType;
+import first.lyra.common.attachmentEntity.AttachmentEntity;
+import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.minion.MinionSlotType;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 
 public final class LyraHelper {
 
     private final Level level;
-    private final @Nullable Player player;
     private final AttachmentEntityData attachmentEntityData;
 
-    private LyraHelper(Level level, @Nullable Player player) {
+    private LyraHelper(Level level) {
         this.level = level;
-        this.player = player;
         this.attachmentEntityData = level.getData(LyraAttachmentRegister.EntityData);
     }
 
     public static LyraHelper get(Level level) {
-        return new LyraHelper(level, null);
-    }
-
-    public static LyraHelper get(Player player) {
-        return new LyraHelper(player.level(), player);
+        return new LyraHelper(level);
     }
 
     public TargetCache getTargetCache(){
@@ -46,35 +40,33 @@ public final class LyraHelper {
     }
 
     public void add(AttachmentEntity entity) {
-        entity.setLevel(level);
-        if (player != null) {
-            entity.setOwner(player);
-        }
         attachmentEntityData.add(entity);
     }
 
-    public void remove(AttachmentEntityType<?> entityType) {
+    public void remove(LivingEntity living, AttachmentEntityType<?> entityType) {
         attachmentEntityData.getGroups()
                 .getOrDefault(entityType, List.of())
                 .stream()
-                .filter(this::isOwnedBy)
+                .filter(entity -> entity instanceof Minion minion)
+                .map(entity -> (Minion) entity)
+                .filter(minion -> minion.getOwner() == living && !minion.isRemove())
                 .forEach(AttachmentEntity::setRemove);
     }
 
-    public boolean canSummon(MinionSlotType type, int slotCost) {
-        return getMaxCount(type) - getUsedSlots(type) >= slotCost;
+    public boolean canSummon(LivingEntity living, MinionSlotType type, int slotCost) {
+        return getMaxCount(living, type) - getUsedSlots(living, type) >= slotCost;
     }
 
-    public int getMaxCount(MinionSlotType type) {
+    public int getMaxCount(LivingEntity living, MinionSlotType type) {
         int maxCount = 0;
-        if (player != null) {
+        if (living != null) {
             maxCount = switch (type) {
                 case Minion -> {
-                    AttributeInstance attributeInstance = player.getAttribute(LyraAttributeRegister.MinionMaxCount);
+                    AttributeInstance attributeInstance = living.getAttribute(LyraAttributeRegister.MinionMaxCount);
                     yield attributeInstance != null ? (int) attributeInstance.getValue() : 0;
                 }
                 case Sentry -> {
-                    AttributeInstance attributeInstance = player.getAttribute(LyraAttributeRegister.SentryMaxCount);
+                    AttributeInstance attributeInstance = living.getAttribute(LyraAttributeRegister.SentryMaxCount);
                     yield attributeInstance != null ? (int) attributeInstance.getValue() : 0;
                 }
                 case None -> 0;
@@ -83,36 +75,15 @@ public final class LyraHelper {
         return maxCount;
     }
 
-    public int getUsedSlots(MinionSlotType type) {
+    public int getUsedSlots(LivingEntity living, MinionSlotType type) {
         return attachmentEntityData.getGroups()
                 .values()
                 .stream()
                 .flatMap(Collection::stream)
-                .filter(this::isOwnedBy)
-                .filter(entity -> entity instanceof Minion)
+                .filter(entity -> entity instanceof Minion minion)
                 .map(entity -> (Minion) entity)
-                .filter(minion -> minion.getSlotType() == type)
-                .filter(minion -> !minion.isRemove())
+                .filter(minion -> minion.getSlotType() == type && minion.getOwner() == living && !minion.isRemove())
                 .mapToInt(Minion::getSlotCost)
                 .sum();
-    }
-
-    public @Nullable Player getPlayer() {
-        return player;
-    }
-
-    public Level getLevel() {
-        return level;
-    }
-
-    private boolean isOwnedBy(AttachmentEntity entity) {
-        boolean owned = player == null;
-        if (player != null) {
-            Player entityOwner = entity.getOwner();
-            if (entityOwner != null) {
-                owned = entityOwner.getUUID().equals(player.getUUID());
-            }
-        }
-        return owned;
     }
 }

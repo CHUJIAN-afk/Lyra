@@ -2,7 +2,7 @@ package first.lyra.common.builder;
 
 import first.lyra.common.dataComponent.MinionWeapon;
 import first.lyra.common.item.SummonerWeaponItem;
-import first.lyra.common.entity.AttachmentEntityType;
+import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.minion.MinionSlotType;
 import first.lyra.register.LyraDataComponentRegister;

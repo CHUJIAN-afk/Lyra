@@ -1,4 +1,4 @@
-package first.lyra.common.entity;
+package first.lyra.common.attachmentEntity;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

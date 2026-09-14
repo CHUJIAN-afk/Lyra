@@ -5,7 +5,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import first.lyra.client.config.ClientConfig;
 import first.lyra.client.dynamicLight.DynamicLightDispatcher;
-import first.lyra.common.entity.*;
+import first.lyra.common.attachmentEntity.*;
 import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;

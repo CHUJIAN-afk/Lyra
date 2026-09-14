@@ -1,7 +1,7 @@
 package first.lyra.common.attachment;
 
-import first.lyra.common.entity.AttachmentEntity;
-import first.lyra.common.entity.AttachmentEntityType;
+import first.lyra.common.attachmentEntity.AttachmentEntity;
+import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.minion.MinionSlotType;
 import first.lyra.register.LyraAttachmentRegister;
@@ -10,8 +10,8 @@ import first.lyra.register.LyraRegistries;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.attachment.AttachmentSyncHandler;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
@@ -65,12 +65,12 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
 
     private void tickEntity(Level level) {
         renderCache.clear();
-        boolean clientSide = level.isClientSide();
         for (List<AttachmentEntity> list : groups.values()) {
             for (AttachmentEntity entity : list) {
                 entity.setLevel(level);
                 entity.tick();
-                if (clientSide) {
+                entity.tickCurrentPathNode();
+                if (level.isClientSide()) {
                     renderCache.add(entity);
                 }
             }
@@ -85,6 +85,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                     List<AttachmentEntity> entities = groups.computeIfAbsent(entry.getKey(), key -> new ArrayList<>());
                     for (AttachmentEntity attachmentEntity : entry.getValue()) {
                         attachmentEntity.setLevel(level);
+                        attachmentEntity.init(attachmentEntity.getCurrentPathNode());
                         entities.add(attachmentEntity);
                     }
                 }
@@ -128,7 +129,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     private void enforceMinionLimits() {
         Map<OwnerSlotKey, List<Minion>> minionsByOwner = new HashMap<>();
         for (Minion minion : get(Minion.class)) {
-            Player owner = minion.getOwner();
+            LivingEntity owner = minion.getOwner();
             MinionSlotType slotType = minion.getSlotType();
             if (owner != null && slotType != MinionSlotType.None) {
                 minionsByOwner.computeIfAbsent(new OwnerSlotKey(owner.getUUID(), slotType), key -> new ArrayList<>()).add(minion);
@@ -136,13 +137,13 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
         }
         for (Map.Entry<OwnerSlotKey, List<Minion>> entry : minionsByOwner.entrySet()) {
             List<Minion> minions = entry.getValue();
-            Player owner = minions.getFirst().getOwner();
+            LivingEntity owner = minions.getFirst().getOwner();
             if (owner != null) {
-                AttributeInstance limit = owner.getAttribute(switch (entry.getKey().slotType()) {
-                    case Minion -> LyraAttributeRegister.MinionMaxCount;
-                    case Sentry -> LyraAttributeRegister.SentryMaxCount;
+                AttributeInstance limit = switch (entry.getKey().slotType()) {
+                    case Minion -> owner.getAttribute(LyraAttributeRegister.MinionMaxCount);
+                    case Sentry -> owner.getAttribute(LyraAttributeRegister.SentryMaxCount);
                     case None -> null;
-                });
+                };
                 if (limit != null) {
                     int used = minions.stream().filter(minion -> !minion.isRemove()).mapToInt(Minion::getSlotCost).sum();
                     int max = (int) limit.getValue();
