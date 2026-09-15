@@ -1,16 +1,23 @@
 package first.lyra.common.attachmentEntity;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class PlannedPath {
     private final String identifier;
-    private List<PathNode> nodes;
-    private int currentIndex;
+    private final List<PathNode> nodes;
+    private final Map<Integer, Runnable> plannedRunnable = new HashMap<>();
+    private int currentIndex = 0;
+
+    public PlannedPath(List<PathNode> nodes) {
+        this.identifier = "default";
+        this.nodes = nodes;
+    }
 
     public PlannedPath(String identifier, List<PathNode> nodes) {
         this.identifier = identifier;
         this.nodes = nodes;
-        this.currentIndex = 0;
     }
 
     public String getIdentifier() {
@@ -25,27 +32,25 @@ public class PlannedPath {
         return currentIndex;
     }
 
-    /**
-     * 动态修正轨迹：允许 Goal 在运行时利用支点重新计算后续节点，并更新当前路径
-     */
-    public void updateNodes(List<PathNode> newNodes) {
-        this.nodes = newNodes;
-    }
-
-    public void setIndex(int index) {
-        this.currentIndex = index;
+    public void run(int currentIndex, Runnable runnable) {
+        plannedRunnable.put(currentIndex, runnable);
     }
 
     /**
      * 获取下一个节点并推进进度（不移除列表内数据）
      */
     public PathNode advance() {
-        if (isFinished()) return null;
+        if (isFinished()) {
+            return null;
+        }
+        Runnable runnable = plannedRunnable.get(currentIndex);
+        if (runnable != null) {
+            runnable.run();
+        }
         return nodes.get(currentIndex++);
     }
 
     public boolean isFinished() {
         return currentIndex >= nodes.size();
     }
-
 }

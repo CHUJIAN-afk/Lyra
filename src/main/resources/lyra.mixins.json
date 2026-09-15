@@ -9,6 +9,7 @@
     "CombatRulesMixin",
     "CreativeModeTabMixin",
     "DamageSourceMixin",
+    "ExperienceOrbAccessor",
     "ItemMixin",
     "LevelRendererAccessor",
     "LivingEntityMixin",

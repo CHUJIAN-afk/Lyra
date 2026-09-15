@@ -17,10 +17,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public abstract class Minion extends AttachmentEntity {
+public abstract class Minion extends AttachmentEntity implements IOwner {
 
-    protected @Nullable LivingEntity owner = null;
-    protected @Nullable LivingEntity target = null;
+    protected LivingEntity owner;
+    protected LivingEntity target;
     protected boolean targetChange = false;
     protected MinionSlotType slotType = MinionSlotType.None;
     protected int slotCost = 1;
@@ -114,7 +114,7 @@ public abstract class Minion extends AttachmentEntity {
         return null;
     }
 
-    public @Nullable LivingEntity getOwner() {
+    public LivingEntity getOwner() {
         return owner;
     }
 
@@ -122,7 +122,7 @@ public abstract class Minion extends AttachmentEntity {
         this.owner = owner;
     }
 
-    public @Nullable LivingEntity getTarget() {
+    public LivingEntity getTarget() {
         return target;
     }
 

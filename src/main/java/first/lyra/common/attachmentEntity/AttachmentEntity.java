@@ -104,11 +104,11 @@ public abstract class AttachmentEntity {
     public final void tickCurrentPathNode() {
         if (!level.isClientSide()) {
             tickCount++;
-            if (!isRemove() && this instanceof IBlockCollision<?> blockCollision) {
-                blockCollision.blockCollision(this);
-            }
             if (!isRemove() && this instanceof IEntityCollision<?> iEntityCollision) {
                 iEntityCollision.processCollision(this);
+            }
+            if (!isRemove() && this instanceof IBlockCollision<?> blockCollision) {
+                blockCollision.blockCollision(this);
             }
         }
         historyNodes.addFirst(currentPathNode);
@@ -141,7 +141,7 @@ public abstract class AttachmentEntity {
     }
 
     public void setPath(List<PathNode> nodes) {
-        this.currentPlannedPath = new PlannedPath("default", nodes);
+        this.currentPlannedPath = new PlannedPath(nodes);
         if (!nodes.isEmpty()) {
             this.currentPathNode = nodes.getFirst();
         }

@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
-public abstract class Projectile extends MomentumAttachmentEntity {
+public abstract class Projectile extends MomentumAttachmentEntity implements IOwner {
 
     protected LivingEntity owner = null;
     protected int maxTickCount = 200;

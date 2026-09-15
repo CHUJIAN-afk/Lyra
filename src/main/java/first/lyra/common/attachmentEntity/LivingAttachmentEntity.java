@@ -21,7 +21,6 @@ import java.util.Objects;
 
 public abstract class LivingAttachmentEntity extends MomentumAttachmentEntity implements IEntityCollision<LivingAttachmentEntity>, IBlockCollision<LivingAttachmentEntity> {
 
-    protected final AttachmentEntityGoalSelector goalSelector = new AttachmentEntityGoalSelector();
     protected HurtEntity hurtEntity = null;
     protected boolean init = false;
     private boolean onGround = false;

@@ -1,5 +1,6 @@
 package first.lyra.common.attachmentEntity;
 
+import first.lyra.api.LyraHelper;
 import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
@@ -46,6 +47,9 @@ public interface IEntityCollision<T extends AttachmentEntity> {
      * 判断目标是否为有效的碰撞对象
      */
     default boolean isValidCollisionTarget(T entity, LivingEntity target) {
+        if (entity instanceof IOwner iOwner) {
+            return LyraHelper.get(entity.level).getTargetCache().isTarget(iOwner.getOwner(), target);
+        }
         return true;
     }
 
