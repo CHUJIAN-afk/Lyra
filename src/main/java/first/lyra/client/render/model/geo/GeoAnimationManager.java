@@ -1,4 +1,4 @@
-package first.lyra.client.render.animated;
+package first.lyra.client.render.model.geo;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -25,16 +25,16 @@ import java.util.TreeMap;
  * 文件 {@code assets/ns/animations/foo.animation.json} 对应对应模型 id {@code ns:foo}。
  * </p>
  */
-public final class AnimatedClipManager extends SimpleJsonResourceReloadListener {
+public final class GeoAnimationManager extends SimpleJsonResourceReloadListener {
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().create();
 
-    public static final AnimatedClipManager INSTANCE = new AnimatedClipManager();
+    public static final GeoAnimationManager INSTANCE = new GeoAnimationManager();
 
     private Map<ResourceLocation, Map<String, AnimatedClip>> animations = new HashMap<>();
 
-    private AnimatedClipManager() {
+    private GeoAnimationManager() {
         super(GSON, "animations");
     }
 

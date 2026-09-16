@@ -1,4 +1,4 @@
-package first.lyra.client.render.animated;
+package first.lyra.client.render.model.geo;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -26,16 +26,16 @@ import java.util.Map;
  * 纹理默认推导为 {@code textures/item/entity/foo.png}。
  * </p>
  */
-public final class AnimatedGeoModelManager extends SimpleJsonResourceReloadListener {
+public final class GeoModelManager extends SimpleJsonResourceReloadListener {
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().create();
 
-    public static final AnimatedGeoModelManager INSTANCE = new AnimatedGeoModelManager();
+    public static final GeoModelManager INSTANCE = new GeoModelManager();
 
     private Map<ResourceLocation, AnimatedGeoModel> models = new HashMap<>();
 
-    private AnimatedGeoModelManager() {
+    private GeoModelManager() {
         super(GSON, "geo");
     }
 

@@ -1,4 +1,4 @@
-package first.lyra.client.render.animated;
+package first.lyra.client.render.model.bbmodel;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -6,29 +6,19 @@ import com.mojang.math.Axis;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.IntFunction;
 
-/**
- * 骨骼模型中的可变骨骼节点。
- * <p>
- * {@code rotX/rotY/rotZ} 与 GeckoLib 保持同一约定：
- * 模型 JSON 的 rotation(x,y,z) 烘焙为 (-x°, -y°, z°) 弧度；
- * 动画 keyframe 的 rotation 也按相同规则转换。
- * </p>
- */
-public final class AnimatedBone {
+final class BBModelBone {
 
     private final String name;
-    private final List<AnimatedCube> cubes = new ArrayList<>();
-    private final List<AnimatedBone> children = new ArrayList<>();
-
+    private final List<BBModelCube> cubes = new ArrayList<>();
+    private final List<BBModelBone> children = new ArrayList<>();
     private final float pivotX;
     private final float pivotY;
     private final float pivotZ;
-
     private final float bindRotX;
     private final float bindRotY;
     private final float bindRotZ;
-
     private final boolean neverRender;
 
     private float posX;
@@ -42,7 +32,7 @@ public final class AnimatedBone {
     private float scaleZ = 1;
     private boolean hidden;
 
-    AnimatedBone(
+    BBModelBone(
             String name,
             float pivotX,
             float pivotY,
@@ -63,19 +53,19 @@ public final class AnimatedBone {
         this.hidden = neverRender;
     }
 
-    public String getName() {
+    String getName() {
         return name;
     }
 
-    public List<AnimatedBone> getChildren() {
+    List<BBModelBone> getChildren() {
         return children;
     }
 
-    void addCube(AnimatedCube cube) {
+    void addCube(BBModelCube cube) {
         cubes.add(cube);
     }
 
-    void addChild(AnimatedBone child) {
+    void addChild(BBModelBone child) {
         children.add(child);
     }
 
@@ -90,19 +80,17 @@ public final class AnimatedBone {
         scaleY = 1;
         scaleZ = 1;
         hidden = neverRender;
-        for (AnimatedBone child : children) {
+        for (BBModelBone child : children) {
             child.reset();
         }
     }
 
-    /** 供动画采样器写入位置。单位与模型 JSON 相同（像素/16）。 */
     void setPosition(float x, float y, float z) {
         this.posX = x;
         this.posY = y;
         this.posZ = z;
     }
 
-    /** 供动画采样器写入旋转（弧度，已按 Gecko 轴约定转换）。 */
     void setRotation(float x, float y, float z) {
         this.rotX = x;
         this.rotY = y;
@@ -115,33 +103,35 @@ public final class AnimatedBone {
         this.scaleZ = z;
     }
 
-    /** 隐藏此骨骼及其子树。 */
     void setHidden(boolean hidden) {
         this.hidden = hidden;
     }
 
-    void render(PoseStack poseStack, VertexConsumer consumer, int packedLight, int packedOverlay, int color) {
+    void render(
+            PoseStack poseStack,
+            IntFunction<VertexConsumer> consumers,
+            int packedLight,
+            int packedOverlay,
+            int color
+    ) {
         if (hidden) {
             return;
         }
 
         poseStack.pushPose();
         applyBonePose(poseStack);
-
-        for (AnimatedCube cube : cubes) {
-            cube.render(poseStack, consumer, packedLight, packedOverlay, color);
+        for (BBModelCube cube : cubes) {
+            cube.render(poseStack, consumers, packedLight, packedOverlay, color);
         }
-        for (AnimatedBone child : children) {
-            child.render(poseStack, consumer, packedLight, packedOverlay, color);
+        for (BBModelBone child : children) {
+            child.render(poseStack, consumers, packedLight, packedOverlay, color);
         }
-
         poseStack.popPose();
     }
 
     private void applyBonePose(PoseStack poseStack) {
-        poseStack.translate(-posX / 16f, posY / 16f, posZ / 16f);
+        poseStack.translate(posX / 16f, posY / 16f, posZ / 16f);
         poseStack.translate(pivotX / 16f, pivotY / 16f, pivotZ / 16f);
-
         if (rotZ != 0) {
             poseStack.mulPose(Axis.ZP.rotation(rotZ));
         }
@@ -151,7 +141,6 @@ public final class AnimatedBone {
         if (rotX != 0) {
             poseStack.mulPose(Axis.XP.rotation(rotX));
         }
-
         if (scaleX != 1 || scaleY != 1 || scaleZ != 1) {
             poseStack.scale(scaleX, scaleY, scaleZ);
         }

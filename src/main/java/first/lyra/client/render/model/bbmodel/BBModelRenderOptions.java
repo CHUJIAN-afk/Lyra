@@ -1,4 +1,4 @@
-package first.lyra.client.render.animated;
+package first.lyra.client.render.model.bbmodel;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.renderer.LightTexture;
@@ -11,17 +11,11 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * 动画模型渲染请求。经 {@link AnimatedModelRenderer#request(ResourceLocation)} 创建，
- * 所有方法返回 this 以便链式使用。
- */
-public final class AnimatedRenderOptions {
+public final class BBModelRenderOptions {
 
     private final ResourceLocation modelId;
-    private ResourceLocation animationId;
     private String animationName;
     private float ageTicks;
-
     private ResourceLocation texture;
     private RenderType renderType;
     private int packedLight = LightTexture.FULL_BRIGHT;
@@ -37,87 +31,72 @@ public final class AnimatedRenderOptions {
     private float rotZ;
     private final Set<String> hiddenBones = new HashSet<>();
 
-    AnimatedRenderOptions(ResourceLocation modelId) {
+    public BBModelRenderOptions(ResourceLocation modelId) {
         this.modelId = modelId;
-        this.animationId = modelId;
     }
 
-    public ResourceLocation modelId() {
-        return modelId;
-    }
-
-    /** 播放模型同目录推导出的动画片段，动画时间使用 tick 域。 */
-    public AnimatedRenderOptions animation(String name, float ageTicks) {
-        return animation(modelId, name, ageTicks);
-    }
-
-    /** 指定动画文件 id（通常与模型 id 相同）与动画名。 */
-    public AnimatedRenderOptions animation(ResourceLocation animationFileId, String name, float ageTicks) {
-        this.animationId = animationFileId;
+    public BBModelRenderOptions animation(String name, float ageTicks) {
         this.animationName = name;
         this.ageTicks = ageTicks;
         return this;
     }
 
-    /** 不播放动画，仅使用模型绑定姿态。 */
-    public AnimatedRenderOptions bindPose() {
+    public BBModelRenderOptions bindPose() {
         this.animationName = null;
         this.ageTicks = 0;
         return this;
     }
 
-    public AnimatedRenderOptions texture(ResourceLocation texture) {
+    public BBModelRenderOptions texture(ResourceLocation texture) {
         this.texture = texture;
         return this;
     }
 
-    public AnimatedRenderOptions renderType(RenderType renderType) {
+    public BBModelRenderOptions renderType(RenderType renderType) {
         this.renderType = renderType;
         return this;
     }
 
-    public AnimatedRenderOptions light(int packedLight) {
+    public BBModelRenderOptions light(int packedLight) {
         this.packedLight = packedLight;
         return this;
     }
 
-    public AnimatedRenderOptions overlay(int packedOverlay) {
+    public BBModelRenderOptions overlay(int packedOverlay) {
         this.packedOverlay = packedOverlay;
         return this;
     }
 
-    /** 整体 ARGB 染色，-1 不启用。 */
-    public AnimatedRenderOptions color(int argb) {
+    public BBModelRenderOptions color(int argb) {
         this.color = argb;
         return this;
     }
 
-    public AnimatedRenderOptions alpha(float alpha) {
+    public BBModelRenderOptions alpha(float alpha) {
         this.alpha = alpha;
         return this;
     }
 
-    public AnimatedRenderOptions scale(float scale) {
+    public BBModelRenderOptions scale(float scale) {
         this.scale = scale;
         return this;
     }
 
-    public AnimatedRenderOptions translate(float x, float y, float z) {
+    public BBModelRenderOptions translate(float x, float y, float z) {
         this.translateX = x;
         this.translateY = y;
         this.translateZ = z;
         return this;
     }
 
-    public AnimatedRenderOptions rotate(float xDegrees, float yDegrees, float zDegrees) {
+    public BBModelRenderOptions rotate(float xDegrees, float yDegrees, float zDegrees) {
         this.rotX = xDegrees;
         this.rotY = yDegrees;
         this.rotZ = zDegrees;
         return this;
     }
 
-    /** 隐藏指定骨骼及其子树。 */
-    public AnimatedRenderOptions hideBone(String... boneNames) {
+    public BBModelRenderOptions hideBone(String... boneNames) {
         if (boneNames != null) {
             for (String boneName : boneNames) {
                 hiddenBones.add(boneName);
@@ -126,13 +105,12 @@ public final class AnimatedRenderOptions {
         return this;
     }
 
-    public void render(PoseStack poseStack, MultiBufferSource bufferSource) {
-        AnimatedModelRenderer.render(this, poseStack, bufferSource);
+    public boolean render(PoseStack poseStack, MultiBufferSource bufferSource) {
+        return BBModelRenderer.render(this, poseStack, bufferSource);
     }
 
-    @Nullable
-    ResourceLocation animationId() {
-        return animationId;
+    ResourceLocation modelId() {
+        return modelId;
     }
 
     @Nullable

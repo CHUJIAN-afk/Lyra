@@ -1,4 +1,4 @@
-package first.lyra.client.render.animated;
+package first.lyra.client.render.model.geo;
 
 import net.minecraft.util.Mth;
 
@@ -36,13 +36,13 @@ final class AnimatedClip {
     void sample(double tick, AnimatedGeoModel model) {
         double elapsed;
         if (lengthTicks > 0 && loop) {
-            elapsed = tick % lengthTicks;
+            elapsed = tick - Math.floor(tick / lengthTicks) * lengthTicks;
         } else if (lengthTicks > 0) {
             elapsed = Math.min(tick, lengthTicks);
         } else {
             elapsed = tick;
         }
-        if (elapsed < 0) {
+        if (!loop && elapsed < 0) {
             elapsed = 0;
         }
 
@@ -105,7 +105,7 @@ final class AnimatedClip {
                         return segment.endValue;
                     }
                     double t = local / segment.length;
-                    double eased = Easing.apply(segment.easing, t);
+                    double eased = GeoEasing.apply(segment.easing, t);
                     return Mth.lerp(eased, segment.startValue, segment.endValue);
                 }
                 segmentStart = segmentEnd;

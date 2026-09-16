@@ -1,4 +1,4 @@
-package first.lyra.client.render.virtual;
+package first.lyra.client.render.model.virtual;
 
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.world.entity.Entity;

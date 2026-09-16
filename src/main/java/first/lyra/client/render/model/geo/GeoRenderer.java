@@ -1,4 +1,4 @@
-package first.lyra.client.render.animated;
+package first.lyra.client.render.model.geo;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -9,27 +9,23 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 
 /**
- * 静态动画模型渲染入口，无 GeckoLib 运行时依赖。
+ * Geo 骨骼动画渲染模块。
  * <p>
  * 用法：
  * <pre>{@code
- * AnimatedModelRenderer.request(Lyra.rl("laser_minigun"))
+ * LyraModelRenderer.geo(Lyra.rl("laser_minigun"))
  *         .animation("shooting", ageTicks + partialTick)
  *         .hideBone("magazine")
  *         .render(poseStack, bufferSource);
  * }</pre>
- * 也提供旧式静态调用：
- * <pre>{@code
- * AnimatedModelRenderer.render(modelId, poseStack, bufferSource, "shooting", ageTicks);
- * }</pre>
  */
-public final class AnimatedModelRenderer {
+public final class GeoRenderer {
 
-    private AnimatedModelRenderer() {
+    private GeoRenderer() {
     }
 
-    public static AnimatedRenderOptions request(ResourceLocation modelId) {
-        return new AnimatedRenderOptions(modelId);
+    public static GeoRenderOptions request(ResourceLocation modelId) {
+        return new GeoRenderOptions(modelId);
     }
 
     /** 无动画：渲染绑定姿态。 */
@@ -53,11 +49,11 @@ public final class AnimatedModelRenderer {
     }
 
     public static boolean render(
-            AnimatedRenderOptions options,
+            GeoRenderOptions options,
             PoseStack poseStack,
             MultiBufferSource bufferSource
     ) {
-        AnimatedGeoModel model = AnimatedGeoModelManager.INSTANCE.getModel(options.modelId());
+        AnimatedGeoModel model = GeoModelManager.INSTANCE.getModel(options.modelId());
         if (model == null) {
             return false;
         }
@@ -66,7 +62,7 @@ public final class AnimatedModelRenderer {
         try {
             String animationName = options.animationName();
             if (animationName != null) {
-                AnimatedClip clip = AnimatedClipManager.INSTANCE.getClip(options.animationId(), animationName);
+                AnimatedClip clip = GeoAnimationManager.INSTANCE.getClip(options.animationId(), animationName);
                 if (clip != null) {
                     clip.sample(options.ageTicks(), model);
                 }

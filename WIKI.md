@@ -1,7 +1,7 @@
 # Lyra API 调用参考（WIKI）
 
 > 面向宿主模组（迁移方）的 Lyra 库调用手册。基于当前仓库源码整理。
-> 环境：Minecraft 1.21.1 · NeoForge 21.1.248 · Java 21 · GeckoLib 4.8.4（compileOnly）
+> 环境：Minecraft 1.21.1 · NeoForge 21.1.248 · Java 21
 
 ---
 
@@ -12,9 +12,7 @@
 - [1. 虚拟实体体系](#feat-1)
 - [2. 动态光照](#feat-2)
 - [3. 局部无敌帧](#feat-3)
-- [4. 外挂 GeckoLib 渲染](#feat-4)
-- [4a. 原生动画模型渲染（无 GeckoLib）](#feat-4a)
-- [4b. 虚拟实体渲染器复用（无真实实体）](#feat-4b)
+- [4. 统一模型渲染器](#feat-4)
 - [5. 创造模式分页与动画横幅](#feat-5)
 - [6. 物品注册数据生成集成](#feat-6)
 - [7. 伤害显示](#feat-7)
@@ -73,80 +71,51 @@ Lyra 提供以下开箱即用的高级能力，均基于实际源码实现。事
 - `recordHit(uuid, ticks)` 写入攻击历史（不造成伤害），`hasAttack(uuid)` 查询——`LivingDamageEvent.Post` 中玩家造成的伤害自动记录（100 tick）
 - 对原版目标：敌人攻击过玩家 / 玩家攻击过敌人 / 召唤物被攻击，均纳入仆从 `isTarget` 判定
 
-### <a id="feat-4"></a>4. 外挂 GeckoLib 渲染
+### <a id="feat-4"></a>4. 统一模型渲染器
 
-`GeoSideloader`：**不依赖实体或方块、无需继承或扩展的静态 Geo 模型渲染**：
+所有独立模型渲染统一从 `first.lyra.client.render.model.LyraModelRenderer` 进入。每个工厂返回
+独立请求类型，因此链式调用由模型格式强类型限制，不能误调用动画、骨骼或实体姿态方法。
 
 ```java
-GeoSideloader.create(Lyra.rl("laser_minigun"))   // 模型 RL → geo/texture/animation 三资源自动推导
-        .setAnimation("shooting", tickProgress)   // 自定义动画进度（tick 域直接注入）
-        .hideBone("magazine")                     // 骨骼隐藏（含子骨骼）
-        .render(poseStack, bufferSource, partialTick, packedLight);
+LyraModelRenderer.json(modelLocation)                  // 原版 JSON 静态模型
+        .color(tint)
+        .light(packedLight)
+        .render(poseStack, bufferSource);
+
+LyraModelRenderer.geo(modelId)                         // Geo 骨骼动画模型
+        .animation("shooting", ageTicks)
+        .hideBone("magazine")
+        .render(poseStack, bufferSource);
+
+LyraModelRenderer.virtualEntity(EntityType.BEE, partialTick)
+        .pose(VirtualEntityPose.create().ageTicks(age).walk(age, 1))
+        .render(poseStack, bufferSource);
+
+LyraModelRenderer.bbmodel(modelId)                     // Blockbench 工程
+        .animation("run", ageTicks)
+        .hideBone("head")
+        .render(poseStack, bufferSource);
 ```
 
-- **自定义动画进度**：`GeoAnimationSampler` 从 `GeckoLibCache` 直接读取 Animation 关键帧（支持 easing、LOOP 取模/钳制），绕开 GeckoLib 的 `AnimationController`/`handleAnimations` 管线，进度由调用方精确注入
-- **骨骼隐藏**：`hideBone(String...)` 按骨骼名隐藏（含子骨骼）
-- 每帧新实例、无跨帧状态；渲染前后均 reset 共享 `GeoBone` 到初始姿态，防止交叉污染
+内部模块完全分离，互不继承或共享模型状态：
 
-### <a id="feat-4a"></a>4a. 原生动画模型渲染（无 GeckoLib）
+- `model.json`：只渲染已烘焙的 `ModelResourceLocation`，不支持动画、骨骼或实体状态。
+- `model.geo`：解析 `geo/*.geo.json` 与 `animations/*.animation.json`，支持动画、loop、
+  隐藏骨骼、贴图/光照/染色覆盖。
+- `model.virtual`：使用实体类型创建内部客户端幽灵实体，调用该类型已注册的
+  `EntityRenderer` 与 `setupAnim`，不把实体加入世界。
+- `model.bbmodel`：直接解析 `bbmodels/*.bbmodel` 中的 cube、group、动画和内嵌贴图。
 
-新增模块位于 `first.lyra.client.render.animated`，**不依赖 GeckoLib 运行时**，
-直接解析 Bedrock/Gecko 格式的 `geo/*.geo.json` 与 `animations/*.animation.json`，
-用原版 `RenderType.entityTranslucent` 写入实体格式顶点。资源约定与旧 GeckoLib 自动推导一致：
+BBModel 动画名同时支持完整名和末段别名，例如 `animation.bear.run` 可用 `"run"` 调用。循环动画
+在采样前按动画长度包裹 tick，并以 wrap 段连接首尾时间与姿态；当首尾关键帧落在同一边界时，
+会自动生成一个短接缝过渡段消除循环跳变。BBModel 的 box UV 按 Blockbench 的 `uv_offset` 计算；
+显式面 UV 直接使用工程数据，避免重复 mirror。
 
 ```text
 assets/<mod>/geo/<name>.geo.json
 assets/<mod>/animations/<name>.animation.json
+assets/<mod>/bbmodels/<name>.bbmodel
 assets/<mod>/textures/item/entity/<name>.png
-```
-
-所有 `.geo.json` / `.animation.json` 会在资源重载时自动注册，模型 id 即 `<mod>:<name>`：
-
-```java
-import first.lyra.client.render.animated.AnimatedModelRenderer;
-
-// 链式静态入口（与旧 GeoSideloader 用法接近）
-AnimatedModelRenderer.request(ResourceLocation.fromNamespaceAndPath("summoner", "laser_minigun"))
-        .animation("shooting", ageTicks + partialTick)   // tick 域
-        .hideBone("magazine")
-        .color(FastColor.ARGB32.color((int) (alpha * 255), 255, 255, 255))
-        .render(poseStack, bufferSource);
-
-// 或直接静态调用
-AnimatedModelRenderer.render(modelId, poseStack, bufferSource, "shooting", ageTicks);
-```
-
-支持位置/旋转/缩放 keyframe、loop、常见 easing（linear/quad/cubic/quart/quint/sine/expo/circ/
-back/elastic/bounce）、隐藏骨骼、染色/透明度、渲染类型与顶部缩放旋转偏移。模型渲染前后都会
-reset 骨骼绑定姿态，避免缓存污染。
-
-### <a id="feat-4b"></a>4b. 虚拟实体渲染器复用（无真实实体）
-
-新增模块位于 `first.lyra.client.render.virtual`：直接取出目标实体类型已注册的
-原版或其它模组 `EntityRenderer`，用内部缓存的“幽灵实体”实例驱动它，不把实体加入世界。
-实体渲染器自带的 `setupAnim`（行走、攻击、头部跟随、实体专属动画）会照常运行。
-
-```java
-import first.lyra.client.render.virtual.VirtualEntityPose;
-import first.lyra.client.render.virtual.VirtualEntityRenderer;
-
-// 编译期可直接引用 EntityType；运行时按 ResourceLocation 引用其它模组实体也支持
-VirtualEntityRenderer.render(EntityType.ZOMBIE, poseStack, bufferSource, partialTick,
-        VirtualEntityPose.create()
-                .ageTicks(100)
-                .look(45, 60, -10)
-                .walk(20, 1)
-                .attack(0.4f)
-                .scale(1.5f)
-                .color(tint));
-
-VirtualEntityRenderer.render(
-        ResourceLocation.fromNamespaceAndPath("other_mod", "boss"),
-        poseStack, bufferSource, partialTick,
-        VirtualEntityPose.create()
-                .customize(entity -> {
-                    // 模组专属字段用 instanceof 后调用公开 setter
-                }));
 ```
 
 ### <a id="feat-5"></a>5. 创造模式物品栏分页 + 动画横幅

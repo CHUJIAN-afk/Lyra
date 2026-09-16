@@ -1,5 +1,19 @@
 # Lyra API 改动日志
 
+## 当前开发版 — 模型渲染器模块化（破坏性变更）
+
+模型渲染统一改为 `LyraModelRenderer`，并按格式拆分为互不复用的独立模块：
+
+| 旧入口 | 新入口 |
+|---|---|
+| `RenderUtil.renderStandalone(...)` | `LyraModelRenderer.json(...).color(...).light(...).render(...)` |
+| `AnimatedModelRenderer.request(...)` | `LyraModelRenderer.geo(...)` |
+| `VirtualEntityRenderer.render(..., pose)` | `LyraModelRenderer.virtualEntity(...).pose(...).render(...)` |
+
+新增 `LyraModelRenderer.bbmodel(...)`，直接加载 `assets/<mod>/bbmodels/<name>.bbmodel`，支持
+BBModel 内嵌贴图、骨骼关键帧、循环播放和隐藏骨骼。旧 `client.geo`、`client.render.animated`
+与 `client.render.virtual` 包中的入口已移除。
+
 ## 1.21.1.4 — 通用属性命名：Minion* → Summon*
 
 仆从与哨兵共用的通用属性从 minion 前缀改为 Summon（召唤伤害等），与 `LyraDamageRegister.Summon`、`summon.` 语言键统一。各类型的专属计数属性保留 minion/sentry 命名。

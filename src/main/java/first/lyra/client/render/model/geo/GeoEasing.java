@@ -1,13 +1,13 @@
-package first.lyra.client.render.animated;
+package first.lyra.client.render.model.geo;
 
 import java.util.Locale;
 
 /**
  * Gecko/Bedrock easing 名称的轻量实现，不依赖 GeckoLib。
  */
-final class Easing {
+final class GeoEasing {
 
-    private Easing() {
+    private GeoEasing() {
     }
 
     static double apply(String easingName, double t) {
@@ -15,36 +15,36 @@ final class Easing {
         return switch (name) {
             case "none", "linear" -> t;
             case "step" -> t <= 0 ? 0 : 1;
-            case "easeinsine" -> easeIn(t, Easing::sine);
-            case "easeoutsine" -> easeOut(t, Easing::sine);
-            case "easeinoutsine" -> easeInOut(t, Easing::sine);
-            case "easeinquad" -> easeIn(t, Easing::quad);
-            case "easeoutquad" -> easeOut(t, Easing::quad);
-            case "easeinoutquad" -> easeInOut(t, Easing::quad);
-            case "easeincubic" -> easeIn(t, Easing::cubic);
-            case "easeoutcubic" -> easeOut(t, Easing::cubic);
-            case "easeinoutcubic" -> easeInOut(t, Easing::cubic);
+            case "easeinsine" -> easeIn(t, GeoEasing::sine);
+            case "easeoutsine" -> easeOut(t, GeoEasing::sine);
+            case "easeinoutsine" -> easeInOut(t, GeoEasing::sine);
+            case "easeinquad" -> easeIn(t, GeoEasing::quad);
+            case "easeoutquad" -> easeOut(t, GeoEasing::quad);
+            case "easeinoutquad" -> easeInOut(t, GeoEasing::quad);
+            case "easeincubic" -> easeIn(t, GeoEasing::cubic);
+            case "easeoutcubic" -> easeOut(t, GeoEasing::cubic);
+            case "easeinoutcubic" -> easeInOut(t, GeoEasing::cubic);
             case "easeinquart" -> easeIn(t, v -> pow(v, 4));
             case "easeoutquart" -> easeOut(t, v -> pow(v, 4));
             case "easeinoutquart" -> easeInOut(t, v -> pow(v, 4));
             case "easeinquint" -> easeIn(t, v -> pow(v, 5));
             case "easeoutquint" -> easeOut(t, v -> pow(v, 5));
             case "easeinoutquint" -> easeInOut(t, v -> pow(v, 5));
-            case "easeinexpo" -> easeIn(t, Easing::expo);
-            case "easeoutexpo" -> easeOut(t, Easing::expo);
-            case "easeinoutexpo" -> easeInOut(t, Easing::expo);
-            case "easeincirc" -> easeIn(t, Easing::circ);
-            case "easeoutcirc" -> easeOut(t, Easing::circ);
-            case "easeinoutcirc" -> easeInOut(t, Easing::circ);
-            case "easeinback" -> easeIn(t, Easing::back);
-            case "easeoutback" -> easeOut(t, Easing::back);
-            case "easeinoutback" -> easeInOut(t, Easing::back);
-            case "easeinelastic" -> easeIn(t, Easing::elastic);
-            case "easeoutelastic" -> easeOut(t, Easing::elastic);
-            case "easeinoutelastic" -> easeInOut(t, Easing::elastic);
-            case "easeinbounce" -> easeIn(t, Easing::bounce);
-            case "easeoutbounce" -> easeOut(t, Easing::bounce);
-            case "easeinoutbounce" -> easeInOut(t, Easing::bounce);
+            case "easeinexpo" -> easeIn(t, GeoEasing::expo);
+            case "easeoutexpo" -> easeOut(t, GeoEasing::expo);
+            case "easeinoutexpo" -> easeInOut(t, GeoEasing::expo);
+            case "easeincirc" -> easeIn(t, GeoEasing::circ);
+            case "easeoutcirc" -> easeOut(t, GeoEasing::circ);
+            case "easeinoutcirc" -> easeInOut(t, GeoEasing::circ);
+            case "easeinback" -> easeIn(t, GeoEasing::back);
+            case "easeoutback" -> easeOut(t, GeoEasing::back);
+            case "easeinoutback" -> easeInOut(t, GeoEasing::back);
+            case "easeinelastic" -> easeIn(t, GeoEasing::elastic);
+            case "easeoutelastic" -> easeOut(t, GeoEasing::elastic);
+            case "easeinoutelastic" -> easeInOut(t, GeoEasing::elastic);
+            case "easeinbounce" -> easeIn(t, GeoEasing::bounce);
+            case "easeoutbounce" -> easeOut(t, GeoEasing::bounce);
+            case "easeinoutbounce" -> easeInOut(t, GeoEasing::bounce);
             default -> t;
         };
     }

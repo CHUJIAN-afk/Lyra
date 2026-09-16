@@ -1,4 +1,4 @@
-package first.lyra.client.render.animated;
+package first.lyra.client.render.model.geo;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;

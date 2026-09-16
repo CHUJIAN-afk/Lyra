@@ -1,9 +1,10 @@
 package first.lyra.client;
 
 import first.lyra.Lyra;
+import first.lyra.client.render.model.bbmodel.BBModelManager;
+import first.lyra.client.render.model.geo.GeoAnimationManager;
+import first.lyra.client.render.model.geo.GeoModelManager;
 import first.lyra.client.tooltip.TooltipHandler;
-import first.lyra.client.render.animated.AnimatedClipManager;
-import first.lyra.client.render.animated.AnimatedGeoModelManager;
 import first.lyra.common.damageInfo.DamageInfoStyleManager;
 import first.lyra.common.particle.genericParticle.GenericParticleProvider;
 import first.lyra.register.LyraParticleRegister;
@@ -28,8 +29,9 @@ public class ClientEvent {
     @SubscribeEvent
     public static void registerClientReloadListeners(RegisterClientReloadListenersEvent event) {
         event.registerReloadListener(DamageInfoStyleManager.INSTANCE);
-        event.registerReloadListener(AnimatedGeoModelManager.INSTANCE);
-        event.registerReloadListener(AnimatedClipManager.INSTANCE);
+        event.registerReloadListener(GeoModelManager.INSTANCE);
+        event.registerReloadListener(GeoAnimationManager.INSTANCE);
+        event.registerReloadListener(BBModelManager.INSTANCE);
     }
 
     @SubscribeEvent

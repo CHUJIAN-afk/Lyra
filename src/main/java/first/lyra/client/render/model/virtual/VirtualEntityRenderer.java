@@ -1,4 +1,4 @@
-package first.lyra.client.render.virtual;
+package first.lyra.client.render.model.virtual;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import first.lyra.client.render.ColorBufferSource;
