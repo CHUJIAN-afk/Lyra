@@ -112,10 +112,12 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                         return 0;
                     });
                     int slotCost = minion.getSlotCost();
-                    if (slotCost > 0 && limit >= slotCost) {
-                        limits.put(minion.getSlotType(), limit - slotCost);
-                    } else {
-                        minion.setRemove();
+                    if (slotCost > 0) {
+                        if (limit >= slotCost) {
+                            limits.put(minion.getSlotType(), limit - slotCost);
+                        } else {
+                            minion.setRemove();
+                        }
                     }
                 }
                 // 清理所有分组中标记移除的实体
