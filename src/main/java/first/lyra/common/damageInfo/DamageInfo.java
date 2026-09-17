@@ -160,14 +160,16 @@ public class DamageInfo {
             float u0 = (float) (glyph * glyphPixelWidth) / style.textureWidth();
             float u1 = (float) ((glyph + 1) * glyphPixelWidth) / style.textureWidth();
 
-            // 本地坐标先减 halfWidth 居中，再变换 + 收集
-            float x0 = i * step - halfWidth;
-            float x1 = x0 + size;
+            // 本地坐标先居中，再变换 + 收集。
+            // 相机朝向四元数下本地 +x 指屏幕左侧（与原版 SingleQuadParticle 的朝向约定一致），
+            // 因此字符串要从 +x 往 -x 排、UV 的 u 与本地 +x 反向，否则整串数字左右镜像（0.76 显示成 67.0）。
+            float x1 = halfWidth - i * step;
+            float x0 = x1 - size;
 
-            appendDamageVertex(matrix, x0, -halfSize, 0, color, u0, 0f, v);
-            appendDamageVertex(matrix, x0, halfSize, 0, color, u0, 1f, v);
-            appendDamageVertex(matrix, x1, halfSize, 0, color, u1, 1f, v);
-            appendDamageVertex(matrix, x1, -halfSize, 0, color, u1, 0f, v);
+            appendDamageVertex(matrix, x0, -halfSize, 0, color, u1, 0f, v);
+            appendDamageVertex(matrix, x0, halfSize, 0, color, u1, 1f, v);
+            appendDamageVertex(matrix, x1, halfSize, 0, color, u0, 1f, v);
+            appendDamageVertex(matrix, x1, -halfSize, 0, color, u0, 0f, v);
         }
         RenderUtil.writeVertices(consumer, this.damageVertexData, this.damageColorData, LightTexture.FULL_BRIGHT, this.damageVertexCount);
         this.damageVertexCount = 0;

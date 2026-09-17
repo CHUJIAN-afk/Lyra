@@ -78,7 +78,7 @@ public final class JsonModelRenderer {
      * 的键查询只会拿到 missing model（表现为紫黑方块）。这里先按去 variant 的键查，再回退原键。
      */
     private static BakedModel findModel(ModelManager modelManager, ModelResourceLocation modelLocation) {
-        ResourceLocation plain = new ResourceLocation(modelLocation.getNamespace(), modelLocation.getPath());
+        ResourceLocation plain = ResourceLocation.fromNamespaceAndPath(modelLocation.getNamespace(), modelLocation.getPath());
         BakedModel model = modelManager.getModel(plain);
         if (model != modelManager.getMissingModel()) {
             return model;
