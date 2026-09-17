@@ -14,15 +14,23 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
 import net.minecraft.util.RandomSource;
+import com.mojang.logging.LogUtils;
 import org.joml.Vector3f;
+import org.slf4j.Logger;
 
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Static vanilla JSON model renderer. This module deliberately has no animation,
  * texture override, bone visibility or entity state support.
  */
 public final class JsonModelRenderer {
+
+    private static final Logger LOGGER = LogUtils.getLogger();
+    /** 已提示过缺失的模型，避免每帧刷屏。 */
+    private static final Set<ModelResourceLocation> MISSING_WARNED = ConcurrentHashMap.newKeySet();
 
     private JsonModelRenderer() {
     }
@@ -51,14 +59,31 @@ public final class JsonModelRenderer {
             int packedLight
     ) {
         ModelManager modelManager = Minecraft.getInstance().getModelManager();
-        BakedModel model = modelManager.getModel(modelLocation);
+        BakedModel model = findModel(modelManager, modelLocation);
         if (model == modelManager.getMissingModel()) {
+            if (MISSING_WARNED.add(modelLocation)) {
+                LOGGER.warn("Lyra model {} is missing (expected at assets/{}/models/{}.json)", modelLocation, modelLocation.getNamespace(), resourcePath(modelLocation));
+            }
             return false;
         }
 
         VertexConsumer consumer = bufferSource.getBuffer(LyraRenderTypes.getModel());
         writeModel(poseStack.last(), consumer, model, color, packedLight);
         return true;
+    }
+
+    /**
+     * 1.20.1 的 {@code ModelEvent.RegisterAdditional} 以普通 {@code ResourceLocation} 作为烘焙键，
+     * 而 {@code ModelResourceLocation#equals} 会把 variant 一起比较，用带 {@code #standalone}
+     * 的键查询只会拿到 missing model（表现为紫黑方块）。这里先按去 variant 的键查，再回退原键。
+     */
+    private static BakedModel findModel(ModelManager modelManager, ModelResourceLocation modelLocation) {
+        ResourceLocation plain = new ResourceLocation(modelLocation.getNamespace(), modelLocation.getPath());
+        BakedModel model = modelManager.getModel(plain);
+        if (model != modelManager.getMissingModel()) {
+            return model;
+        }
+        return modelManager.getModel(modelLocation);
     }
 
     private static void writeModel(PoseStack.Pose pose, VertexConsumer consumer, BakedModel model, int color, int packedLight) {
@@ -107,7 +132,7 @@ public final class JsonModelRenderer {
                                 Float.intBitsToFloat(packed[base + 1]),
                                 Float.intBitsToFloat(packed[base + 2])
                         )
-                        .color(FastColor.ARGB32.alpha(color), FastColor.ARGB32.red(color), FastColor.ARGB32.green(color), FastColor.ARGB32.blue(color))
+                        .color(color)
                         .uv(Float.intBitsToFloat(packed[base + 4]), Float.intBitsToFloat(packed[base + 5]))
                         .overlayCoords(OverlayTexture.NO_OVERLAY)
                         .uv2(packedLight)

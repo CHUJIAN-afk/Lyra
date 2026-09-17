@@ -193,7 +193,7 @@ final class BBModelCube {
             for (Vertex vertex : quad.vertices) {
                 Vector3f position = pose.pose().transformPosition(vertex.x, vertex.y, vertex.z, new Vector3f());
                 consumer.vertex(position.x(), position.y(), position.z())
-                        .color(FastColor.ARGB32.alpha(color), FastColor.ARGB32.red(color), FastColor.ARGB32.green(color), FastColor.ARGB32.blue(color))
+                        .color(color)
                         .uv(vertex.u, vertex.v)
                         .overlayCoords(packedOverlay)
                         .uv2(packedLight)

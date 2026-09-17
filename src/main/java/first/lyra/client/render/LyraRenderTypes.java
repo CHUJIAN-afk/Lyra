@@ -5,7 +5,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import first.lyra.Lyra;
 import net.minecraft.Util;
 import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.resources.ResourceLocation;
 
 import java.util.function.Function;
@@ -37,12 +37,49 @@ public class LyraRenderTypes extends RenderType {
         return create("lyra_texture_no_depth", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 1536, true, true, state);
     });
 
+    /**
+     * 拖尾渲染类型。
+     * <p>
+     * 1.20.1 的 {@code RenderType.entityTranslucentEmissive(贴图)} 默认开启 outline 变体
+     * （{@code CompositeState#createCompositeState(true)}），该变体会被实体描边通道复用，
+     * 导致拖尾在描边/物品实体通道里以不透明方式再画一次。这里显式关闭 outline，
+     * 只保留「半透明 + 不写深度 + 无剔除 + 全亮」的发光管线。
+     * </p>
+     */
+    public static final RenderType TRAIL = create(
+            "lyra_trail",
+            DefaultVertexFormat.NEW_ENTITY,
+            VertexFormat.Mode.QUADS,
+            1536,
+            true,
+            true,
+            CompositeState.builder()
+                    .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_EMISSIVE_SHADER)
+                    .setTextureState(new TextureStateShard(Lyra.rl("textures/trail.png"), false, false))
+                    .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                    .setCullState(NO_CULL)
+                    .setOverlayState(OVERLAY)
+                    .setWriteMaskState(COLOR_WRITE)
+                    .createCompositeState(false)
+    );
+
+    /**
+     * 模型渲染类型。
+     * <p>
+     * 1.20.1 的 {@code Sheets.translucentItemSheet()} 实际是 {@code itemEntityTranslucentCull}，
+     * 带有 ITEM_ENTITY_TARGET 输出状态：在光影/高性能图形下会被画进物品实体缓冲，
+     * 世界中的模型于是出现颜色错乱（紫黑块）。这里改用同源但不带特殊输出的
+     * 半透明剔除管线，行为与 1.21.1 的 translucentItemSheet 对齐。
+     * </p>
+     */
+    public static final RenderType MODEL = RenderType.entityTranslucentCull(TextureAtlas.LOCATION_BLOCKS);
+
     public static RenderType getTrail() {
-        return RenderType.entityTranslucentEmissive(Lyra.rl("textures/trail.png"));
+        return TRAIL;
     }
 
     public static RenderType getModel() {
-        return Sheets.translucentItemSheet();
+        return MODEL;
     }
 
     /**

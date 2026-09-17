@@ -97,7 +97,7 @@ public final class RenderUtil {
             int sourceIndex = i * 5;
             int color = colorData[i];
             consumer.vertex(xyzuvData[sourceIndex], xyzuvData[sourceIndex + 1], xyzuvData[sourceIndex + 2])
-                    .color(FastColor.ARGB32.alpha(color), FastColor.ARGB32.red(color), FastColor.ARGB32.green(color), FastColor.ARGB32.blue(color))
+                    .color(color)
                     .uv(xyzuvData[sourceIndex + 3], xyzuvData[sourceIndex + 4])
                     .overlayCoords(OverlayTexture.NO_OVERLAY)
                     .uv2(packedLight)

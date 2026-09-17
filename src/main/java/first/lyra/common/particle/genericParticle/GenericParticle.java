@@ -1,6 +1,7 @@
 package first.lyra.common.particle.genericParticle;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.logging.LogUtils;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleRenderType;
@@ -13,6 +14,9 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import org.slf4j.Logger;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 通用粒子 - 自定义渲染中心色块和边缘色块。
@@ -22,6 +26,9 @@ import org.joml.Vector3f;
  * </p>
  */
 public class GenericParticle extends TextureSheetParticle {
+
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final AtomicBoolean FIRST_RENDER_LOGGED = new AtomicBoolean();
 
     private final SpriteSet spriteSet;
     private final float baseScale;
@@ -70,6 +77,9 @@ public class GenericParticle extends TextureSheetParticle {
 
     @Override
     public void render(@NotNull VertexConsumer buffer, @NotNull Camera camera, float partialTick) {
+        if (FIRST_RENDER_LOGGED.compareAndSet(false, true)) {
+            LOGGER.info("[Lyra] GenericParticle 渲染自检: sprite={}, baseScale={}, lifetime={}", this.sprite.contents().name(), this.baseScale, this.lifetime);
+        }
         Vec3 cameraPos = camera.getPosition();
         float x = (float) (Mth.lerp(partialTick, this.xo, this.x) - cameraPos.x);
         float y = (float) (Mth.lerp(partialTick, this.yo, this.y) - cameraPos.y);
@@ -118,23 +128,26 @@ public class GenericParticle extends TextureSheetParticle {
 
     private void renderQuad(VertexConsumer buffer, float cx, float cy, float cz, Quaternionf quaternion, float minX, float minY, float maxX, float maxY, float u0, float u1, float v0, float v1, int color, int light, int overlay) {
         Vector3f v = new Vector3f();
+        // 顶点顺序与 UV 配对必须和原版 SingleQuadParticle 一致：(-,-) → (-,+) → (+,+) → (+,-)。
+        // 顺序反过来是反向缠绕，粒子渲染管线没有关闭背面剔除，整片会被剔除掉（表现为粒子完全看不见）。
         v.set(minX, minY, 0.0F).rotate(quaternion);
-        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u0, v0, overlay, light);
-        v.set(maxX, minY, 0.0F).rotate(quaternion);
-        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u1, v0, overlay, light);
-        v.set(maxX, maxY, 0.0F).rotate(quaternion);
         addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u1, v1, overlay, light);
         v.set(minX, maxY, 0.0F).rotate(quaternion);
+        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u1, v0, overlay, light);
+        v.set(maxX, maxY, 0.0F).rotate(quaternion);
+        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u0, v0, overlay, light);
+        v.set(maxX, minY, 0.0F).rotate(quaternion);
         addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u0, v1, overlay, light);
     }
 
     private static void addVertex(VertexConsumer buffer, float x, float y, float z, int color, float u, float v, int overlay, int light) {
+        // 1.20.1 的 DefaultVertexFormat.PARTICLE 元素顺序是 Position -> UV0 -> Color -> UV2
+        // （不是常见的 Position -> Color -> UV0 -> UV2），且没有 overlay/normal 元素。
+        // 顺序写错或多写元素，都会在 endVertex 抛 "Not filled all elements of the vertex"。
         buffer.vertex(x, y, z)
-                .color((color >>> 24) & 0xFF, (color >>> 16) & 0xFF, (color >>> 8) & 0xFF, color & 0xFF)
                 .uv(u, v)
-                .overlayCoords(overlay)
+                .color((color >>> 24) & 0xFF, (color >>> 16) & 0xFF, (color >>> 8) & 0xFF, color & 0xFF)
                 .uv2(light)
-                .normal(0.0F, 0.0F, 1.0F)
                 .endVertex();
     }
 
