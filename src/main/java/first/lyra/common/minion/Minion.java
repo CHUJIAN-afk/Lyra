@@ -99,7 +99,7 @@ public abstract class Minion extends AttachmentEntity {
     public LivingEntity searchTarget() {
         int distance = this.getSearchDistance();
         if (distance > 0 && owner != null) {
-            TargetCache targetCache = getLevel().getData(LyraAttachmentRegister.TargetCache);
+            TargetCache targetCache = getTargetCache();
             List<LivingEntity> targets = targetCache.getEntitiesInRadius(owner.getBoundingBox().getCenter(), distance, living -> targetCache.isVisibility(owner, living) && targetCache.isTarget(living));
             if (!targets.isEmpty()) {
                 return targetCache.getNewTarget(this, targets, 0, true);

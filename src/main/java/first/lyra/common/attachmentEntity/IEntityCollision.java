@@ -138,7 +138,7 @@ public interface IEntityCollision<T extends AttachmentEntity> {
         AABB bounds = sweep.bounds();
         Vec3 center = bounds.getCenter();
         double radius = center.distanceTo(new Vec3(bounds.maxX, bounds.maxY, bounds.maxZ));
-        return entity.getLevel().getData(LyraAttachmentRegister.TargetCache).getEntitiesInRadius(center, radius, target -> isValidCollisionTarget((T) entity, target));
+        return entity.getOwner().getData(LyraAttachmentRegister.TargetCache).getEntitiesInRadius(center, radius, target -> isValidCollisionTarget((T) entity, target));
     }
 
     /**

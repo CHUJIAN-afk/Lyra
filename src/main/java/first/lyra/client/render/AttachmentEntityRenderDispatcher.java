@@ -10,6 +10,7 @@ import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -51,28 +52,28 @@ public class AttachmentEntityRenderDispatcher {
      * @param partialTick  部分 tick 插值进度
      */
     public static void render(ClientLevel level, Camera camera, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick) {
-        List<AttachmentEntity> entities = level.getData(LyraAttachmentRegister.EntityData)
-                .getRenderCache();
-        Vec3 cameraPos = camera.getPosition();
-        boolean showHitboxes = Minecraft.getInstance()
-                .getEntityRenderDispatcher()
-                .shouldRenderHitBoxes();
-        VertexConsumer debugConsumer = showHitboxes ? bufferSource.getBuffer(RenderType.lines()) : null;
-        for (AttachmentEntity entity : entities) {
-            poseStack.pushPose();
-            PathNode renderNode = entity.getRenderNode(partialTick);
-            Vec3 pos = renderNode.pos();
-            poseStack.translate(pos.x() - cameraPos.x(), pos.y() - cameraPos.y(), pos.z() - cameraPos.z());
-            int lightCoords = getLightCoords(level, BlockPos.containing(pos));
-            // 渲染实体模型
-            IAttachmentEntityRenderer<AttachmentEntity> renderer = getRenderer(entity);
-            if (renderer != null) {
-                renderer.render(entity, poseStack, bufferSource, partialTick, lightCoords, renderNode);
+        List<AbstractClientPlayer> players = level.players();
+        for (AbstractClientPlayer player : players) {
+            List<AttachmentEntity> entities = player.getData(LyraAttachmentRegister.EntityData).getRenderCache();
+            Vec3 cameraPos = camera.getPosition();
+            boolean showHitboxes = Minecraft.getInstance().getEntityRenderDispatcher().shouldRenderHitBoxes();
+            VertexConsumer debugConsumer = showHitboxes ? bufferSource.getBuffer(RenderType.lines()) : null;
+            for (AttachmentEntity entity : entities) {
+                poseStack.pushPose();
+                PathNode renderNode = entity.getRenderNode(partialTick);
+                Vec3 pos = renderNode.pos();
+                poseStack.translate(pos.x() - cameraPos.x(), pos.y() - cameraPos.y(), pos.z() - cameraPos.z());
+                int lightCoords = getLightCoords(level, BlockPos.containing(pos));
+                // 渲染实体模型
+                IAttachmentEntityRenderer<AttachmentEntity> renderer = getRenderer(entity);
+                if (renderer != null) {
+                    renderer.render(entity, poseStack, bufferSource, partialTick, lightCoords, renderNode);
+                }
+                if (ClientConfig.DebugMode.isTrue()) {
+                    debugRender(poseStack, entity, showHitboxes, renderNode, debugConsumer);
+                }
+                poseStack.popPose();
             }
-            if (ClientConfig.DebugMode.isTrue()) {
-                debugRender(poseStack, entity, showHitboxes, renderNode, debugConsumer);
-            }
-            poseStack.popPose();
         }
     }
 

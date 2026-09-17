@@ -69,9 +69,9 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                     for (AttachmentEntity entity : list) {
                         if (entity instanceof Minion minion) {
                             List<Minion> minionList = sameCache.computeIfAbsent(minion.getSameHash(), key -> new ArrayList<>());
+                            minion.setOrder(minionList.size());
                             minionList.add(minion);
                             for (Minion minion1 : minionList) {
-                                minion1.setOrder(minionList.size() - 1);
                                 minion1.setSameSize(list.size());
                             }
                         }
@@ -143,7 +143,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                 });
                 if (!groups.isEmpty() || changed) {
                     changed = false;
-                    level.syncData(LyraAttachmentRegister.EntityData);
+                    player.syncData(LyraAttachmentRegister.EntityData);
                 }
             }
         }

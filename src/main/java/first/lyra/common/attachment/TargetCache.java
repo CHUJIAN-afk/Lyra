@@ -102,7 +102,7 @@ public class TargetCache {
         }
         if (searchBox != null) {
             for (LivingEntity entity : serverLevel.getEntitiesOfClass(LivingEntity.class, searchBox)) {
-                if (entity.isAlive()) {
+                if (owner != entity && entity.isAlive()) {
                     int entityCellX = Mth.floor(entity.getX()) >> 4;
                     int entityCellY = Mth.floor(entity.getY()) >> 4;
                     int entityCellZ = Mth.floor(entity.getZ()) >> 4;

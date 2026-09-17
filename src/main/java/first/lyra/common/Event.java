@@ -66,7 +66,7 @@ public class Event {
     public static void tick(PlayerTickEvent.Post event) {
         Player player = event.getEntity();
         if (!player.level().isClientSide()) {
-            player.level().getData(LyraAttachmentRegister.TargetCache).tick((ServerPlayer) player);
+            player.getData(LyraAttachmentRegister.TargetCache).tick((ServerPlayer) player);
         }
         player.getData(LyraAttachmentRegister.EntityData).tick(player);
     }
