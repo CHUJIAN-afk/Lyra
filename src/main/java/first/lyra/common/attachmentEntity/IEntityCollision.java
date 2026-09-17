@@ -1,6 +1,5 @@
 package first.lyra.common.attachmentEntity;
 
-import first.lyra.api.LyraHelper;
 import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;

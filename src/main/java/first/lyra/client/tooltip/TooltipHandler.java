@@ -1,6 +1,5 @@
 package first.lyra.client.tooltip;
 
-import first.lyra.Lyra;
 import first.lyra.common.armorSet.ArmorSet;
 import first.lyra.common.item.SummonerWeaponItem;
 import first.lyra.register.LyraRegistries;

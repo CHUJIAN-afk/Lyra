@@ -12,8 +12,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ItemLike;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
-
 @JeiPlugin
 public class LyraPlugin implements IModPlugin {
 

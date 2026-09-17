@@ -1,7 +1,6 @@
 package first.lyra.client.render;
 
 import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import first.lyra.mixin.BufferBuilderAccessor;

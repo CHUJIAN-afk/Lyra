@@ -5,7 +5,6 @@ import first.lyra.common.attachmentEntity.AttachmentEntityDamageSource;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 public class MixinHandler {

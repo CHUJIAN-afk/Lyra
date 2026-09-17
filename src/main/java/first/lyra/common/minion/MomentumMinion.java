@@ -1,6 +1,9 @@
 package first.lyra.common.minion;
 
-import first.lyra.common.attachmentEntity.*;
+import first.lyra.common.attachmentEntity.AttachmentEntityType;
+import first.lyra.common.attachmentEntity.IMomentumAttachmentEntity;
+import first.lyra.common.attachmentEntity.PathNode;
+import first.lyra.common.attachmentEntity.PlannedPath;
 import net.minecraft.core.Holder;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;

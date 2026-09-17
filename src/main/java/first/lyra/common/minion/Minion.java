@@ -2,7 +2,6 @@ package first.lyra.common.minion;
 
 import first.lyra.common.attachment.TargetCache;
 import first.lyra.common.attachmentEntity.*;
-import first.lyra.mixin.ClientLevelAccessor;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraDamageRegister;
 import first.lyra.utils.LyraStreamCodecs;
@@ -11,15 +10,12 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 public abstract class Minion extends AttachmentEntity {
 
-    protected LivingEntity owner;
     protected LivingEntity target;
     protected boolean targetChange = false;
     protected MinionSlotType slotType = MinionSlotType.None;
@@ -36,14 +32,6 @@ public abstract class Minion extends AttachmentEntity {
     @Override
     protected void registerSyncFields(SyncFieldDispatcher fields) {
         super.registerSyncFields(fields);
-        fields.field(LyraStreamCodecs.OPTIONAL_UUID, () -> Optional.ofNullable(owner).map(LivingEntity::getUUID), (level, optional) -> {
-            owner = null;
-            optional.ifPresent(uuid -> {
-                if (((ClientLevelAccessor) level).callGetEntities().get(uuid) instanceof LivingEntity living) {
-                    owner = living;
-                }
-            });
-        });
         fields.field(LyraStreamCodecs.INT, () -> target != null ? target.getId() : -1, (level, id) -> target = level.getEntity(id) instanceof LivingEntity living ? living : null);
         fields.field(LyraStreamCodecs.MINION_SLOT_TYPE, this::getSlotType, this::setSlotType);
         fields.field(LyraStreamCodecs.INT, this::getSlotCost, this::setSlotCost);
