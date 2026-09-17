@@ -4,6 +4,7 @@ import first.lyra.common.attachmentEntity.AttachmentEntityDamageSource;
 import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import first.lyra.common.attachmentEntity.MomentumAttachmentEntity;
 import first.lyra.common.attachmentEntity.PathNode;
+import first.lyra.common.minion.MinionSlotType;
 import first.lyra.register.LyraDamageRegister;
 import net.minecraft.core.Holder;
 import net.minecraft.world.damagesource.DamageSource;
@@ -41,6 +42,11 @@ public abstract class Projectile extends MomentumAttachmentEntity {
             PathNode pathNode = getCurrentPathNode();
             setCurrentPathNode(pathNode.modifyEuler(yaw, pitch, pathNode.roll()));
         }
+    }
+
+    @Override
+    public void onLevelChange() {
+        setRemove();
     }
 
     public void setMaxTickCount(int maxTickCount) {

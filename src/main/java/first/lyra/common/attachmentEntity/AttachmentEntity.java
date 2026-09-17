@@ -174,6 +174,7 @@ public abstract class AttachmentEntity {
     }
 
     public void init(PathNode node) {
+        this.clientInit = false;
         this.currentPathNode = node;
         this.historyNodes.clear();
         this.historyNodes.add(node);

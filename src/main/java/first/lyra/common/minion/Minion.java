@@ -49,6 +49,14 @@ public abstract class Minion extends AttachmentEntity {
         return owner != null && owner.isAlive();
     }
 
+    @Override
+    public void onLevelChange() {
+        init(getCurrentPathNode().modifyPos(getOwner().getBoundingBox().getCenter()));
+        if (slotType == MinionSlotType.Sentry) {
+            setRemove();
+        }
+    }
+
     public long getSameHash() {
         return Objects.hash(this.getType()) * 43L;
     }
