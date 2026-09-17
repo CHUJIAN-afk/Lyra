@@ -10,7 +10,6 @@ import net.minecraft.data.tags.ItemTagsProvider;
 import net.minecraft.data.tags.TagsProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ArmorItem;
@@ -29,7 +28,6 @@ import net.minecraftforge.fml.loading.FMLLoader;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -102,10 +100,7 @@ public class LyraItemRegistries {
         return this;
     }
 
-    public void register(IEventBus eventBus, @Nullable Runnable runnable) {
-        if (runnable != null) {
-            runnable.run();
-        }
+    public void register(IEventBus eventBus) {
         register.register(eventBus);
         eventBus.addListener((GatherDataEvent event) -> {
             boolean client = event.includeClient();

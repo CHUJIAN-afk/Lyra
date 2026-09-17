@@ -1,6 +1,5 @@
 package first.lyra.register;
 
-import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.Codec;
 import first.lyra.Lyra;
 import first.lyra.common.particle.genericParticle.GenericParticleOptions;

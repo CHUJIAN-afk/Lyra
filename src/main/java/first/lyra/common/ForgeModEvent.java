@@ -1,16 +1,15 @@
 package first.lyra.common;
 
-import first.lyra.Lyra;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraftforge.event.entity.EntityAttributeModificationEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import org.mesdag.portlib.event.PortEventHandler;
 
-@Mod.EventBusSubscriber(modid = Lyra.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public final class ForgeModEvent {
+    public static void init() {
+        PortEventHandler.addListener(ForgeModEvent::attributeModification);
+    }
 
-    @SubscribeEvent
-    public static void attributeModification(EntityAttributeModificationEvent event) {
+    private static void attributeModification(EntityAttributeModificationEvent event) {
         LyraAttributeRegister.handler(event);
     }
 }

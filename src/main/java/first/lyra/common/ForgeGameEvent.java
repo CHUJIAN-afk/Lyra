@@ -1,6 +1,5 @@
 package first.lyra.common;
 
-import first.lyra.Lyra;
 import first.lyra.common.armorSet.ArmorSet;
 import first.lyra.common.attachment.DamageInfoData;
 import first.lyra.common.attachment.InvincibleData;
@@ -16,19 +15,23 @@ import net.minecraftforge.event.LootTableLoadEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingDamageEvent;
 import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
+import org.mesdag.portlib.event.PortEventHandler;
+import org.mesdag.portlib.event.PortEventPriority;
 
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-@Mod.EventBusSubscriber(modid = Lyra.MODID, bus = Mod.EventBusSubscriber.Bus.FORGE)
-public class ForgeEvent {
+public final class ForgeGameEvent {
+    public static void init() {
+        PortEventHandler.addListener(ForgeGameEvent::lootTable);
+        PortEventHandler.addListener(ForgeGameEvent::playerTick);
+        PortEventHandler.addListener(ForgeGameEvent::levelTick);
+        PortEventHandler.addListener(ForgeGameEvent::equipmentChange);
+        PortEventHandler.addListener(PortEventPriority.LOWEST, ForgeGameEvent::damage);
+    }
 
-    @SubscribeEvent
-    public static void lootTable(LootTableLoadEvent event) {
+    private static void lootTable(LootTableLoadEvent event) {
         ResourceLocation location = event.getName();
         LootTable table = event.getTable();
         LyraItemRegistries.REGISTRIES.values().forEach(registries -> {
@@ -42,8 +45,7 @@ public class ForgeEvent {
         });
     }
 
-    @SubscribeEvent
-    public static void playerTick(TickEvent.PlayerTickEvent event) {
+    private static void playerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
@@ -54,8 +56,7 @@ public class ForgeEvent {
         player.getData(LyraAttachmentRegister.EntityData).tick(player);
     }
 
-    @SubscribeEvent
-    public static void levelTick(TickEvent.LevelTickEvent event) {
+    private static void levelTick(TickEvent.LevelTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
@@ -63,13 +64,11 @@ public class ForgeEvent {
         DamageInfoData.tick(event);
     }
 
-    @SubscribeEvent
-    public static void equipmentChange(LivingEquipmentChangeEvent event) {
+    private static void equipmentChange(LivingEquipmentChangeEvent event) {
         ArmorSet.handler(event);
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void damage(LivingDamageEvent event) {
+    private static void damage(LivingDamageEvent event) {
         InvincibleData.handler(event);
         DamageInfoData.handler(event);
     }
