@@ -146,7 +146,7 @@ public class GenericParticle extends TextureSheetParticle {
         // 顺序写错或多写元素，都会在 endVertex 抛 "Not filled all elements of the vertex"。
         buffer.vertex(x, y, z)
                 .uv(u, v)
-                .color((color >>> 24) & 0xFF, (color >>> 16) & 0xFF, (color >>> 8) & 0xFF, color & 0xFF)
+                .color(color)
                 .uv2(light)
                 .endVertex();
     }

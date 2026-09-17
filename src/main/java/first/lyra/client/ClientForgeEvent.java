@@ -34,7 +34,7 @@ public final class ClientForgeEvent {
             MultiBufferSource.BufferSource bufferSource = minecraft.renderBuffers().bufferSource();
             float partialTick = event.getPartialTick();
             AttachmentEntityRenderDispatcher.render(level, event.getCamera(), event.getPoseStack(), bufferSource, partialTick);
-            DamageInfoRenderDispatcher.render(level, event.getCamera(), bufferSource, partialTick);
+            DamageInfoRenderDispatcher.render(level, event.getCamera(), event.getPoseStack(), bufferSource, partialTick);
         } else if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
             DynamicLightDispatcher.update((LevelRendererAccessor) event.getLevelRenderer());
         }

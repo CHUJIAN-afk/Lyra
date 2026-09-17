@@ -1,5 +1,6 @@
 package first.lyra.common.damageInfo;
 
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import first.lyra.client.render.RenderUtil;
 import first.lyra.utils.EasingCurve;
@@ -121,7 +122,7 @@ public class DamageInfo {
      * @param camPos        相机世界坐标
      * @param partialTick   插值因子
      */
-    public void render(VertexConsumer consumer, Quaternionf baseRotation, Vec3 camPos, float partialTick) {
+    public void render(VertexConsumer consumer, PoseStack poseStack, Quaternionf baseRotation, Vec3 camPos, float partialTick) {
         Vec3 renderPos = getRenderPos(partialTick);
 
         // 预计算渲染参数
@@ -139,13 +140,15 @@ public class DamageInfo {
         float totalWidth = !text.isEmpty() ? (text.length() - 1) * step + size : 0f;
         float halfWidth = totalWidth / 2f;
 
-        // 构造变换矩阵：baseRotation × ZN(roll) 旋转 + 平移到渲染位置（相对相机）
-        // 平移在旋转之后（世界空间），故 offsetX 不应进平移列，而应在本地坐标里居中
-        Matrix4f matrix = new Matrix4f()
-                .rotate(baseRotation.rotateZ(roll * Mth.DEG_TO_RAD, new Quaternionf()))
-                .setTranslation((float) (renderPos.x() - camPos.x()),
-                                (float) (renderPos.y() - camPos.y()),
-                                (float) (renderPos.z() - camPos.z()));
+        // 变换走渲染阶段的 PoseStack（与附件实体同一套相机相对坐标约定），
+        // 不要自己往顶点里烘焙相机相对平移——1.20.1 的模型视图矩阵会再叠一次，
+        // 结果是伤害数字被相机位置平移，落在错误的地方。
+        poseStack.pushPose();
+        poseStack.translate(renderPos.x() - camPos.x(),
+                renderPos.y() - camPos.y(),
+                renderPos.z() - camPos.z());
+        poseStack.mulPose(baseRotation.rotateZ(roll * Mth.DEG_TO_RAD, new Quaternionf()));
+        Matrix4f matrix = poseStack.last().pose();
 
         int glyphPixelWidth = style.glyphPixelWidth();
         int length = text.length();
@@ -168,6 +171,7 @@ public class DamageInfo {
         }
         RenderUtil.writeVertices(consumer, this.damageVertexData, this.damageColorData, LightTexture.FULL_BRIGHT, this.damageVertexCount);
         this.damageVertexCount = 0;
+        poseStack.popPose();
     }
 
     private void appendDamageVertex(Matrix4f matrix, float x, float y, float z, int color, float u, float v, Vector3f scratch) {

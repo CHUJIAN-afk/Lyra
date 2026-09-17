@@ -1,6 +1,7 @@
 package first.lyra.common.damageInfo;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import first.lyra.common.attachment.DamageInfoData;
 import first.lyra.register.LyraAttachmentRegister;
@@ -26,7 +27,7 @@ import java.util.Map;
  */
 public class DamageInfoRenderDispatcher {
 
-    public static void render(Level level, Camera camera, MultiBufferSource bufferSource, float partialTick) {
+    public static void render(Level level, Camera camera, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick) {
         Minecraft minecraft = Minecraft.getInstance();
         DamageInfoData data = level.getData(LyraAttachmentRegister.DamageInfoData);
         Map<ResourceLocation, List<DamageInfo>> infos = data.getActiveInfos();
@@ -37,7 +38,7 @@ public class DamageInfoRenderDispatcher {
             for (Map.Entry<ResourceLocation, List<DamageInfo>> group : infos.entrySet()) {
                 VertexConsumer consumer = bufferSource.getBuffer(RenderType.entityTranslucent(group.getKey(), false));
                 for (DamageInfo info : group.getValue()) {
-                    info.render(consumer, baseRotation, camPos, partialTick);
+                    info.render(consumer, poseStack, baseRotation, camPos, partialTick);
                 }
             }
         }
