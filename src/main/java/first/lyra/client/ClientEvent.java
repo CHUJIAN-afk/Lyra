@@ -8,7 +8,6 @@ import first.lyra.client.tooltip.TooltipHandler;
 import first.lyra.common.damageInfo.DamageInfoStyleManager;
 import first.lyra.common.particle.genericParticle.GenericParticleProvider;
 import first.lyra.register.LyraParticleRegister;
-import first.lyra.register.LyraEntityRegister;
 import net.minecraft.client.renderer.entity.NoopRenderer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -37,10 +36,5 @@ public class ClientEvent {
     @SubscribeEvent
     public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
         event.registerSpriteSet(LyraParticleRegister.Generic.get(), GenericParticleProvider::new);
-    }
-
-    @SubscribeEvent
-    public static void registerEntityRenderers(EntityRenderersEvent.RegisterRenderers event) {
-        event.registerEntityRenderer(LyraEntityRegister.HurtEntity.get(), NoopRenderer::new);
     }
 }

@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
 
-public abstract class Projectile extends MomentumAttachmentEntity implements IOwner {
+public abstract class Projectile extends MomentumAttachmentEntity {
 
     protected LivingEntity owner = null;
     protected int maxTickCount = 200;
@@ -36,16 +36,14 @@ public abstract class Projectile extends MomentumAttachmentEntity implements IOw
 
     @Override
     public @NotNull DamageSource getDamageSource() {
-        return new AttachmentEntityDamageSource(LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, level), null, owner, getPos(), this);
+        return new AttachmentEntityDamageSource(LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, getLevel()), null, owner, getPos(), this);
     }
 
     @Override
     public void tick() {
         super.tick();
-        if (!level.isClientSide()) {
-            if (getMaxTickCount() > 0 && getTickCount() >= getMaxTickCount()) {
-                setRemove();
-            }
+        if (getMaxTickCount() > 0 && getTickCount() >= getMaxTickCount()) {
+            setRemove();
         }
     }
 
@@ -59,14 +57,6 @@ public abstract class Projectile extends MomentumAttachmentEntity implements IOw
             PathNode pathNode = getCurrentPathNode();
             setCurrentPathNode(pathNode.modifyEuler(yaw, pitch, pathNode.roll()));
         }
-    }
-
-    public LivingEntity getOwner() {
-        return owner;
-    }
-
-    public void setOwner(LivingEntity owner) {
-        this.owner = owner;
     }
 
     public void setMaxTickCount(int maxTickCount) {

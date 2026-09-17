@@ -136,7 +136,6 @@ public class SummonerWeaponItem<T extends Minion> extends Item {
     public T createMinion(@NotNull Player player, @NotNull ItemStack itemStack) {
         AttachmentEntityType<T> type = getEntityType();
         T minion = type.factory().get();
-        minion.setLevel(player.level());
         minion.setOwner(player);
         minion.setSlotType(getSlotType(itemStack));
         minion.setDamage(getSummonDamage(player, itemStack));

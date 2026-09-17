@@ -20,10 +20,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 从资源目录 {@code geo} 自动加载全部 Bedrock/Gecko .geo.json 模型。
+ * 从资源目录 {@code lyra_model/geo} 自动加载全部 Bedrock/Gecko .geo.json 模型。
  * <p>
- * 文件 {@code assets/ns/geo/foo.geo.json} 对应模型 id {@code ns:foo}，
- * 纹理默认推导为 {@code textures/item/entity/foo.png}。
+ * 文件 {@code assets/ns/lyra_model/geo/foo/foo.geo.json} 对应模型 id {@code ns:foo}，
+ * 纹理默认推导为 {@code lyra_model/geo/foo/foo.png}。
  * </p>
  */
 public final class GeoModelManager extends SimpleJsonResourceReloadListener {
@@ -36,7 +36,7 @@ public final class GeoModelManager extends SimpleJsonResourceReloadListener {
     private Map<ResourceLocation, AnimatedGeoModel> models = new HashMap<>();
 
     private GeoModelManager() {
-        super(GSON, "geo");
+        super(GSON, "lyra_model/geo");
     }
 
     @Nullable
@@ -54,8 +54,11 @@ public final class GeoModelManager extends SimpleJsonResourceReloadListener {
             if (!path.endsWith(".geo")) {
                 continue;
             }
-            String basePath = path.substring(0, path.length() - ".geo".length());
-            ResourceLocation modelId = ResourceLocation.fromNamespaceAndPath(fileId.getNamespace(), basePath);
+            ResourceLocation modelId = modelId(fileId, ".geo");
+            if (modelId == null) {
+                LOGGER.warn("Ignored geo model with invalid Lyra path {}", fileId);
+                continue;
+            }
 
             try {
                 JsonObject root = entry.getValue().getAsJsonObject();
@@ -121,9 +124,29 @@ public final class GeoModelManager extends SimpleJsonResourceReloadListener {
 
         ResourceLocation texture = ResourceLocation.fromNamespaceAndPath(
                 modelId.getNamespace(),
-                "textures/item/entity/" + modelId.getPath() + ".png"
+                "lyra_model/geo/" + modelId.getPath() + "/" + fileName(modelId.getPath()) + ".png"
         );
         return new AnimatedGeoModel(modelId, texture, roots);
+    }
+
+    @Nullable
+    private static ResourceLocation modelId(ResourceLocation fileId, String suffix) {
+        String path = fileId.getPath();
+        if (!path.endsWith(suffix)) {
+            return null;
+        }
+        String base = path.substring(0, path.length() - suffix.length());
+        int slash = base.lastIndexOf('/');
+        if (slash <= 0) {
+            return null;
+        }
+        String folder = base.substring(0, slash);
+        return ResourceLocation.fromNamespaceAndPath(fileId.getNamespace(), folder);
+    }
+
+    private static String fileName(String path) {
+        int slash = path.lastIndexOf('/');
+        return slash >= 0 ? path.substring(slash + 1) : path;
     }
 
     private AnimatedBone parseBone(String name, JsonObject obj, float textureWidth, float textureHeight) {

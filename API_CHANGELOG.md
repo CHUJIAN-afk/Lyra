@@ -10,9 +10,15 @@
 | `AnimatedModelRenderer.request(...)` | `LyraModelRenderer.geo(...)` |
 | `VirtualEntityRenderer.render(..., pose)` | `LyraModelRenderer.virtualEntity(...).pose(...).render(...)` |
 
-新增 `LyraModelRenderer.bbmodel(...)`，直接加载 `assets/<mod>/bbmodels/<name>.bbmodel`，支持
+新增 `LyraModelRenderer.bbmodel(...)`，直接加载
+`assets/<mod>/lyra_model/bbmodel/<id>.bbmodel`，支持
 BBModel 内嵌贴图、骨骼关键帧、循环播放和隐藏骨骼。旧 `client.geo`、`client.render.animated`
 与 `client.render.virtual` 包中的入口已移除。
+
+渲染资源目录统一到 `assets/<mod>/lyra_model/`：Geo 使用
+`geo/<model_id>/<id>.geo.json|animation.json|png`，原版 JSON 使用
+`json/<model_id>/<id>.json|png`，BBModel 使用 `bbmodel/<id>.bbmodel`，
+广告牌贴图使用 `textures/<id>.png`。
 
 ## 1.21.1.4 — 通用属性命名：Minion* → Summon*
 

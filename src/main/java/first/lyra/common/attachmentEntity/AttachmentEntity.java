@@ -1,11 +1,14 @@
 package first.lyra.common.attachmentEntity;
 
 import first.lyra.common.attachment.InvincibleData;
+import first.lyra.common.attachment.TargetCache;
+import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
@@ -18,20 +21,20 @@ import java.util.UUID;
 
 public abstract class AttachmentEntity {
 
-    protected UUID uuid = UUID.randomUUID();
     protected final Holder<AttachmentEntityType<?>> type;
-    protected Level level = null;
-    protected PlannedPath currentPlannedPath = null;
     protected final ArrayList<PathNode> historyNodes = new ArrayList<>();
-    protected boolean remove = false;
-    protected SyncFieldDispatcher syncFields = SyncFieldDispatcher.create(this::registerSyncFields);
     protected final AttachmentEntityGoalSelector goalSelector = new AttachmentEntityGoalSelector();
+    protected final SyncFieldDispatcher syncFields = SyncFieldDispatcher.create(this::registerSyncFields);
+    protected UUID uuid = UUID.randomUUID();
+    protected Player owner = null;
+    protected PlannedPath currentPlannedPath = null;
+    protected boolean remove = false;
 
-    protected boolean clientInit = false;
+    protected int tickCount = 0;
     protected float damage = 0;
     protected float knockback = 0;
     protected float armorPierce = 0;
-    protected int tickCount = 0;
+    protected boolean clientInit = false;
     protected PathNode currentPathNode = null;
 
     protected void registerSyncFields(SyncFieldDispatcher fields) {
@@ -53,7 +56,11 @@ public abstract class AttachmentEntity {
 
     @NotNull
     public DamageSource getDamageSource() {
-        return new AttachmentEntityDamageSource(level.damageSources().generic().typeHolder(), null, null, getPos(), this);
+        return new AttachmentEntityDamageSource(getLevel().damageSources().generic().typeHolder(), null, null, getPos(), this);
+    }
+
+    public TargetCache getTargetCache() {
+        return owner.getData(LyraAttachmentRegister.TargetCache);
     }
 
     public void attack(LivingEntity target, float damageAmount, int invincibleTime) {
@@ -102,13 +109,14 @@ public abstract class AttachmentEntity {
     }
 
     public final void tickCurrentPathNode() {
+        Level level = getLevel();
         if (!level.isClientSide()) {
             tickCount++;
-            if (!isRemove() && this instanceof IEntityCollision<?> iEntityCollision) {
-                iEntityCollision.processCollision(this);
-            }
-            if (!isRemove() && this instanceof IBlockCollision<?> blockCollision) {
+            if (this instanceof IBlockCollision<?> blockCollision) {
                 blockCollision.blockCollision(this);
+            }
+            if (this instanceof IEntityCollision<?> iEntityCollision) {
+                iEntityCollision.entityCollision(this);
             }
         }
         historyNodes.addFirst(currentPathNode);
@@ -121,6 +129,9 @@ public abstract class AttachmentEntity {
     }
 
     public void onRemove() {
+    }
+
+    public void onLevelChange() {
     }
 
     public void setPlannedPath(PlannedPath path) {
@@ -242,23 +253,14 @@ public abstract class AttachmentEntity {
      * @return 虚拟实体所在世界
      */
     public Level getLevel() {
-        return level;
-    }
-
-    /**
-     * 设置虚拟实体所在世界，由世界附件数据管理器调用。
-     *
-     * @param level 世界实例
-     */
-    public void setLevel(Level level) {
-        this.level = level;
+        return owner.level();
     }
 
     /**
      * @return 当前维度的随机源
      */
     public RandomSource getRandom() {
-        return level.getRandom();
+        return getLevel().getRandom();
     }
 
     public int getTickCount() {
@@ -275,6 +277,14 @@ public abstract class AttachmentEntity {
 
     public void setClientInit(boolean clientInit) {
         this.clientInit = clientInit;
+    }
+
+    public Player getOwner(){
+        return owner;
+    }
+
+    public void setOwner(Player owner){
+        this.owner = owner;
     }
 
     /**

@@ -6,7 +6,19 @@ import net.minecraft.world.phys.Vec3;
 public record PathNode(Vec3 pos, float yaw, float pitch, float roll) {
 
     public PathNode(Vec3 pos, Vec3 direction) {
-        this(pos, (float) Math.toDegrees(Math.atan2(-direction.x, direction.z)), (float) Math.toDegrees(Math.asin(-direction.y)), 0);
+        this(pos, yawFromDirection(direction), pitchFromDirection(direction), 0);
+    }
+
+    public static float yawFromDirection(Vec3 direction) {
+        return (float) Math.toDegrees(Math.atan2(-direction.x, direction.z));
+    }
+
+    public static float pitchFromDirection(Vec3 direction) {
+        if (direction.lengthSqr() < 1.0E-12) {
+            return 0;
+        }
+        Vec3 normalized = direction.normalize();
+        return (float) Math.toDegrees(Math.asin(-normalized.y));
     }
 
     public PathNode lerp(PathNode to, float partialTick) {

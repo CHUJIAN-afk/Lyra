@@ -20,9 +20,9 @@ import java.util.Map;
 import java.util.TreeMap;
 
 /**
- * 从资源目录 {@code animations} 自动加载 .animation.json 动画文件。
+ * 从资源目录 {@code lyra_model/geo} 自动加载 .animation.json 动画文件。
  * <p>
- * 文件 {@code assets/ns/animations/foo.animation.json} 对应对应模型 id {@code ns:foo}。
+ * 文件 {@code assets/ns/lyra_model/geo/foo/foo.animation.json} 对应模型 id {@code ns:foo}。
  * </p>
  */
 public final class GeoAnimationManager extends SimpleJsonResourceReloadListener {
@@ -35,7 +35,7 @@ public final class GeoAnimationManager extends SimpleJsonResourceReloadListener 
     private Map<ResourceLocation, Map<String, AnimatedClip>> animations = new HashMap<>();
 
     private GeoAnimationManager() {
-        super(GSON, "animations");
+        super(GSON, "lyra_model/geo");
     }
 
     @Nullable
@@ -53,8 +53,11 @@ public final class GeoAnimationManager extends SimpleJsonResourceReloadListener 
             if (!path.endsWith(".animation")) {
                 continue;
             }
-            String basePath = path.substring(0, path.length() - ".animation".length());
-            ResourceLocation fileId = ResourceLocation.fromNamespaceAndPath(entry.getKey().getNamespace(), basePath);
+            ResourceLocation fileId = modelId(entry.getKey(), ".animation");
+            if (fileId == null) {
+                LOGGER.warn("Ignored animation with invalid Lyra path {}", entry.getKey());
+                continue;
+            }
 
             try {
                 JsonObject root = entry.getValue().getAsJsonObject();
@@ -74,6 +77,20 @@ public final class GeoAnimationManager extends SimpleJsonResourceReloadListener 
 
         this.animations = parsed;
         LOGGER.info("Loaded {} animated geo animation files", parsed.size());
+    }
+
+    @Nullable
+    private static ResourceLocation modelId(ResourceLocation fileId, String suffix) {
+        String path = fileId.getPath();
+        if (!path.endsWith(suffix)) {
+            return null;
+        }
+        String base = path.substring(0, path.length() - suffix.length());
+        int slash = base.lastIndexOf('/');
+        if (slash <= 0) {
+            return null;
+        }
+        return ResourceLocation.fromNamespaceAndPath(fileId.getNamespace(), base.substring(0, slash));
     }
 
     private AnimatedClip parseClip(String name, JsonObject obj) {

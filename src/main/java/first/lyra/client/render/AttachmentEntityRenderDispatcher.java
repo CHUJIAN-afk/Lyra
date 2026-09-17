@@ -59,7 +59,6 @@ public class AttachmentEntityRenderDispatcher {
                 .shouldRenderHitBoxes();
         VertexConsumer debugConsumer = showHitboxes ? bufferSource.getBuffer(RenderType.lines()) : null;
         for (AttachmentEntity entity : entities) {
-            entity.setLevel(level);
             poseStack.pushPose();
             PathNode renderNode = entity.getRenderNode(partialTick);
             Vec3 pos = renderNode.pos();

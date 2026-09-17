@@ -47,30 +47,26 @@ public interface IEntityCollision<T extends AttachmentEntity> {
      * 判断目标是否为有效的碰撞对象
      */
     default boolean isValidCollisionTarget(T entity, LivingEntity target) {
-        if (entity instanceof IOwner iOwner) {
-            return LyraHelper.get(entity.level).getTargetCache().isTarget(iOwner.getOwner(), target);
-        }
-        return true;
+        return entity.getTargetCache().isTarget(target);
     }
 
     /**
      * 执行基于历史轨迹的精确碰撞检测，并触发攻击
      */
-    default void processCollision(AttachmentEntity entity) {
+    default void entityCollision(AttachmentEntity entity) {
         ArrayList<PathNode> historyNodes = entity.getHistoryNodes();
-        if (canCollideAttack() && historyNodes.size() > 2) {
+        if (canCollideAttack() && !historyNodes.isEmpty()) {
 
-            // 采样点：上一tick、上上tick、当前位置
+            // 采样点：上一tick、当前位置
             PathNode current = entity.currentPathNode;    // 当前位置
-            PathNode prevTick = historyNodes.get(0);      // 上一tick
-            PathNode prevPrevTick = historyNodes.get(1);  // 上上tick
+            PathNode prevTick = historyNodes.getFirst();      // 上一tick
 
             AABB localBox = getHitbox();
             Vec3 boxSize = new Vec3(localBox.getXsize(), localBox.getYsize(), localBox.getZsize());
             Vec3 boxCenterOffset = localBox.getCenter();
             boolean hasCenterOffset = boxCenterOffset.lengthSqr() > 1e-5;
 
-            Sweep sweep = buildSweep(prevPrevTick, prevTick, current, boxSize, boxCenterOffset, hasCenterOffset);
+            Sweep sweep = buildSweep(prevTick, current, boxSize, boxCenterOffset, hasCenterOffset);
             if (sweep == null) {
                 return;
             }
@@ -103,16 +99,11 @@ public interface IEntityCollision<T extends AttachmentEntity> {
      * 采样标准：连续两个 OBB 至少 50% 重合
      * </p>
      */
-    private Sweep buildSweep(PathNode prevPrev, PathNode prev, PathNode current, Vec3 boxSize, Vec3 boxCenterOffset, boolean hasCenterOffset) {
+    private Sweep buildSweep(PathNode prev, PathNode current, Vec3 boxSize, Vec3 boxCenterOffset, boolean hasCenterOffset) {
         List<SampledOBB> result = new ArrayList<>();
 
-        // 贝塞尔曲线控制点：使用上上tick位置作为控制点方向参考
-        Vec3 P0 = prev.pos();           // 起点（上一tick）
-        Vec3 P1 = current.pos();        // 终点（当前位置）
-        Vec3 controlPoint = P0.add(P0.subtract(prevPrev.pos()).scale(0.5)); // 控制点
-
-        // 计算曲线总长度估算
-        double estimatedLength = P0.distanceTo(P1);
+        // 仅使用上一tick和当前位置两个节点进行线性采样
+        double estimatedLength = prev.pos().distanceTo(current.pos());
         double minDim = Math.min(Math.min(boxSize.x, boxSize.y), boxSize.z);
 
         // 计算需要的采样数量（确保相邻 OBB 50% 重合）
@@ -128,7 +119,7 @@ public interface IEntityCollision<T extends AttachmentEntity> {
         double maxZ = Double.NEGATIVE_INFINITY;
         for (int i = 0; i <= steps; i++) {
             float t = (float) i / steps;
-            SampledOBB sampled = createSampledOBB(P0, controlPoint, P1, prev, current, t, boxSize, boxCenterOffset, hasCenterOffset);
+            SampledOBB sampled = createSampledOBB(prev, current, t, boxSize, boxCenterOffset, hasCenterOffset);
             result.add(sampled);
 
             AABB bounds = sampled.bounds();
@@ -154,10 +145,9 @@ public interface IEntityCollision<T extends AttachmentEntity> {
     /**
      * 创建采样的 OBB
      */
-    private SampledOBB createSampledOBB(Vec3 P0, Vec3 controlPoint, Vec3 P1, PathNode prev, PathNode current, float t, Vec3 boxSize, Vec3 boxCenterOffset, boolean hasCenterOffset) {
-        // 二次贝塞尔曲线插值位置: B(t) = (1-t)²P0 + 2(1-t)tC + t²P1
-        double mt = 1.0 - t;
-        Vec3 pos = P0.scale(mt * mt).add(controlPoint.scale(2 * mt * t)).add(P1.scale(t * t));
+    private SampledOBB createSampledOBB(PathNode prev, PathNode current, float t, Vec3 boxSize, Vec3 boxCenterOffset, boolean hasCenterOffset) {
+        // 两个节点之间线性插值位置
+        Vec3 pos = prev.pos().lerp(current.pos(), t);
 
         // 欧拉角插值
         float yaw = Mth.rotLerp(t, prev.yaw(), current.yaw());
@@ -214,7 +204,7 @@ public interface IEntityCollision<T extends AttachmentEntity> {
     }
 
     /**
-     * 采样的 OBB、其缓存包围盒和曲线参数
+     * 采样的 OBB、其缓存包围盒和采样参数
      */
     record SampledOBB(OBB obb, AABB bounds, float t) {
     }

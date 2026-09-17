@@ -100,11 +100,12 @@ LyraModelRenderer.bbmodel(modelId)                     // Blockbench 工程
 内部模块完全分离，互不继承或共享模型状态：
 
 - `model.json`：只渲染已烘焙的 `ModelResourceLocation`，不支持动画、骨骼或实体状态。
-- `model.geo`：解析 `geo/*.geo.json` 与 `animations/*.animation.json`，支持动画、loop、
+- `model.geo`：解析 `lyra_model/geo/<model_id>/<id>.geo.json` 与
+  `<id>.animation.json`，支持动画、loop、
   隐藏骨骼、贴图/光照/染色覆盖。
 - `model.virtual`：使用实体类型创建内部客户端幽灵实体，调用该类型已注册的
   `EntityRenderer` 与 `setupAnim`，不把实体加入世界。
-- `model.bbmodel`：直接解析 `bbmodels/*.bbmodel` 中的 cube、group、动画和内嵌贴图。
+- `model.bbmodel`：直接解析 `lyra_model/bbmodel/<id>.bbmodel` 中的 cube、group、动画和内嵌贴图。
 
 BBModel 动画名同时支持完整名和末段别名，例如 `animation.bear.run` 可用 `"run"` 调用。循环动画
 在采样前按动画长度包裹 tick，并以 wrap 段连接首尾时间与姿态；当首尾关键帧落在同一边界时，
@@ -112,10 +113,32 @@ BBModel 动画名同时支持完整名和末段别名，例如 `animation.bear.r
 显式面 UV 直接使用工程数据，避免重复 mirror。
 
 ```text
-assets/<mod>/geo/<name>.geo.json
-assets/<mod>/animations/<name>.animation.json
-assets/<mod>/bbmodels/<name>.bbmodel
-assets/<mod>/textures/item/entity/<name>.png
+assets/<mod>/lyra_model/geo/<model_id>/<id>.geo.json
+assets/<mod>/lyra_model/geo/<model_id>/<id>.animation.json
+assets/<mod>/lyra_model/geo/<model_id>/<id>.png
+assets/<mod>/lyra_model/json/<model_id>/<id>.json
+assets/<mod>/lyra_model/json/<model_id>/<id>.png
+assets/<mod>/lyra_model/bbmodel/<id>.bbmodel
+assets/<mod>/lyra_model/textures/<id>.png
+```
+
+原版 `ModelBakery` 仍只从 `models/` 目录烘焙 JSON 模型。源码按上述 `lyra_model/json` 约定存放时，
+宿主项目的 `processResources` 需要镜像一份到 `assets/<mod>/models/lyra_model/json`：
+
+```groovy
+tasks.named('processResources', ProcessResources).configure {
+    from("src/main/resources/assets/${mod_id}/lyra_model/json") {
+        include '**/*.json'
+        into "assets/${mod_id}/models/lyra_model/json"
+    }
+    from("src/main/resources/assets/${mod_id}/lyra_model/json") {
+        include '**/*.png'
+        into "assets/${mod_id}/textures/lyra_model/json"
+    }
+    from("src/main/resources/assets/${mod_id}/lyra_model/textures") {
+        into "assets/${mod_id}/textures/lyra_model/textures"
+    }
+}
 ```
 
 ### <a id="feat-5"></a>5. 创造模式物品栏分页 + 动画横幅

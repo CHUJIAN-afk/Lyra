@@ -23,7 +23,6 @@ import java.util.function.Supplier;
  */
 public class MinionWeaponItemBuilder<T extends Minion> {
 
-    private final ResourceLocation identifier;
     private final Supplier<AttachmentEntityType<T>> typeSupplier;
     private float damage = 0;
     private float knockback = 0;
@@ -35,7 +34,6 @@ public class MinionWeaponItemBuilder<T extends Minion> {
     private Consumer<Item.Properties> properties = null;
 
     public MinionWeaponItemBuilder(ResourceLocation identifier, @NotNull Supplier<AttachmentEntityType<T>> typeSupplier) {
-        this.identifier = identifier;
         this.typeSupplier = typeSupplier;
     }
 

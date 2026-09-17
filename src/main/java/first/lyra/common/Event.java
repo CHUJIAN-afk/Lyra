@@ -7,27 +7,26 @@ import first.lyra.common.attachment.DamageInfoData;
 import first.lyra.common.attachment.InvincibleData;
 import first.lyra.common.attachment.ParticlesData;
 import first.lyra.common.dataComponent.MinionWeapon;
-import first.lyra.register.LyraAttributeRegister;
 import first.lyra.register.LyraAttachmentRegister;
+import first.lyra.register.LyraAttributeRegister;
 import first.lyra.register.LyraDataComponentRegister;
 import first.lyra.register.LyraItemRegistries;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.entity.XpOrbTargetingEvent;
 import net.neoforged.neoforge.event.LootTableLoadEvent;
 import net.neoforged.neoforge.event.ModifyDefaultComponentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeModificationEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
-import net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
+import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import java.util.List;
 import java.util.Map;
@@ -64,12 +63,16 @@ public class Event {
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void tick(LevelTickEvent.Post event) {
-        Level level = event.getLevel();
-        if (!level.isClientSide()) {
-            level.getData(LyraAttachmentRegister.TargetCache).tick((ServerLevel) level);
+    public static void tick(PlayerTickEvent.Post event) {
+        Player player = event.getEntity();
+        if (!player.level().isClientSide()) {
+            player.level().getData(LyraAttachmentRegister.TargetCache).tick((ServerPlayer) player);
         }
-        level.getData(LyraAttachmentRegister.EntityData).tick(level);
+        player.getData(LyraAttachmentRegister.EntityData).tick(player);
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void tick(LevelTickEvent.Post event) {
         ParticlesData.tick(event);
         DamageInfoData.tick(event);
     }

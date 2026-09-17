@@ -12,9 +12,10 @@ import first.lyra.utils.LyraStreamCodecs;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.attachment.AttachmentSyncHandler;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.network.connection.ConnectionType;
@@ -37,129 +38,130 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     private final Map<AttachmentEntityType<?>, List<AttachmentEntity>> groups = new HashMap<>();
     private final Map<UUID, AttachmentEntity> uuidData = new HashMap<>();
     private final List<AttachmentEntity> renderCache = new ArrayList<>();
-    private boolean changed = false;
     private final AtomicReference<List<byte[]>> pendingPayloads = new AtomicReference<>(List.of());
+    private Player player;
+    private Level level = null;
+    private boolean changed = false;
 
-    public void tick(Level level) {
-        if (level.isClientSide()) {
-            applyPendingSync(level);
-            if (!isRunning()) {
-                renderCache.clear();
-                return;
+    public void tick(Player player) {
+        this.player = player;
+        if (isClientSide()) {
+            applyPendingSync();
+            renderCache.clear();
+            if (isRunning()) {
+                for (List<AttachmentEntity> list : groups.values()) {
+                    for (AttachmentEntity entity : list) {
+                        entity.tickCurrentPathNode();
+                        renderCache.add(entity);
+                    }
+                }
+            }
+        } else {
+            if (isRunning()) {
+                boolean levelChange = false;
+                if (level != null && level != player.level()) {
+                    levelChange = true;
+                }
+                level = player.level();
+                Map<Long, List<Minion>> sameCache = new HashMap<>();
+                // tick实体
+                for (List<AttachmentEntity> list : groups.values()) {
+                    for (AttachmentEntity entity : list) {
+                        if (entity instanceof Minion minion) {
+                            List<Minion> minionList = sameCache.computeIfAbsent(minion.getSameHash(), key -> new ArrayList<>());
+                            minionList.add(minion);
+                            for (Minion minion1 : minionList) {
+                                minion1.setOrder(minionList.size() - 1);
+                                minion1.setSameSize(list.size());
+                            }
+                        }
+                        if (levelChange) {
+                            entity.onLevelChange();
+                        }
+                        entity.tick();
+                        entity.tickCurrentPathNode();
+                    }
+                }
+                // 将待添加队列合并到主分组
+                if (!pendingAdd.isEmpty()) {
+                    for (Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>> entry : pendingAdd.entrySet()) {
+                        List<AttachmentEntity> entities = groups.computeIfAbsent(entry.getKey(), key -> new ArrayList<>());
+                        for (AttachmentEntity attachmentEntity : entry.getValue()) {
+                            if (!attachmentEntity.getCurrentPathNode().pos().equals(Vec3.ZERO)) {
+                                attachmentEntity.setOwner(player);
+                                entities.add(attachmentEntity);
+                            }
+                        }
+                    }
+                    pendingAdd.clear();
+                    changed = true;
+                }
+                // 检查槽位溢出
+                Map<MinionSlotType, Integer> limits = new HashMap<>();
+                for (Minion minion : get(Minion.class)) {
+                    Player owner = minion.getOwner();
+                    int limit = limits.computeIfAbsent(minion.getSlotType(), slotType -> {
+                        AttributeInstance instance = switch (slotType) {
+                            case Minion -> owner.getAttribute(LyraAttributeRegister.MinionMaxCount);
+                            case Sentry -> owner.getAttribute(LyraAttributeRegister.SentryMaxCount);
+                            case None -> null;
+                        };
+                        if (instance != null) {
+                            return (int) instance.getValue();
+                        }
+                        return 0;
+                    });
+                    int slotCost = minion.getSlotCost();
+                    if (slotCost > 0 && limit >= slotCost) {
+                        limits.put(minion.getSlotType(), limit - slotCost);
+                    } else {
+                        minion.setRemove();
+                    }
+                }
+                // 清理所有分组中标记移除的实体
+                groups.values().removeIf(list -> {
+                    while (true) {
+                        list.removeIf(entity -> {
+                            if (!entity.isAlive()) {
+                                entity.setRemove();
+                            }
+                            if (entity.isRemove()) {
+                                entity.onRemove();
+                                changed = true;
+                                return true;
+                            }
+                            return false;
+                        });
+                        if (list.isEmpty()) {
+                            break;
+                        }
+                        if (list.stream().noneMatch(AttachmentEntity::isRemove)) {
+                            break;
+                        }
+                    }
+                    return list.isEmpty();
+                });
+                if (!groups.isEmpty() || changed) {
+                    changed = false;
+                    level.syncData(LyraAttachmentRegister.EntityData);
+                }
             }
         }
-        if (isRunning()) {
-            tickEntity(level);
-            updateEntities(level);
-            syncToClient(level);
-        }
+    }
+
+    public Level getLevel() {
+        return player.level();
+    }
+
+    public boolean isClientSide() {
+        return player.level().isClientSide();
     }
 
     public boolean isRunning() {
-        return !groups.isEmpty() || !pendingAdd.isEmpty() || changed;
-    }
-
-    private void syncToClient(Level level) {
-        if (!level.isClientSide() && (!groups.isEmpty() || changed)) {
-            changed = false;
-            level.syncData(LyraAttachmentRegister.EntityData);
-        }
-    }
-
-    private void tickEntity(Level level) {
-        renderCache.clear();
-        for (List<AttachmentEntity> list : groups.values()) {
-            for (AttachmentEntity entity : list) {
-                entity.tick();
-                entity.tickCurrentPathNode();
-                if (level.isClientSide()) {
-                    renderCache.add(entity);
-                }
-            }
-        }
-    }
-
-    private void updateEntities(Level level) {
-        if (!level.isClientSide()) {
-            // 将待添加队列合并到主分组
-            if (!pendingAdd.isEmpty()) {
-                for (Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>> entry : pendingAdd.entrySet()) {
-                    List<AttachmentEntity> entities = groups.computeIfAbsent(entry.getKey(), key -> new ArrayList<>());
-                    for (AttachmentEntity attachmentEntity : entry.getValue()) {
-                        attachmentEntity.setLevel(level);
-                        attachmentEntity.init(attachmentEntity.getCurrentPathNode());
-                        entities.add(attachmentEntity);
-                    }
-                }
-                pendingAdd.clear();
-                changed = true;
-            }
-            Map<OwnerSlotKey, List<Minion>> minionsByOwner = new HashMap<>();
-            for (Minion minion1 : get(Minion.class)) {
-                LivingEntity owner = minion1.getOwner();
-                MinionSlotType slotType = minion1.getSlotType();
-                if (owner != null && slotType != MinionSlotType.None) {
-                    minionsByOwner.computeIfAbsent(new OwnerSlotKey(owner.getUUID(), slotType), key -> new ArrayList<>()).add(minion1);
-                }
-            }
-            for (Map.Entry<OwnerSlotKey, List<Minion>> entry : minionsByOwner.entrySet()) {
-                List<Minion> minions = entry.getValue();
-                LivingEntity owner = minions.getFirst().getOwner();
-                if (owner != null) {
-                    AttributeInstance limit = switch (entry.getKey().slotType()) {
-                        case Minion -> owner.getAttribute(LyraAttributeRegister.MinionMaxCount);
-                        case Sentry -> owner.getAttribute(LyraAttributeRegister.SentryMaxCount);
-                        case None -> null;
-                    };
-                    if (limit != null) {
-                        int used = minions.stream().filter(minion1 -> !minion1.isRemove()).mapToInt(Minion::getSlotCost).sum();
-                        int max = (int) limit.getValue();
-                        for (Minion minion1 : minions) {
-                            if (used <= max) {
-                                break;
-                            }
-                            if (!minion1.isRemove()) {
-                                minion1.setRemove();
-                                used -= minion1.getSlotCost();
-                                changed = true;
-                            }
-                        }
-                    }
-                }
-            }
-            // 清理所有分组中标记移除的实体
-            groups.values().removeIf(list -> {
-                while (true) {
-                    list.removeIf(entity -> {
-                        if (!entity.isAlive()) {
-                            entity.setRemove();
-                        }
-                        if (entity.isRemove()) {
-                            entity.onRemove();
-                            changed = true;
-                            return true;
-                        }
-                        return false;
-                    });
-                    if (list.isEmpty()) {
-                        break;
-                    }
-                    if (list.stream().noneMatch(AttachmentEntity::isRemove)) {
-                        break;
-                    }
-                }
-                return list.isEmpty();
-            });
-            Map<Long, List<Minion>> sameCache = new HashMap<>();
-            groups.values().forEach(list -> list.forEach(entity -> {
-                if (entity instanceof Minion minion) {
-                    sameCache.computeIfAbsent(minion.getSameHash(), k -> new ArrayList<>()).add(minion);
-                }
-            }));
-            sameCache.values().forEach(list -> list.forEach(minion -> {
-                minion.setOrder(list.indexOf(minion));
-                minion.setSameSize(list.size());
-            }));
+        if (isClientSide()) {
+            return !groups.isEmpty();
+        } else {
+            return !groups.isEmpty() || !pendingAdd.isEmpty() || changed;
         }
     }
 
@@ -191,8 +193,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     }
 
     public void remove(AttachmentEntityType<?> entityType) {
-        getGroups().getOrDefault(entityType, new ArrayList<>())
-                .forEach(AttachmentEntity::setRemove);
+        getGroups().getOrDefault(entityType, new ArrayList<>()).forEach(AttachmentEntity::setRemove);
     }
 
     @Override
@@ -238,7 +239,8 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     /**
      * 网络包到达时只暂存载荷，在客户端 tick 起点执行真实解码。
      */
-    private void applyPendingSync(Level level) {
+    private void applyPendingSync() {
+        Level level = getLevel();
         List<byte[]> snapshot = pendingPayloads.getAndSet(List.of());
         for (byte[] payload : snapshot) {
             RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(payload), level.registryAccess(), ConnectionType.NEOFORGE);
@@ -260,7 +262,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                         entity = entityType.factory().get();
                         entity.setUuid(uuid);
                     }
-                    entity.setLevel(level);
+                    entity.setOwner(player);
                     entity.getSyncFieldDispatcher().decode(buf, level);
                     if (!buf.readBoolean()) {
                         PathNode pathNode = LyraStreamCodecs.PATH_NODE.decode(buf);
@@ -281,8 +283,5 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
 
     public List<AttachmentEntity> getRenderCache() {
         return renderCache;
-    }
-
-    private record OwnerSlotKey(UUID owner, MinionSlotType slotType) {
     }
 }

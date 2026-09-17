@@ -55,7 +55,5 @@ public class AttachmentEntityGoalSelector {
             int cmp = Integer.compare(this.priority, o.priority);
             return cmp != 0 ? cmp : Integer.compare(System.identityHashCode(this), System.identityHashCode(o));
         }
-
     }
-
 }

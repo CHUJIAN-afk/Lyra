@@ -27,9 +27,7 @@ public abstract class MomentumAttachmentEntity extends AttachmentEntity implemen
     @Override
     public void tick() {
         super.tick();
-        if (!level.isClientSide()) {
-            tickPhysics();
-        }
+        tickPhysics();
     }
 
     public void tickPhysics() {

@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Targeting;
@@ -37,24 +38,23 @@ public class TargetCache {
     private final Long2ObjectOpenHashMap<List<LivingEntity>> spatialGroups = new Long2ObjectOpenHashMap<>();
     private final Long2ObjectOpenHashMap<LevelChunk> chunkCache = new Long2ObjectOpenHashMap<>();
     private final BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
-    private ServerLevel level;
+    private ServerPlayer owner = null;
+    private ServerLevel serverLevel;
 
-    public void tick(ServerLevel level) {
+    public void tick(ServerPlayer player) {
+        this.owner = player;
+        this.serverLevel = owner.serverLevel();
         visibilityCache.clear();
         targetCache.clear();
         distanceCache.clear();
         spatialGroups.clear();
         chunkCache.clear();
-        this.level = level;
     }
 
-    public boolean isTarget(@Nullable LivingEntity owner, @Nullable LivingEntity target) {
+    public boolean isTarget(@Nullable LivingEntity target) {
         if (owner != null && target != null && owner != target && target.isAlive()) {
             return targetCache.computeIfAbsent(owner.getUUID().hashCode() + target.getUUID().hashCode(), k -> {
-                if (owner instanceof Player && target instanceof Enemy) {
-                    return true;
-                }
-                if (owner instanceof Targeting targeting && targeting.getTarget() == target) {
+                if (owner != null && target instanceof Enemy) {
                     return true;
                 }
                 if (target instanceof Targeting targeting && targeting.getTarget() == owner) {
@@ -78,7 +78,7 @@ public class TargetCache {
 
     public List<LivingEntity> getEntitiesInRadius(Vec3 pos, double radius, @Nullable Predicate<LivingEntity> filter) {
         List<LivingEntity> result = new ArrayList<>();
-        if (radius <= 0 || level == null) {
+        if (radius <= 0 || serverLevel == null) {
             return result;
         }
         double radiusSq = radius * radius;
@@ -100,7 +100,7 @@ public class TargetCache {
             }
         }
         if (searchBox != null) {
-            for (LivingEntity entity : level.getEntitiesOfClass(LivingEntity.class, searchBox)) {
+            for (LivingEntity entity : serverLevel.getEntitiesOfClass(LivingEntity.class, searchBox)) {
                 if (entity.isAlive()) {
                     int entityCellX = Mth.floor(entity.getX()) >> 4;
                     int entityCellY = Mth.floor(entity.getY()) >> 4;
@@ -198,7 +198,7 @@ public class TargetCache {
     }
 
     private boolean hasLineOfSight(Vec3 from, Vec3 to) {
-        if (level == null) {
+        if (serverLevel == null) {
             return false;
         }
         if (from.distanceToSqr(to) > 128.0 * 128.0) {
@@ -232,9 +232,8 @@ public class TargetCache {
         double tMaxY = tDeltaY * (stepY > 0 ? 1.0 - Mth.frac(endY) : Mth.frac(endY));
         double tMaxZ = tDeltaZ * (stepZ > 0 ? 1.0 - Mth.frac(endZ) : Mth.frac(endZ));
 
-        ServerLevel level = this.level;
-        int minBuildHeight = level.getMinBuildHeight();
-        int maxBuildHeight = level.getMaxBuildHeight();
+        int minBuildHeight = serverLevel.getMinBuildHeight();
+        int maxBuildHeight = serverLevel.getMaxBuildHeight();
 
         // 局部缓存：同一条射线内复用 chunk/section 引用
         long lastChunkKey = Long.MIN_VALUE;
@@ -278,7 +277,7 @@ public class TargetCache {
             if (chunkKey != lastChunkKey) {
                 chunk = chunkCache.get(chunkKey);
                 if (chunk == null) {
-                    chunk = level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                    chunk = serverLevel.getChunkSource().getChunkNow(chunkX, chunkZ);
                     if (chunk != null) {
                         chunkCache.put(chunkKey, chunk);
                     }
@@ -308,11 +307,11 @@ public class TargetCache {
                 continue;
             }
 
-            if (blockState.isCollisionShapeFullBlock(level, mutablePos.set(curX, curY, curZ))) {
+            if (blockState.isCollisionShapeFullBlock(serverLevel, mutablePos.set(curX, curY, curZ))) {
                 return false;
             }
 
-            VoxelShape voxelShape = blockState.getCollisionShape(level, mutablePos);
+            VoxelShape voxelShape = blockState.getCollisionShape(serverLevel, mutablePos);
             if (voxelShape.isEmpty()) {
                 continue;
             }

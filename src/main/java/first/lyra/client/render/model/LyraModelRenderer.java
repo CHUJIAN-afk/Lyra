@@ -3,6 +3,7 @@ package first.lyra.client.render.model;
 import first.lyra.client.render.model.bbmodel.BBModelRenderOptions;
 import first.lyra.client.render.model.geo.GeoRenderOptions;
 import first.lyra.client.render.model.json.JsonModelRenderOptions;
+import first.lyra.client.render.model.json.JsonModelRenderer;
 import first.lyra.client.render.model.virtual.VirtualEntityRenderOptions;
 import net.minecraft.client.resources.model.ModelResourceLocation;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -24,6 +25,14 @@ public final class LyraModelRenderer {
 
     public static JsonModelRenderOptions json(ModelResourceLocation model) {
         return new JsonModelRenderOptions(Objects.requireNonNull(model, "model"));
+    }
+
+    public static JsonModelRenderOptions json(ResourceLocation modelId) {
+        return new JsonModelRenderOptions(JsonModelRenderer.standaloneLocation(Objects.requireNonNull(modelId, "modelId")));
+    }
+
+    public static ModelResourceLocation jsonLocation(ResourceLocation modelId) {
+        return JsonModelRenderer.standaloneLocation(Objects.requireNonNull(modelId, "modelId"));
     }
 
     public static GeoRenderOptions geo(ResourceLocation modelId) {

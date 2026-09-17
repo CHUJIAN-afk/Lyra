@@ -28,10 +28,8 @@ public abstract class MomentumMinion extends Minion implements IMomentumAttachme
     @Override
     public void tick() {
         super.tick();
-        if (!level.isClientSide()) {
-            tickPhysics();
-            tickDirection();
-        }
+        tickDirection();
+        tickPhysics();
     }
 
     private void tickDirection() {

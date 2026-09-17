@@ -28,7 +28,7 @@ public final class BBModelManager extends SimplePreparableReloadListener<BBModel
 
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Gson GSON = new GsonBuilder().create();
-    private static final String DIRECTORY = "bbmodels";
+    private static final String DIRECTORY = "lyra_model/bbmodel";
 
     public static final BBModelManager INSTANCE = new BBModelManager();
 

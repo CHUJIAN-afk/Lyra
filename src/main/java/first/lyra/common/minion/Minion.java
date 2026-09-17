@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public abstract class Minion extends AttachmentEntity implements IOwner {
+public abstract class Minion extends AttachmentEntity {
 
     protected LivingEntity owner;
     protected LivingEntity target;
@@ -53,7 +53,7 @@ public abstract class Minion extends AttachmentEntity implements IOwner {
 
     @Override
     public @NotNull DamageSource getDamageSource() {
-        return new AttachmentEntityDamageSource(LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, level), null, owner, getPos(), this);
+        return new AttachmentEntityDamageSource(LyraDamageRegister.getDamageTypeHolder(LyraDamageRegister.Summon, getLevel()), null, owner, getPos(), this);
     }
 
     @Override
@@ -92,11 +92,9 @@ public abstract class Minion extends AttachmentEntity implements IOwner {
     @Override
     public void tick() {
         super.tick();
-        if (!level.isClientSide()) {
-            setTargetChange(false);
-            setTarget(searchTarget());
-            goalSelector.tick();
-        }
+        setTargetChange(false);
+        setTarget(searchTarget());
+        goalSelector.tick();
     }
 
     /**
@@ -105,21 +103,13 @@ public abstract class Minion extends AttachmentEntity implements IOwner {
     public LivingEntity searchTarget() {
         int distance = this.getSearchDistance();
         if (distance > 0 && owner != null) {
-            TargetCache targetCache = level.getData(LyraAttachmentRegister.TargetCache);
-            List<LivingEntity> targets = targetCache.getEntitiesInRadius(owner.getBoundingBox().getCenter(), distance, living -> targetCache.isVisibility(owner, living) && targetCache.isTarget(owner, living));
+            TargetCache targetCache = getLevel().getData(LyraAttachmentRegister.TargetCache);
+            List<LivingEntity> targets = targetCache.getEntitiesInRadius(owner.getBoundingBox().getCenter(), distance, living -> targetCache.isVisibility(owner, living) && targetCache.isTarget(living));
             if (!targets.isEmpty()) {
                 return targetCache.getNewTarget(this, targets, 0, true);
             }
         }
         return null;
-    }
-
-    public LivingEntity getOwner() {
-        return owner;
-    }
-
-    public void setOwner(@Nullable LivingEntity owner) {
-        this.owner = owner;
     }
 
     public LivingEntity getTarget() {

@@ -1,0 +1,9 @@
+{
+  "sources": [
+    {
+      "type": "directory",
+      "source": "lyra_model/json",
+      "prefix": "lyra_model/json/"
+    }
+  ]
+}
