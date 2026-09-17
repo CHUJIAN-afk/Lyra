@@ -2,6 +2,7 @@ package first.lyra.client.render.model.json;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.logging.LogUtils;
 import first.lyra.client.render.LyraRenderTypes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -14,7 +15,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FastColor;
 import net.minecraft.util.RandomSource;
-import com.mojang.logging.LogUtils;
 import org.joml.Vector3f;
 import org.slf4j.Logger;
 
