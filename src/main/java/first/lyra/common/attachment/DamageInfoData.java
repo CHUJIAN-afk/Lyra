@@ -4,10 +4,12 @@ import first.lyra.common.damageInfo.DamageInfo;
 import first.lyra.common.damageInfo.IDamageSourceCritical;
 import first.lyra.common.network.BatchedDamageInfoPayload;
 import first.lyra.register.LyraAttachmentRegister;
+import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -131,6 +133,11 @@ public class DamageInfoData {
             this.level = level;
         }
 
+        public DamageInfoBuilder damageType(Holder<DamageType> damageType) {
+            this.damageType = damageType.getRegisteredName();
+            return this;
+        }
+
         public DamageInfoBuilder damageType(String damageType) {
             this.damageType = damageType;
             return this;
@@ -173,8 +180,7 @@ public class DamageInfoData {
          */
         public void emit() {
             if (!level.isClientSide() && damageAmount >= 0.01) {
-                level.getData(LyraAttachmentRegister.DamageInfoData)
-                        .addEntry(new BatchedDamageInfoPayload.Entry(damageType, damageAmount, x, y, z, vx, vy, vz, critical));
+                level.getData(LyraAttachmentRegister.DamageInfoData).addEntry(new BatchedDamageInfoPayload.Entry(damageType, damageAmount, x, y, z, vx, vy, vz, critical));
             }
         }
     }
