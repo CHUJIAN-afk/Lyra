@@ -14,7 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ItemLike;
-import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
+import net.minecraftforge.event.entity.living.LivingEquipmentChangeEvent;
 
 import java.util.*;
 import java.util.function.Consumer;
@@ -30,7 +30,7 @@ public record ArmorSet(ResourceLocation id, List<ItemLike> items, Multimap<Holde
                 lookup.putAll(cache);
                 cache.clear();
             }
-            List<ArmorSet> list = LyraRegistries.ARMOR_SETS.stream().toList();
+            List<ArmorSet> list = LyraRegistries.armorSets().stream().toList();
             for (ArmorSet armorSet : list) {
                 boolean full = armorSet.full(player);
                 if (full) {
@@ -49,7 +49,7 @@ public record ArmorSet(ResourceLocation id, List<ItemLike> items, Multimap<Holde
                     for (Map.Entry<Holder<Attribute>, AttributeModifier> entry : entries) {
                         Holder<Attribute> key = entry.getKey();
                         AttributeModifier value = entry.getValue();
-                        AttributeUtils.condition(player, key, value.id(), value.amount(), value.operation(), full);
+                        AttributeUtils.condition(player, key, value.getId(), value.getAmount(), value.getOperation(), full);
                     }
                 }
             }

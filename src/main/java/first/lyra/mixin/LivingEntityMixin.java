@@ -19,7 +19,7 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.event.EventHooks;
+import net.minecraftforge.event.ForgeEventFactory;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -47,31 +47,32 @@ public abstract class LivingEntityMixin {
     protected Player lastHurtByPlayer;
 
     @Shadow
-    public abstract int getExperienceReward(ServerLevel level, @Nullable Entity killer);
+    public abstract int getExperienceReward();
 
-    @Shadow
-    @Final
-    public int invulnerableDuration;
-
-    @SuppressWarnings("DataFlowIssue")
     @WrapWithCondition(
             method = "dropAllDeathLoot",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/world/entity/LivingEntity;dropExperience(Lnet/minecraft/world/entity/Entity;)V"
+                    target = "Lnet/minecraft/world/entity/LivingEntity;dropExperience()V"
             )
     )
-    private boolean dropExperience(LivingEntity instance, Entity entity, @Local(argsOnly = true) DamageSource damageSource) {
+    private boolean dropExperience(LivingEntity instance, @Local(argsOnly = true) DamageSource damageSource) {
         if (damageSource instanceof AttachmentEntityDamageSource source) {
             Player player = null;
-            if (source.getAttachmentEntity() instanceof Minion minion && minion.getOwner() instanceof Player owner) {
-                player = owner;
+            if (source.getAttachmentEntity() instanceof Minion minion) {
+                Player owner = minion.getOwner();
+                if (owner != null) {
+                    player = owner;
+                }
             }
-            if (source.getAttachmentEntity() instanceof Projectile projectile && projectile.getOwner() instanceof Player owner) {
-                player = owner;
+            if (source.getAttachmentEntity() instanceof Projectile projectile) {
+                Player owner = projectile.getOwner();
+                if (owner != null) {
+                    player = owner;
+                }
             }
             if (player != null && instance.level() instanceof ServerLevel serverlevel && !wasExperienceConsumed() && (isAlwaysExperienceDropper() || lastHurtByPlayerTime > 0 && instance.shouldDropExperience() && serverlevel.getGameRules().getBoolean(GameRules.RULE_DOMOBLOOT))) {
-                int reward = EventHooks.getExperienceDrop(instance, lastHurtByPlayer, getExperienceReward(serverlevel, entity));
+                int reward = ForgeEventFactory.getExperienceDrop(instance, lastHurtByPlayer, getExperienceReward());
                 Vec3 pos = instance.position();
                 int takeXpDelay = player.takeXpDelay;
                 while (reward > 0) {

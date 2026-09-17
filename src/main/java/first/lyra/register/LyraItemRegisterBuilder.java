@@ -3,29 +3,29 @@ package first.lyra.register;
 import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.data.recipes.FinishedRecipe;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.neoforged.fml.ModList;
-import net.neoforged.fml.loading.FMLLoader;
-import net.neoforged.neoforge.client.model.generators.ItemModelProvider;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredItem;
+import net.minecraftforge.client.model.generators.ItemModelProvider;
+import net.minecraftforge.fml.ModList;
+import net.minecraftforge.fml.loading.FMLLoader;
+import net.minecraftforge.registries.RegistryObject;
 
 import java.util.ArrayList;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class LyraItemRegisterBuilder<T extends Item> {
 
     private final LyraItemRegistries lyraItemRegistries;
-    private final DeferredItem<T> register;
+    private final RegistryObject<T> register;
 
-    public LyraItemRegisterBuilder(LyraItemRegistries lyraItemRegistries, DeferredItem<T> register) {
+    public LyraItemRegisterBuilder(LyraItemRegistries lyraItemRegistries, RegistryObject<T> register) {
         this.lyraItemRegistries = lyraItemRegistries;
         this.register = register;
     }
@@ -39,7 +39,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
         ResourceLocation id = register.getId();
         String key = "item." + id.getNamespace() + "." + id.getPath() + "jei.description." + index;
         if (ModList.get().isLoaded("jei") && FMLLoader.getDist().isClient()) {
-            lyraItemRegistries.jeiInfoData.computeIfAbsent(register, like -> new ArrayList<>()).add(Component.translatable(key));
+            lyraItemRegistries.jeiInfoData.computeIfAbsent(register.get(), like -> new ArrayList<>()).add(Component.translatable(key));
         }
         lyraItemRegistries.language(key, enDesc, zhDesc);
         return this;
@@ -55,7 +55,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
         return this;
     }
 
-    public <A extends AttachmentEntity> LyraItemRegisterBuilder<T> summonLanguage(DeferredHolder<AttachmentEntityType<?>, AttachmentEntityType<A>> holder, String en, String zh) {
+    public <A extends AttachmentEntity> LyraItemRegisterBuilder<T> summonLanguage(RegistryObject<AttachmentEntityType<A>> holder, String en, String zh) {
         lyraItemRegistries.language("summon." + holder.getId().toLanguageKey(), en, zh);
         return this;
     }
@@ -64,7 +64,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
         lyraItemRegistries.language("block." + register.getId().toLanguageKey(), en, zh);
         return this;
     }
-    public LyraItemRegisterBuilder<T> recipeWithLookup(BiConsumer<HolderLookup.Provider, RecipeOutput> outputConsumer) {
+    public LyraItemRegisterBuilder<T> recipeWithLookup(BiConsumer<HolderLookup.Provider, Consumer<FinishedRecipe>> outputConsumer) {
         if (lyraItemRegistries.isDevelopment()) {
             lyraItemRegistries.recipesGenerate.add(outputConsumer);
         }
@@ -73,7 +73,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
 
     public LyraItemRegisterBuilder<T> itemTag(TagKey<Item> tagKey) {
         if (lyraItemRegistries.isDevelopment()) {
-            lyraItemRegistries.itemTagsGenerate.computeIfAbsent(tagKey, key -> new ArrayList<>()).add(register);
+            lyraItemRegistries.itemTagsGenerate.computeIfAbsent(tagKey, key -> new ArrayList<>()).add(register.get());
         }
         return this;
     }
@@ -85,7 +85,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
         return this;
     }
 
-    public DeferredItem<T> build() {
+    public RegistryObject<T> build() {
         return register;
     }
 }

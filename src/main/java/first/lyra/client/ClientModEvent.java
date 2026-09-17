@@ -4,24 +4,17 @@ import first.lyra.Lyra;
 import first.lyra.client.render.model.bbmodel.BBModelManager;
 import first.lyra.client.render.model.geo.GeoAnimationManager;
 import first.lyra.client.render.model.geo.GeoModelManager;
-import first.lyra.client.tooltip.TooltipHandler;
 import first.lyra.common.damageInfo.DamageInfoStyleManager;
 import first.lyra.common.particle.genericParticle.GenericParticleProvider;
 import first.lyra.register.LyraParticleRegister;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
-import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
-import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
+import net.minecraftforge.client.event.RegisterParticleProvidersEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
 
-@EventBusSubscriber(modid = Lyra.MODID, value = Dist.CLIENT)
-public class ClientEvent {
-
-    @SubscribeEvent
-    public static void handler(ItemTooltipEvent event) {
-        TooltipHandler.handler(event);
-    }
+@Mod.EventBusSubscriber(modid = Lyra.MODID, value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.MOD)
+public final class ClientModEvent {
 
     @SubscribeEvent
     public static void registerClientReloadListeners(RegisterClientReloadListenersEvent event) {

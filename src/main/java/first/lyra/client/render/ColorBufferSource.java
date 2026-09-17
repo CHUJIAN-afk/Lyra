@@ -1,21 +1,11 @@
 package first.lyra.client.render;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.blaze3d.vertex.VertexFormatElement;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.FastColor;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * 颜色与透明度双包装的 MultiBufferSource（26.2 ColorVertexConsumer 向下移植）。
- * <p>
- * 统一原 {@code TintedVertexConsumer}（固定染色）与 {@code AlphaBufferSource}（透明度乘数）：
- * {@link #setColor(int)} 拦截最终颜色（RGB+alpha 整体替换，-1 不启用），
- * {@link #setAlpha(float)} 调整最终透明度（乘数，1.0 不启用），两者可独立或组合使用。
- * 所有通过此缓冲源获取的 VertexConsumer 都会应用包装。
- * </p>
- */
 public class ColorBufferSource implements MultiBufferSource {
 
     private final MultiBufferSource inner;
@@ -26,13 +16,11 @@ public class ColorBufferSource implements MultiBufferSource {
         this.inner = inner;
     }
 
-    /** 拦截最终颜色（RGB 与 alpha 整体替换，-1 不启用）。 */
     public ColorBufferSource setColor(int argb) {
         this.colorARGB = argb;
         return this;
     }
 
-    /** 调整最终透明度（乘数 [0,1]，1.0 不启用）。 */
     public ColorBufferSource setAlpha(float alpha) {
         this.alpha = alpha;
         return this;
@@ -47,17 +35,16 @@ public class ColorBufferSource implements MultiBufferSource {
         return new ColorVertexConsumer(consumer, this.colorARGB, this.alpha);
     }
 
-    /** 颜色 + 透明度拦截的 VertexConsumer 包装器。 */
     private record ColorVertexConsumer(VertexConsumer inner, int colorARGB, float alpha) implements VertexConsumer {
 
         @Override
-        public @NotNull VertexConsumer addVertex(float x, float y, float z) {
-            inner.addVertex(x, y, z);
+        public @NotNull VertexConsumer vertex(double x, double y, double z) {
+            inner.vertex(x, y, z);
             return this;
         }
 
         @Override
-        public @NotNull VertexConsumer setColor(int r, int g, int b, int a) {
+        public @NotNull VertexConsumer color(int r, int g, int b, int a) {
             if (this.colorARGB != -1) {
                 r = FastColor.ARGB32.red(this.colorARGB);
                 g = FastColor.ARGB32.green(this.colorARGB);
@@ -67,37 +54,47 @@ public class ColorBufferSource implements MultiBufferSource {
             if (this.alpha < 1.0f) {
                 a = (int) (a * this.alpha);
             }
-            return inner.setColor(r, g, b, a);
-        }
-
-        @Override
-        public @NotNull VertexConsumer setUv(float u, float v) {
-            inner.setUv(u, v);
+            inner.color(r, g, b, a);
             return this;
         }
 
         @Override
-        public @NotNull VertexConsumer setUv1(int u, int v) {
-            inner.setUv1(u, v);
+        public @NotNull VertexConsumer uv(float u, float v) {
+            inner.uv(u, v);
             return this;
         }
 
         @Override
-        public @NotNull VertexConsumer setUv2(int u, int v) {
-            inner.setUv2(u, v);
+        public @NotNull VertexConsumer overlayCoords(int u, int v) {
+            inner.overlayCoords(u, v);
             return this;
         }
 
         @Override
-        public @NotNull VertexConsumer setNormal(float x, float y, float z) {
-            inner.setNormal(x, y, z);
+        public @NotNull VertexConsumer uv2(int u, int v) {
+            inner.uv2(u, v);
             return this;
         }
 
         @Override
-        public @NotNull VertexConsumer misc(@NotNull VertexFormatElement element, int @NotNull ... rawData) {
-            inner.misc(element, rawData);
+        public @NotNull VertexConsumer normal(float x, float y, float z) {
+            inner.normal(x, y, z);
             return this;
+        }
+
+        @Override
+        public void endVertex() {
+            inner.endVertex();
+        }
+
+        @Override
+        public void defaultColor(int red, int green, int blue, int alpha) {
+            inner.defaultColor(red, green, blue, alpha);
+        }
+
+        @Override
+        public void unsetDefaultColor() {
+            inner.unsetDefaultColor();
         }
     }
 }

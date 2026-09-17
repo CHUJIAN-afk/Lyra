@@ -3,6 +3,7 @@ package first.lyra.common.builder;
 import com.google.common.collect.ImmutableMultimap;
 import first.lyra.common.armorSet.ArmorSet;
 import first.lyra.register.LyraItemRegistries;
+import first.lyra.utils.AttributeUtils;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.ai.attributes.Attribute;
@@ -34,7 +35,7 @@ public final class ArmorSetBuilder {
     }
 
     public ArmorSetBuilder modifier(Holder<Attribute> attribute, double amount, AttributeModifier.Operation operation) {
-        this.modifiers.put(attribute, new AttributeModifier(id, amount, operation));
+            this.modifiers.put(attribute, new AttributeModifier(AttributeUtils.modifierId(id), id.toString(), amount, operation));
         return this;
     }
 

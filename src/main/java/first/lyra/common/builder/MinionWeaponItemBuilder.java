@@ -6,13 +6,13 @@ import first.lyra.common.item.SummonerWeaponItem;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.minion.MinionSlotType;
 import first.lyra.register.LyraDataComponentRegister;
+import first.lyra.utils.TriConsumer;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import org.apache.commons.lang3.function.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Consumer;

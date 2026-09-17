@@ -58,7 +58,7 @@ public interface IEntityCollision<T extends AttachmentEntity> {
 
             // 采样点：上一tick、当前位置
             PathNode current = entity.currentPathNode;    // 当前位置
-            PathNode prevTick = historyNodes.getFirst();      // 上一tick
+            PathNode prevTick = historyNodes.get(0);      // 上一tick
 
             AABB localBox = getHitbox();
             Vec3 boxSize = new Vec3(localBox.getXsize(), localBox.getYsize(), localBox.getZsize());

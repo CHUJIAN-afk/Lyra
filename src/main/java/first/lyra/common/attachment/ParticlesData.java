@@ -1,26 +1,25 @@
 package first.lyra.common.attachment;
 
+import first.lyra.Lyra;
 import first.lyra.common.network.BatchedParticlesPayload;
 import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.event.TickEvent;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class ParticlesData {
 
-    public static void tick(LevelTickEvent.Post event) {
-        Level level = event.getLevel();
+    public static void tick(TickEvent.LevelTickEvent event) {
+        Level level = event.level;
         if (!level.isClientSide()) {
             ParticlesData data = level.getData(LyraAttachmentRegister.BatchedParticles);
             if (!data.entries.isEmpty()) {
                 List<BatchedParticlesPayload.Entry> snapshot = new ArrayList<>(data.entries);
                 data.entries.clear();
-                PacketDistributor.sendToPlayersInDimension((ServerLevel) level, new BatchedParticlesPayload(snapshot));
+                Lyra.NETWORK_HANDLER.sendToPlayersInDimension(level.dimension(), new BatchedParticlesPayload(snapshot));
             }
         }
     }

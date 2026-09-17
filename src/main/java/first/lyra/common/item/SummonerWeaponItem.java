@@ -12,6 +12,7 @@ import first.lyra.common.sound.Playable;
 import first.lyra.register.LyraAttributeRegister;
 import first.lyra.register.LyraDataComponentRegister;
 import first.lyra.register.LyraRegistries;
+import first.lyra.utils.TriConsumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
 import net.minecraft.network.chat.Component;
@@ -27,7 +28,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import org.apache.commons.lang3.function.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

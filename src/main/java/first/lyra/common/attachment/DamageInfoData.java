@@ -1,5 +1,6 @@
 package first.lyra.common.attachment;
 
+import first.lyra.Lyra;
 import first.lyra.common.damageInfo.DamageInfo;
 import first.lyra.common.damageInfo.IDamageSourceCritical;
 import first.lyra.common.network.BatchedDamageInfoPayload;
@@ -15,9 +16,8 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
-import net.neoforged.neoforge.event.tick.LevelTickEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,7 +26,7 @@ import java.util.Map;
 
 public class DamageInfoData {
 
-    public static void handler(LivingDamageEvent.Post event) {
+    public static void handler(LivingDamageEvent event) {
         DamageSource damageSource = event.getSource();
         LivingEntity entity = event.getEntity();
         Level level = entity.level();
@@ -41,8 +41,8 @@ public class DamageInfoData {
                     .normalize();
             boolean critical = damageSource instanceof IDamageSourceCritical iDamageSourceCritical && iDamageSourceCritical.lyra$isCritical();
             DamageInfoData.build(level)
-                    .damageType(damageSource.typeHolder().getRegisteredName())
-                    .damageAmount(event.getNewDamage())
+                    .damageType(damageTypeName(damageSource.typeHolder()))
+                    .damageAmount(event.getAmount())
                     .pos(pos)
                     .velocity(velocity.scale(random.nextInt(50, 70) * 0.01f))
                     .critical(critical)
@@ -50,12 +50,12 @@ public class DamageInfoData {
         }
     }
 
-    public static void tick(LevelTickEvent.Post event) {
-        Level level = event.getLevel();
+    public static void tick(TickEvent.LevelTickEvent event) {
+        Level level = event.level;
         if (!level.isClientSide()) {
             DamageInfoData damageData = level.getData(LyraAttachmentRegister.DamageInfoData);
             if (damageData.size() > 0) {
-                PacketDistributor.sendToPlayersInDimension((ServerLevel) level, new BatchedDamageInfoPayload(damageData.drain()));
+                Lyra.NETWORK_HANDLER.sendToPlayersInDimension(level.dimension(), new BatchedDamageInfoPayload(damageData.drain()));
             }
         } else {
             level.getData(LyraAttachmentRegister.DamageInfoData).tick();
@@ -134,7 +134,7 @@ public class DamageInfoData {
         }
 
         public DamageInfoBuilder damageType(Holder<DamageType> damageType) {
-            this.damageType = damageType.getRegisteredName();
+            this.damageType = damageTypeName(damageType);
             return this;
         }
 
@@ -183,5 +183,9 @@ public class DamageInfoData {
                 level.getData(LyraAttachmentRegister.DamageInfoData).addEntry(new BatchedDamageInfoPayload.Entry(damageType, damageAmount, x, y, z, vx, vy, vz, critical));
             }
         }
+    }
+
+    private static String damageTypeName(Holder<DamageType> damageType) {
+        return damageType.unwrapKey().map(key -> key.location().toString()).orElse("default");
     }
 }

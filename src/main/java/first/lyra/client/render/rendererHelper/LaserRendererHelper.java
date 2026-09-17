@@ -135,7 +135,7 @@ public class LaserRendererHelper {
         int baseR = FastColor.ARGB32.red(colorRGB);
         int baseG = FastColor.ARGB32.green(colorRGB);
         int baseB = FastColor.ARGB32.blue(colorRGB);
-        int baseA = Math.clamp(Math.round(alpha * 255), 0, 255);
+        int baseA = net.minecraft.util.Mth.clamp(Math.round(alpha * 255), 0, 255);
 
         for (int layer = 0; layer < layers; layer++) {
             // 层级比例: 0=最内层, 1=最外层
@@ -192,12 +192,13 @@ public class LaserRendererHelper {
      * </p>
      */
     private void emitVertex(VertexConsumer consumer, Matrix4f pose, float x, float y, float z, int color, float u, float v) {
-        consumer.addVertex(pose, x, y, z)
-                .setColor(color)
-                .setUv(u, v)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT)
-                .setNormal(0, 0, 1);
+        consumer.vertex(pose, x, y, z)
+                .color(FastColor.ARGB32.alpha(color), FastColor.ARGB32.red(color), FastColor.ARGB32.green(color), FastColor.ARGB32.blue(color))
+                .uv(u, v)
+                .overlayCoords(OverlayTexture.NO_OVERLAY)
+                .uv2(LightTexture.FULL_BRIGHT)
+                .normal(0, 0, 1)
+                .endVertex();
     }
 
     private static float mix(float a, float b, float t) {

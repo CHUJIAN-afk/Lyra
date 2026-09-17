@@ -68,27 +68,27 @@ public class SimpleMobEffectBuilder {
     public MobEffect build() {
         MobEffect effect = new MobEffect(category, color) {
             @Override
-            public boolean applyEffectTick(@NotNull LivingEntity entity, int amplifier) {
+            public void applyEffectTick(@NotNull LivingEntity entity, int amplifier) {
                 if (applyEffectTick != null) {
                     applyEffectTick.accept(entity, amplifier);
-                    return true;
+                    return;
                 }
-                return super.applyEffectTick(entity, amplifier);
+                super.applyEffectTick(entity, amplifier);
             }
 
             @Override
-            public boolean shouldApplyEffectTickThisTick(int duration, int amplifier) {
+            public boolean isDurationEffectTick(int duration, int amplifier) {
                 if (shouldApplyEffectTickThisTick != null) {
                     return shouldApplyEffectTickThisTick.apply(duration, amplifier);
                 }
-                return super.shouldApplyEffectTickThisTick(duration, amplifier);
+                return super.isDurationEffectTick(duration, amplifier);
             }
         };
         for (AttributeModifierEntry entry : attributeModifiers) {
-            effect.addAttributeModifier(entry.attribute, entry.id, entry.amount, entry.operation);
+            effect.addAttributeModifier(entry.attribute.value(), entry.id.toString(), entry.amount, entry.operation);
         }
         for (AttributeCurveEntry entry : attributeCurveModifiers) {
-            effect.addAttributeModifier(entry.attribute, entry.id, entry.operation, entry.curve);
+            effect.addAttributeModifier(entry.attribute.value(), entry.id.toString(), entry.curve.apply(0), entry.operation);
         }
         return effect;
     }

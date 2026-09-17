@@ -85,7 +85,7 @@ public abstract class MomentumMinion extends Minion implements IMomentumAttachme
 
     @Override
     public void setDrag(float drag) {
-        this.drag = Math.clamp(drag, 0, 1);
+        this.drag = net.minecraft.util.Mth.clamp(drag, 0, 1);
     }
 
     @Override

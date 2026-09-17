@@ -373,12 +373,13 @@ public class LightningRendererHelper {
     }
 
     private void emitVertex(VertexConsumer consumer, Matrix4f pose, Vector3f v, int color, float u, float vCoord, Vector3f normal) {
-        consumer.addVertex(pose, v.x, v.y, v.z)
-                .setColor(color)
-                .setUv(u, vCoord)
-                .setOverlay(OverlayTexture.NO_OVERLAY)
-                .setLight(LightTexture.FULL_BRIGHT)
-                .setNormal(normal.x, normal.y, normal.z);
+        consumer.vertex(pose, v.x, v.y, v.z)
+                .color(FastColor.ARGB32.alpha(color), FastColor.ARGB32.red(color), FastColor.ARGB32.green(color), FastColor.ARGB32.blue(color))
+                .uv(u, vCoord)
+                .overlayCoords(OverlayTexture.NO_OVERLAY)
+                .uv2(LightTexture.FULL_BRIGHT)
+                .normal(normal.x, normal.y, normal.z)
+                .endVertex();
     }
 
     private static Vector3f worldToLocal(Vec3 world, Vec3 origin) {

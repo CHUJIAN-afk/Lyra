@@ -11,16 +11,16 @@ import first.lyra.register.LyraRegistries;
 import first.lyra.utils.LyraStreamCodecs;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.attachment.AttachmentSyncHandler;
-import net.neoforged.neoforge.attachment.IAttachmentHolder;
-import net.neoforged.neoforge.network.connection.ConnectionType;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.mesdag.portlib.attachment.IPortAttachmentHolder;
+import org.mesdag.portlib.attachment.PortAttachmentSyncHandler;
+import org.mesdag.portlib.network.PortConnectionType;
+import org.mesdag.portlib.network.PortRegistryFriendlyByteBuf;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * 移除通过 setRemove() 标记完成，添加通过延迟队列在 tick 后统一处理。
  * </p>
  */
-public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEntityData> {
+public class AttachmentEntityData implements PortAttachmentSyncHandler<AttachmentEntityData> {
 
     private final Map<AttachmentEntityType<?>, List<AttachmentEntity>> pendingAdd = new HashMap<>();
     private final Map<AttachmentEntityType<?>, List<AttachmentEntity>> groups = new HashMap<>();
@@ -143,7 +143,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                 });
                 if (!groups.isEmpty() || changed) {
                     changed = false;
-                    player.syncData(LyraAttachmentRegister.EntityData);
+                    player.syncData(LyraAttachmentRegister.EntityData.get());
                 }
             }
         }
@@ -197,11 +197,11 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     }
 
     @Override
-    public void write(RegistryFriendlyByteBuf buf, AttachmentEntityData data, boolean initialSync) {
+    public void write(PortRegistryFriendlyByteBuf buf, AttachmentEntityData data, boolean initialSync) {
         // 写入 AttachmentEntityType → 实体列表的结构
         buf.writeVarInt(data.groups.size());
         for (Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>> entityEntry : data.groups.entrySet()) {
-            buf.writeInt(LyraRegistries.ATTACHMENT_ENTITY_TYPES.getId(entityEntry.getKey()));
+            buf.writeResourceLocation(LyraRegistries.ATTACHMENT_ENTITY_TYPES.getKey(entityEntry.getKey()));
             List<AttachmentEntity> list = entityEntry.getValue();
             buf.writeVarInt(list.size());
             for (AttachmentEntity entity : list) {
@@ -210,7 +210,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
                 buf.writeBoolean(entity.isClientInit());
                 if (!entity.isClientInit()) {
                     entity.setClientInit(true);
-                    LyraStreamCodecs.PATH_NODE.encode(buf, entity.getHistoryNodes().getFirst());
+                    LyraStreamCodecs.PATH_NODE.encode(buf, entity.getHistoryNodes().get(0));
                 }
             }
         }
@@ -219,7 +219,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
     // ===================== 网络同步 =====================
 
     @Override
-    public AttachmentEntityData read(@NotNull IAttachmentHolder holder, @NotNull RegistryFriendlyByteBuf buf, @Nullable AttachmentEntityData oldData) {
+    public AttachmentEntityData read(@NotNull IPortAttachmentHolder holder, @NotNull PortRegistryFriendlyByteBuf buf, @Nullable AttachmentEntityData oldData) {
         AttachmentEntityData data = oldData != null ? oldData : new AttachmentEntityData();
         ByteBuf copy = buf.copy();
         byte[] payload = new byte[copy.readableBytes()];
@@ -243,7 +243,7 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
         Level level = getLevel();
         List<byte[]> snapshot = pendingPayloads.getAndSet(List.of());
         for (byte[] payload : snapshot) {
-            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(payload), level.registryAccess(), ConnectionType.NEOFORGE);
+            PortRegistryFriendlyByteBuf buf = new PortRegistryFriendlyByteBuf(Unpooled.wrappedBuffer(payload), level.registryAccess(), PortConnectionType.MODDED);
             // 保留现有实体的缓存引用
             Map<UUID, AttachmentEntity> existing = new HashMap<>();
             groups.values().forEach(list -> list.forEach(entity -> existing.put(entity.getUuid(), entity)));
@@ -252,7 +252,10 @@ public class AttachmentEntityData implements AttachmentSyncHandler<AttachmentEnt
             // 读取 AttachmentEntityType → 实体列表
             int typeCount = buf.readVarInt();
             for (int i = 0; i < typeCount; i++) {
-                AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.getHolder(buf.readInt()).orElseThrow().value();
+                AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.get(buf.readResourceLocation());
+                if (entityType == null) {
+                    throw new IllegalStateException("Unknown attachment entity type");
+                }
                 List<AttachmentEntity> list = groups.computeIfAbsent(entityType, k -> new ArrayList<>());
                 int listSize = buf.readVarInt();
                 for (int k = 0; k < listSize; k++) {

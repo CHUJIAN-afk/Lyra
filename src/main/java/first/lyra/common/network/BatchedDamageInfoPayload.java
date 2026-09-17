@@ -6,16 +6,14 @@ import first.lyra.common.damageInfo.DamageInfo;
 import first.lyra.common.damageInfo.DamageInfoStyle;
 import first.lyra.common.damageInfo.DamageInfoStyleManager;
 import first.lyra.register.LyraAttachmentRegister;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
-import org.jetbrains.annotations.NotNull;
+import org.mesdag.portlib.network.IPortPacket;
+import org.mesdag.portlib.network.PortRegistryFriendlyByteBuf;
+import org.mesdag.portlib.network.codec.PortByteBufCodecs;
+import org.mesdag.portlib.network.codec.PortStreamCodec;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,12 +27,12 @@ import java.util.List;
  *
  * @param entries 伤害数字记录列表
  */
-public record BatchedDamageInfoPayload(List<Entry> entries) implements CustomPacketPayload {
+public record BatchedDamageInfoPayload(List<Entry> entries) implements IPortPacket.S2C {
 
-    public static final Type<BatchedDamageInfoPayload> TYPE = new Type<>(Lyra.rl("damage_info"));
+    public static final ResourceLocation ID = Lyra.rl("damage_info");
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, BatchedDamageInfoPayload> STREAM_CODEC = StreamCodec.composite(
-            Entry.STREAM_CODEC.apply(ByteBufCodecs.list()),
+    public static final PortStreamCodec<PortRegistryFriendlyByteBuf, BatchedDamageInfoPayload> STREAM_CODEC = PortStreamCodec.composite(
+            Entry.STREAM_CODEC.apply(PortByteBufCodecs.list()),
             BatchedDamageInfoPayload::entries,
             BatchedDamageInfoPayload::new
     );
@@ -42,33 +40,31 @@ public record BatchedDamageInfoPayload(List<Entry> entries) implements CustomPac
     /**
      * 客户端处理：逐条转为 {@link DamageInfo} 写入客户端 Level 附件。
      */
-    public static void handleClient(BatchedDamageInfoPayload payload, IPayloadContext context) {
-        context.enqueueWork(() -> {
-            Player player = context.player();
-            Level level = player.level();
-            DamageInfoData damageInfoData = level.getData(LyraAttachmentRegister.DamageInfoData);
-            for (Entry entry : payload.entries()) {
-                DamageInfo info = null;
-                DamageInfoStyle style = DamageInfoStyleManager.INSTANCE.getStyle(ResourceLocation.parse(entry.damageType));
-                if (style != null) {
-                    info = new DamageInfo(style, entry.damageAmount, new Vec3(entry.x, entry.y, entry.z), new Vec3(entry.vx, entry.vy, entry.vz), entry.critical);
-                }
-                if (info != null) {
-                    Vec3 pos = info.getRenderPos(0);
-                    Vec3 eyePosition = player.getEyePosition(0);
-                    if (pos.distanceToSqr(eyePosition) < 64 * 64) {
-                        damageInfoData.getActiveInfos()
-                                .computeIfAbsent(info.getTexture(), key -> new ArrayList<>())
-                                .add(info);
-                    }
+    @Override
+    public void work(Player player) {
+        Level level = player.level();
+        DamageInfoData damageInfoData = level.getData(LyraAttachmentRegister.DamageInfoData);
+        for (Entry entry : entries) {
+            DamageInfo info = null;
+            DamageInfoStyle style = DamageInfoStyleManager.INSTANCE.getStyle(ResourceLocation.parse(entry.damageType));
+            if (style != null) {
+                info = new DamageInfo(style, entry.damageAmount, new Vec3(entry.x, entry.y, entry.z), new Vec3(entry.vx, entry.vy, entry.vz), entry.critical);
+            }
+            if (info != null) {
+                Vec3 pos = info.getRenderPos(0);
+                Vec3 eyePosition = player.getEyePosition(0);
+                if (pos.distanceToSqr(eyePosition) < 64 * 64) {
+                    damageInfoData.getActiveInfos()
+                            .computeIfAbsent(info.getTexture(), key -> new ArrayList<>())
+                            .add(info);
                 }
             }
-        });
+        }
     }
 
     @Override
-    public @NotNull Type<? extends CustomPacketPayload> type() {
-        return TYPE;
+    public ResourceLocation identifier() {
+        return ID;
     }
 
     /**
@@ -80,7 +76,7 @@ public record BatchedDamageInfoPayload(List<Entry> entries) implements CustomPac
      */
     public record Entry(String damageType, float damageAmount, double x, double y, double z, double vx, double vy, double vz, boolean critical) {
 
-        public static final StreamCodec<RegistryFriendlyByteBuf, Entry> STREAM_CODEC = StreamCodec.ofMember(
+        public static final PortStreamCodec<PortRegistryFriendlyByteBuf, Entry> STREAM_CODEC = PortStreamCodec.ofMember(
                 (entry, buf) -> {
                     buf.writeUtf(entry.damageType);
                     buf.writeFloat(entry.damageAmount);

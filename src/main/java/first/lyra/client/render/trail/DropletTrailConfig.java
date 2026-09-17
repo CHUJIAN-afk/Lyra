@@ -44,7 +44,7 @@ public class DropletTrailConfig<T extends AttachmentEntity> extends ConeTrailCon
         float[] cosArr = getCosArray(resolution);
         float[] sinArr = getSinArray(resolution);
 
-        InterpolatedNode headNode = setup.smoothNodes.getFirst();
+        InterpolatedNode headNode = setup.smoothNodes.get(0);
         float headFade = fadeOut.getFade(0);
         float headRadius = maxRadius * (minRadiusRatio + (1 - minRadiusRatio) * headFade);
         int headColor = colorFunction.getColor(entity, 0, setup.partialTick);

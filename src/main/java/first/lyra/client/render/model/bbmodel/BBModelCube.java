@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.core.Direction;
+import net.minecraft.util.FastColor;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -187,18 +188,17 @@ final class BBModelCube {
         var pose = poseStack.last();
         for (Quad quad : quads) {
             VertexConsumer consumer = consumers.apply(quad.textureIndex);
-            Vector3f normal = pose.transformNormal(quad.normal, new Vector3f());
+            Vector3f normal = new Vector3f(quad.normal).mul(pose.normal());
             fixInvertedFlatCube(normal);
             for (Vertex vertex : quad.vertices) {
                 Vector3f position = pose.pose().transformPosition(vertex.x, vertex.y, vertex.z, new Vector3f());
-                consumer.addVertex(
-                        position.x(), position.y(), position.z(),
-                        color,
-                        vertex.u, vertex.v,
-                        packedOverlay,
-                        packedLight,
-                        normal.x(), normal.y(), normal.z()
-                );
+                consumer.vertex(position.x(), position.y(), position.z())
+                        .color(FastColor.ARGB32.alpha(color), FastColor.ARGB32.red(color), FastColor.ARGB32.green(color), FastColor.ARGB32.blue(color))
+                        .uv(vertex.u, vertex.v)
+                        .overlayCoords(packedOverlay)
+                        .uv2(packedLight)
+                        .normal(normal.x(), normal.y(), normal.z())
+                        .endVertex();
             }
         }
         poseStack.popPose();

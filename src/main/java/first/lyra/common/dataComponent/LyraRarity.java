@@ -5,13 +5,14 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import first.lyra.register.LyraDataComponentRegister;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.fml.loading.FMLLoader;
+import net.minecraftforge.fml.loading.FMLLoader;
+import org.mesdag.portlib.network.PortRegistryFriendlyByteBuf;
+import org.mesdag.portlib.network.codec.PortByteBufCodecs;
+import org.mesdag.portlib.network.codec.PortStreamCodec;
+import org.mesdag.portlib.client.PortDeltaTicker;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,7 +36,7 @@ public record LyraRarity(int color) {
 
     public static final Map<LyraRarity, Function<Float, Integer>> DynamicColorData = new HashMap<>();
     public static final Codec<LyraRarity> CODEC = RecordCodecBuilder.create(instance -> instance.group(Codec.INT.fieldOf("color").forGetter(lyraRarity -> lyraRarity.color)).apply(instance, LyraRarity::new));
-    public static final StreamCodec<RegistryFriendlyByteBuf, LyraRarity> STREAM_CODEC = ByteBufCodecs.fromCodecWithRegistries(CODEC);
+    public static final PortStreamCodec<PortRegistryFriendlyByteBuf, LyraRarity> STREAM_CODEC = PortByteBufCodecs.fromCodecWithRegistries(CODEC);
 
     @Override
     public int color() {
@@ -45,7 +46,7 @@ public record LyraRarity(int color) {
             ClientLevel level = minecraft.level;
             if (level != null) {
                 long gameTime = level.getGameTime();
-                float partialTick = minecraft.getTimer().getGameTimeDeltaPartialTick(true);
+                float partialTick = PortDeltaTicker.INSTANCE.getGameTimeDeltaPartialTick(true);
                 return function.apply(gameTime + partialTick);
             }
         }

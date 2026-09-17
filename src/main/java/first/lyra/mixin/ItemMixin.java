@@ -18,7 +18,7 @@ public class ItemMixin {
             at = @At("TAIL"),
             cancellable = true
     )
-    private static void getName(ItemStack stack, CallbackInfoReturnable<Component> cir) {
+    private void getName(ItemStack stack, CallbackInfoReturnable<Component> cir) {
         if (cir.getReturnValue() instanceof MutableComponent mutableComponent) {
             cir.setReturnValue(LyraRarity.handler(stack, mutableComponent));
         }

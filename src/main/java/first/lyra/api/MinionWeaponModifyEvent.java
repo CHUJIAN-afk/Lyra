@@ -5,7 +5,7 @@ import first.lyra.common.minion.MinionSlotType;
 import net.minecraft.core.Holder;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.level.ItemLike;
-import net.neoforged.bus.api.Event;
+import net.minecraftforge.eventbus.api.Event;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

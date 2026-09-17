@@ -8,15 +8,15 @@ import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import net.minecraftforge.event.entity.living.LivingDamageEvent;
 
 import java.util.UUID;
 
 public class InvincibleData {
 
-    public static void handler(LivingDamageEvent.Post event) {
+    public static void handler(LivingDamageEvent event) {
         DamageSource damageSource = event.getSource();
         LivingEntity entity = event.getEntity();
         Level level = entity.level();

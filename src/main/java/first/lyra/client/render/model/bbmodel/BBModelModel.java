@@ -40,7 +40,7 @@ final class BBModelModel {
 
     ResourceLocation getTexture(int index) {
         if (index < 0 || index >= textures.size()) {
-            return textures.getFirst();
+            return textures.get(0);
         }
         return textures.get(index);
     }

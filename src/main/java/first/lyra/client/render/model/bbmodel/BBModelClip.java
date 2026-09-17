@@ -141,7 +141,7 @@ final class BBModelClip {
                 segmentStart = segmentEnd;
             }
 
-            return segments.getLast().endValue();
+            return segments.get(segments.size() - 1).endValue();
         }
     }
 

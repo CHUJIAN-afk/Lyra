@@ -55,7 +55,7 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
 
     /** 当前透明度（第一人称按距离淡化，AlphaModify 关闭时 1.0）。渲染器调用点直接使用。 */
     protected float getAlpha(RenderContext<T> context, PathNode visualNode, float partialTick) {
-        return ClientConfig.AlphaModify.isTrue() ? getAlphaModify(context, visualNode, partialTick) : 1.0f;
+        return ClientConfig.AlphaModify.get() ? getAlphaModify(context, visualNode, partialTick) : 1.0f;
     }
 
     protected void modelModify(T entity, PoseStack poseStack, MultiBufferSource bufferSource, PathNode visualNode, RenderContext<T> context, float partialTick, int packedLight, float alpha) {

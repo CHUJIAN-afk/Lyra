@@ -111,7 +111,7 @@ final class AnimatedClip {
                 segmentStart = segmentEnd;
             }
 
-            return segments.getLast().endValue;
+            return segments.get(segments.size() - 1).endValue;
         }
     }
 

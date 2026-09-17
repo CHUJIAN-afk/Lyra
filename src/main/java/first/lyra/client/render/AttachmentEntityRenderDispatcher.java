@@ -69,7 +69,7 @@ public class AttachmentEntityRenderDispatcher {
                 if (renderer != null) {
                     renderer.render(entity, poseStack, bufferSource, partialTick, lightCoords, renderNode);
                 }
-                if (ClientConfig.DebugMode.isTrue()) {
+                if (ClientConfig.DebugMode.get()) {
                     debugRender(poseStack, entity, showHitboxes, renderNode, debugConsumer);
                 }
                 poseStack.popPose();

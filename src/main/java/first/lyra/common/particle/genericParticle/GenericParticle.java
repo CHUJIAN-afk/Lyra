@@ -75,8 +75,7 @@ public class GenericParticle extends TextureSheetParticle {
         float y = (float) (Mth.lerp(partialTick, this.yo, this.y) - cameraPos.y);
         float z = (float) (Mth.lerp(partialTick, this.zo, this.z) - cameraPos.z);
 
-        Quaternionf quaternion = new Quaternionf();
-        this.getFacingCameraMode().setRotation(quaternion, camera, partialTick);
+        Quaternionf quaternion = new Quaternionf(camera.rotation());
         if (this.roll != 0.0F) {
             quaternion.rotateZ(Mth.lerp(partialTick, this.oRoll, this.roll));
         }
@@ -120,13 +119,23 @@ public class GenericParticle extends TextureSheetParticle {
     private void renderQuad(VertexConsumer buffer, float cx, float cy, float cz, Quaternionf quaternion, float minX, float minY, float maxX, float maxY, float u0, float u1, float v0, float v1, int color, int light, int overlay) {
         Vector3f v = new Vector3f();
         v.set(minX, minY, 0.0F).rotate(quaternion);
-        buffer.addVertex(cx + v.x, cy + v.y, cz + v.z, color, u0, v0, overlay, light, 0.0F, 0.0F, 1.0F);
+        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u0, v0, overlay, light);
         v.set(maxX, minY, 0.0F).rotate(quaternion);
-        buffer.addVertex(cx + v.x, cy + v.y, cz + v.z, color, u1, v0, overlay, light, 0.0F, 0.0F, 1.0F);
+        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u1, v0, overlay, light);
         v.set(maxX, maxY, 0.0F).rotate(quaternion);
-        buffer.addVertex(cx + v.x, cy + v.y, cz + v.z, color, u1, v1, overlay, light, 0.0F, 0.0F, 1.0F);
+        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u1, v1, overlay, light);
         v.set(minX, maxY, 0.0F).rotate(quaternion);
-        buffer.addVertex(cx + v.x, cy + v.y, cz + v.z, color, u0, v1, overlay, light, 0.0F, 0.0F, 1.0F);
+        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u0, v1, overlay, light);
+    }
+
+    private static void addVertex(VertexConsumer buffer, float x, float y, float z, int color, float u, float v, int overlay, int light) {
+        buffer.vertex(x, y, z)
+                .color((color >>> 24) & 0xFF, (color >>> 16) & 0xFF, (color >>> 8) & 0xFF, color & 0xFF)
+                .uv(u, v)
+                .overlayCoords(overlay)
+                .uv2(light)
+                .normal(0.0F, 0.0F, 1.0F)
+                .endVertex();
     }
 
     @Override

@@ -32,7 +32,7 @@ public class CreativeModeTabMixin {
             for (Section section : sections) {
                 List<ItemStack> stacks = new ArrayList<>(CreativeTabDispatcher.itemsOf(holders, section));
                 for (int i = 0; i < 9; i++) {
-                    stacks.addFirst(ItemStack.EMPTY);
+                    stacks.add(0, ItemStack.EMPTY);
                 }
                 while (stacks.size() % 9 != 0) {
                     stacks.add(ItemStack.EMPTY);

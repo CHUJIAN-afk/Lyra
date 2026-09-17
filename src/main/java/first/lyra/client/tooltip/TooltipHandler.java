@@ -17,7 +17,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.level.ItemLike;
-import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
+import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -67,7 +67,7 @@ public final class TooltipHandler {
                 armors.add(armorSlot.getItem());
             }
         }
-        List<ArmorSet> list = LyraRegistries.ARMOR_SETS.stream().toList();
+        List<ArmorSet> list = LyraRegistries.armorSets().stream().toList();
         List<ArmorSet> target = new ArrayList<>();
         for (ArmorSet armorSet1 : list) {
             List<ItemLike> items1 = armorSet1.items();
@@ -86,13 +86,13 @@ public final class TooltipHandler {
             boolean full = player != null && armorSet.full(player);
             ChatFormatting descColor = full ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY;
             for (ItemLike itemDeferredItem : items) {
-                if (items.getFirst() == itemDeferredItem) {
+                if (items.get(0) == itemDeferredItem) {
                     set.append(Component.literal("[ ").withStyle(descColor));
                 }
                 Item piece = itemDeferredItem.asItem();
                 ChatFormatting format = armors.contains(piece) ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY;
                 set.append(piece.getDescription().copy().withStyle(format)).append(Component.literal(" "));
-                if (items.getLast() == itemDeferredItem) {
+                if (items.get(items.size() - 1) == itemDeferredItem) {
                     set.append(Component.literal("] ").withStyle(descColor));
                 }
             }
@@ -103,7 +103,12 @@ public final class TooltipHandler {
             for (Map.Entry<Holder<Attribute>, AttributeModifier> entry : entries) {
                 Attribute attr = entry.getKey().value();
                 AttributeModifier modifier = entry.getValue();
-                lines.add(attr.toComponent(modifier, TooltipFlag.NORMAL).withStyle(descColor));
+                String operationKey = "attribute.modifier." + (modifier.getAmount() >= 0 ? "plus." : "take.") + modifier.getOperation().toValue();
+                lines.add(Component.translatable(
+                        operationKey,
+                        String.format("%.2f", Math.abs(modifier.getAmount())),
+                        Component.translatable(attr.getDescriptionId())
+                ).withStyle(descColor));
             }
             String baseKey = id.toLanguageKey() + ".set.";
             int index = 1;

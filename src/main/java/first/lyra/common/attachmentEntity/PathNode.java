@@ -38,8 +38,8 @@ public record PathNode(Vec3 pos, float yaw, float pitch, float roll) {
         if (obj == this) {
             return true;
         }
-        if (obj instanceof PathNode(Vec3 pos1, float yaw1, float pitch1, float roll1)) {
-            return pos1.equals(this.pos()) && yaw1 == this.yaw() && pitch1 == this.pitch() && roll1 == this.roll();
+        if (obj instanceof PathNode other) {
+            return other.pos().equals(this.pos()) && other.yaw() == this.yaw() && other.pitch() == this.pitch() && other.roll() == this.roll();
         }
         return false;
     }

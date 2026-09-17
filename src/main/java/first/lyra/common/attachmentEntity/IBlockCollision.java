@@ -32,7 +32,7 @@ public interface IBlockCollision<T extends AttachmentEntity & IMomentumAttachmen
     default void blockCollision(AttachmentEntity entity) {
         ArrayList<PathNode> history = entity.getHistoryNodes();
         if (entity instanceof IMomentumAttachmentEntity iMomentumAttachmentEntity && canCollideWithBlocks() && !history.isEmpty()) {
-            Vec3 from = history.getFirst().pos();
+            Vec3 from = history.get(0).pos();
             Vec3 motion = entity.currentPathNode.pos().subtract(from);
             Level level = entity.getLevel();
             // 使用原版碰撞检测算法

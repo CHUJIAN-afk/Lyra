@@ -3,7 +3,6 @@ package first.lyra.client.render;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import first.lyra.mixin.BufferBuilderAccessor;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
@@ -15,9 +14,6 @@ import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import sun.misc.Unsafe;
-
-import java.lang.reflect.Field;
 
 /**
  * 通用顶点与贴图渲染工具（26.2 行为对齐）。
@@ -97,66 +93,16 @@ public final class RenderUtil {
      * @param vertexCount 顶点数
      */
     public static void writeVertices(VertexConsumer consumer, float[] xyzuvData, int[] colorData, int packedLight, int vertexCount) {
-        if (consumer instanceof BufferBuilder builder) {
-            BufferBuilderAccessor accessor = (BufferBuilderAccessor) builder;
-            int vertexSize = accessor.getFormat().getVertexSize();
-            long totalBytes = (long) vertexCount * vertexSize;
-            long pointer = accessor.getBuffer().reserve((int) totalBytes);
-            boolean entityFormat = vertexSize == 36;
-            Unsafe unsafe = UNSAFE;
-            long offset = 0;
-            for (int i = 0; i < vertexCount; i++) {
-                int sourceIndex = i * 5;
-                unsafe.putFloat(pointer + offset, xyzuvData[sourceIndex]);
-                offset += 4;
-                unsafe.putFloat(pointer + offset, xyzuvData[sourceIndex + 1]);
-                offset += 4;
-                unsafe.putFloat(pointer + offset, xyzuvData[sourceIndex + 2]);
-                offset += 4;
-                unsafe.putInt(pointer + offset, FastColor.ABGR32.fromArgb32(colorData[i]));
-                offset += 4;
-                unsafe.putFloat(pointer + offset, xyzuvData[sourceIndex + 3]);
-                offset += 4;
-                unsafe.putFloat(pointer + offset, xyzuvData[sourceIndex + 4]);
-                offset += 4;
-                // BLOCK 32B = 28 数据 + Normal 3 + 对齐 1
-                if (entityFormat) {
-                    unsafe.putInt(pointer + offset, OverlayTexture.NO_OVERLAY);
-                    offset += 4;
-                }
-                unsafe.putInt(pointer + offset, packedLight);
-                offset += 4;
-                unsafe.putByte(pointer + offset, (byte) 0);
-                offset += 1;
-                unsafe.putByte(pointer + offset, (byte) 0);
-                offset += 1;
-                unsafe.putByte(pointer + offset, (byte) 127);
-                offset += 1;
-                offset += 1; // 对齐
-            }
-            accessor.setVertices(accessor.getVertices() + vertexCount);
-            accessor.setElementsToFill(0);
-        } else {
-            // 回退：逐顶点写入（非 BufferBuilder consumer）
-            for (int i = 0; i < vertexCount; i++) {
-                int sourceIndex = i * 5;
-                consumer.addVertex(xyzuvData[sourceIndex], xyzuvData[sourceIndex + 1], xyzuvData[sourceIndex + 2],
-                        colorData[i], xyzuvData[sourceIndex + 3], xyzuvData[sourceIndex + 4],
-                        OverlayTexture.NO_OVERLAY, packedLight, 0, 0, 1);
-            }
-        }
-    }
-
-    /** Unsafe（sun.misc，反射取 theUnsafe 实例；Java 21 无 java.lang.foreign 正式 API）。 */
-    private static final Unsafe UNSAFE = getUnsafe();
-
-    private static Unsafe getUnsafe() {
-        try {
-            Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            return (Unsafe) field.get(null);
-        } catch (Exception exception) {
-            throw new RuntimeException("Failed to obtain Unsafe", exception);
+        for (int i = 0; i < vertexCount; i++) {
+            int sourceIndex = i * 5;
+            int color = colorData[i];
+            consumer.vertex(xyzuvData[sourceIndex], xyzuvData[sourceIndex + 1], xyzuvData[sourceIndex + 2])
+                    .color(FastColor.ARGB32.alpha(color), FastColor.ARGB32.red(color), FastColor.ARGB32.green(color), FastColor.ARGB32.blue(color))
+                    .uv(xyzuvData[sourceIndex + 3], xyzuvData[sourceIndex + 4])
+                    .overlayCoords(OverlayTexture.NO_OVERLAY)
+                    .uv2(packedLight)
+                    .normal(0, 0, 1)
+                    .endVertex();
         }
     }
 }

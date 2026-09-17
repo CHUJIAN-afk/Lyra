@@ -1,14 +1,14 @@
 package first.lyra.client.config;
 
-import net.neoforged.neoforge.common.ModConfigSpec;
+import net.minecraftforge.common.ForgeConfigSpec;
 
 public class ClientConfig {
 
-    private static final ModConfigSpec.Builder Builder = new ModConfigSpec.Builder();
+    private static final ForgeConfigSpec.Builder Builder = new ForgeConfigSpec.Builder();
 
-    public static final ModConfigSpec.BooleanValue AlphaModify = Builder.define("alpha_modify", true);
+    public static final ForgeConfigSpec.BooleanValue AlphaModify = Builder.define("alpha_modify", true);
 
-    public static final ModConfigSpec.BooleanValue DebugMode = Builder.define("debug_mode", false);
+    public static final ForgeConfigSpec.BooleanValue DebugMode = Builder.define("debug_mode", false);
 
-    public static final ModConfigSpec Spec = Builder.build();
+    public static final ForgeConfigSpec Spec = Builder.build();
 }

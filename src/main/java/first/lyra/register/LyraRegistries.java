@@ -6,25 +6,32 @@ import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.registries.NewRegistryEvent;
-import net.neoforged.neoforge.registries.RegistryBuilder;
+import net.minecraftforge.registries.RegistryManager;
+import net.minecraftforge.registries.ForgeRegistry;
+import org.mesdag.portlib.registries.PortCustomRegistration;
+import org.mesdag.portlib.registries.PortRegisterHandler;
 
-@EventBusSubscriber(modid = Lyra.MODID)
+import java.util.Collection;
+
 public class LyraRegistries {
 
     private static final ResourceKey<Registry<AttachmentEntityType<? extends AttachmentEntity>>> ATTACHMENT_ENTITY_TYPE_KEY = ResourceKey.createRegistryKey(Lyra.rl("attachment_entity_types"));
 
-    public static final Registry<AttachmentEntityType<? extends AttachmentEntity>> ATTACHMENT_ENTITY_TYPES = new RegistryBuilder<>(ATTACHMENT_ENTITY_TYPE_KEY).sync(true).create();
+    public static final PortCustomRegistration<AttachmentEntityType<? extends AttachmentEntity>> ATTACHMENT_ENTITY_TYPES =
+            PortRegisterHandler.custom(Lyra.MODID, ATTACHMENT_ENTITY_TYPE_KEY, maker -> maker.sync(true));
 
     private static final ResourceKey<Registry<ArmorSet>> ARMOR_SET_KEY = ResourceKey.createRegistryKey(Lyra.rl("armor_set"));
 
-    public static final Registry<ArmorSet> ARMOR_SETS = new RegistryBuilder<>(ARMOR_SET_KEY).sync(true).create();
+    public static final PortCustomRegistration<ArmorSet> ARMOR_SETS =
+            PortRegisterHandler.custom(Lyra.MODID, ARMOR_SET_KEY, maker -> maker.sync(true));
 
-    @SubscribeEvent
-    public static void createRegistry(NewRegistryEvent event) {
-        event.register(ATTACHMENT_ENTITY_TYPES);
-        event.register(ARMOR_SETS);
+    public static Collection<ArmorSet> armorSets() {
+        ForgeRegistry<ArmorSet> registry = RegistryManager.ACTIVE.getRegistry(ARMOR_SET_KEY);
+        return registry == null ? java.util.List.of() : registry.getValues();
+    }
+
+    public static Collection<AttachmentEntityType<? extends AttachmentEntity>> attachmentEntityTypes() {
+        ForgeRegistry<AttachmentEntityType<? extends AttachmentEntity>> registry = RegistryManager.ACTIVE.getRegistry(ATTACHMENT_ENTITY_TYPE_KEY);
+        return registry == null ? java.util.List.of() : registry.getValues();
     }
 }

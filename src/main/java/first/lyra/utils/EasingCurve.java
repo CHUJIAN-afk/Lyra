@@ -180,9 +180,9 @@ public interface EasingCurve {
          */
         public BezierBuilder control(float x, float y) {
             uniformX = false;
-            if (!explicitX.isEmpty() && x <= explicitX.getLast()) {
+            if (!explicitX.isEmpty() && x <= explicitX.get(explicitX.size() - 1)) {
                 throw new IllegalArgumentException(
-                        "控制点 X 必须单调递增：当前 x=" + x + "，前一个 x=" + explicitX.getLast());
+                        "控制点 X 必须单调递增：当前 x=" + x + "，前一个 x=" + explicitX.get(explicitX.size() - 1));
             }
             explicitX.add(x);
             controlY.add(y);

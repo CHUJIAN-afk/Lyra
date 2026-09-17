@@ -119,9 +119,9 @@ public abstract class AttachmentEntity {
                 iEntityCollision.entityCollision(this);
             }
         }
-        historyNodes.addFirst(currentPathNode);
+        historyNodes.add(0, currentPathNode);
         if (historyNodes.size() > 16) {
-            historyNodes.removeLast();
+            historyNodes.remove(historyNodes.size() - 1);
         }
         if (!level.isClientSide() && currentPlannedPath != null && !currentPlannedPath.isFinished()) {
             currentPathNode = currentPlannedPath.advance();
@@ -154,14 +154,14 @@ public abstract class AttachmentEntity {
     public void setPath(List<PathNode> nodes) {
         this.currentPlannedPath = new PlannedPath(nodes);
         if (!nodes.isEmpty()) {
-            this.currentPathNode = nodes.getFirst();
+            this.currentPathNode = nodes.get(0);
         }
     }
 
     public void setPath(PlannedPath plannedPath) {
         List<PathNode> nodes = plannedPath.getNodes();
         if (!nodes.isEmpty()) {
-            this.currentPathNode = nodes.getFirst();
+            this.currentPathNode = nodes.get(0);
         }
     }
 
@@ -318,7 +318,7 @@ public abstract class AttachmentEntity {
         Vec3 currentPos = getPos();
         ArrayList<PathNode> history = getHistoryNodes();
         if (history.size() > 1) {
-            Vec3 rawVel = currentPos.subtract(history.getFirst().pos());
+            Vec3 rawVel = currentPos.subtract(history.get(0).pos());
             if (rawVel.lengthSqr() > 1e-5) {
                 return rawVel.normalize();
             }

@@ -1,8 +1,8 @@
 package first.lyra.common.attachmentEntity;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.level.Level;
+import org.mesdag.portlib.network.PortRegistryFriendlyByteBuf;
+import org.mesdag.portlib.network.codec.PortStreamCodec;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,17 +29,17 @@ public final class SyncFieldDispatcher {
     }
 
     private interface SyncEntry {
-        boolean encode(RegistryFriendlyByteBuf buf, Level level, boolean initialSync);
+        boolean encode(PortRegistryFriendlyByteBuf buf, Level level, boolean initialSync);
 
-        void decode(RegistryFriendlyByteBuf buf, Level level);
+        void decode(PortRegistryFriendlyByteBuf buf, Level level);
     }
 
     private interface FieldEncoder {
-        void encode(RegistryFriendlyByteBuf buf, Level level);
+        void encode(PortRegistryFriendlyByteBuf buf, Level level);
     }
 
     private interface FieldDecoder {
-        void decode(RegistryFriendlyByteBuf buf, Level level);
+        void decode(PortRegistryFriendlyByteBuf buf, Level level);
     }
 
     private static final class FieldSyncEntry implements SyncEntry {
@@ -53,7 +53,7 @@ public final class SyncFieldDispatcher {
         }
 
         @Override
-        public boolean encode(RegistryFriendlyByteBuf buf, Level level, boolean initialSync) {
+        public boolean encode(PortRegistryFriendlyByteBuf buf, Level level, boolean initialSync) {
             int start = buf.writerIndex();
             encoder.encode(buf, level);
             if (!initialSync && matches(buf, start, previousValue)) {
@@ -67,7 +67,7 @@ public final class SyncFieldDispatcher {
             return true;
         }
 
-        private static boolean matches(RegistryFriendlyByteBuf buf, int start, byte[] expected) {
+        private static boolean matches(PortRegistryFriendlyByteBuf buf, int start, byte[] expected) {
             int length = buf.writerIndex() - start;
             if (expected == null || expected.length != length) {
                 return false;
@@ -81,30 +81,30 @@ public final class SyncFieldDispatcher {
         }
 
         @Override
-        public void decode(RegistryFriendlyByteBuf buf, Level level) {
+        public void decode(PortRegistryFriendlyByteBuf buf, Level level) {
             decoder.decode(buf, level);
         }
     }
 
     private final List<SyncEntry> entries = new ArrayList<>();
 
-    public <T> void field(StreamCodec<? super RegistryFriendlyByteBuf, T> codec, Supplier<T> getter, Consumer<T> setter) {
+    public <T> void field(PortStreamCodec<? super PortRegistryFriendlyByteBuf, T> codec, Supplier<T> getter, Consumer<T> setter) {
         entries.add(new FieldSyncEntry((buf, level) -> codec.encode(buf, getter.get()), (buf, level) -> setter.accept(codec.decode(buf))));
     }
 
-    public <T> void field(StreamCodec<? super RegistryFriendlyByteBuf, T> codec, Function<Level, T> getter, BiConsumer<Level, T> setter) {
+    public <T> void field(PortStreamCodec<? super PortRegistryFriendlyByteBuf, T> codec, Function<Level, T> getter, BiConsumer<Level, T> setter) {
         entries.add(new FieldSyncEntry((buf, level) -> codec.encode(buf, getter.apply(level)), (buf, level) -> setter.accept(level, codec.decode(buf))));
     }
 
-    public <T> void field(StreamCodec<? super RegistryFriendlyByteBuf, T> codec, Supplier<T> getter, BiConsumer<Level, T> setter) {
+    public <T> void field(PortStreamCodec<? super PortRegistryFriendlyByteBuf, T> codec, Supplier<T> getter, BiConsumer<Level, T> setter) {
         entries.add(new FieldSyncEntry((buf, level) -> codec.encode(buf, getter.get()), (buf, level) -> setter.accept(level, codec.decode(buf))));
     }
 
-    public <T> void field(StreamCodec<? super RegistryFriendlyByteBuf, T> codec, Function<Level, T> getter, Consumer<T> setter) {
+    public <T> void field(PortStreamCodec<? super PortRegistryFriendlyByteBuf, T> codec, Function<Level, T> getter, Consumer<T> setter) {
         entries.add(new FieldSyncEntry((buf, level) -> codec.encode(buf, getter.apply(level)), (buf, level) -> setter.accept(codec.decode(buf))));
     }
 
-    public void encode(RegistryFriendlyByteBuf buf, Level level, boolean initialSync) {
+    public void encode(PortRegistryFriendlyByteBuf buf, Level level, boolean initialSync) {
         // 位图标记本 tick 实际需要写入的字段，字段值仍保持各自 codec 的完整编码。
         int maskStart = buf.writerIndex();
         int maskSize = (entries.size() + 7) >>> 3;
@@ -119,7 +119,7 @@ public final class SyncFieldDispatcher {
         }
     }
 
-    public void decode(RegistryFriendlyByteBuf buf, Level level) {
+    public void decode(PortRegistryFriendlyByteBuf buf, Level level) {
         if (entries.isEmpty()) {
             return;
         }

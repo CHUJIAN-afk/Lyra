@@ -104,7 +104,7 @@ public class SphereRendererHelper {
      * 最内层相对半径 0~1（内层越小，核心越锐利）。
      */
     public SphereRendererHelper innerRatio(float ratio) {
-        this.innerRatio = Math.clamp(ratio, 0f, 1f);
+        this.innerRatio = net.minecraft.util.Mth.clamp(ratio, 0f, 1f);
         return this;
     }
 
@@ -124,7 +124,7 @@ public class SphereRendererHelper {
         int baseR = FastColor.ARGB32.red(colorRGB);
         int baseG = FastColor.ARGB32.green(colorRGB);
         int baseB = FastColor.ARGB32.blue(colorRGB);
-        int baseA = Math.clamp(Math.round(alpha * 255), 0, 255);
+        int baseA = net.minecraft.util.Mth.clamp(Math.round(alpha * 255), 0, 255);
 
         for (int layer = 0; layer < layers; layer++) {
             // 层级比例: 0=最内层, 1=最外层
@@ -149,7 +149,7 @@ public class SphereRendererHelper {
      */
     private void renderLayer(VertexConsumer consumer, Matrix4f pose, float r,
                              float layerAlpha, int baseR, int baseG, int baseB, int baseA, int sides) {
-        int a = Math.clamp(Math.round(baseA * layerAlpha), 0, 255);
+        int a = net.minecraft.util.Mth.clamp(Math.round(baseA * layerAlpha), 0, 255);
         int vertexColor = FastColor.ARGB32.color(a, baseR, baseG, baseB);
 
         int stacks = Math.max(2, sides / 2);
@@ -191,7 +191,13 @@ public class SphereRendererHelper {
     }
 
     private void emitVertex(VertexConsumer consumer, Matrix4f pose, float x, float y, float z, int color, float u, float v, float nx, float ny, float nz) {
-        consumer.addVertex(pose, x, y, z).setColor(color).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(LightTexture.FULL_BRIGHT).setNormal(nx, ny, nz);
+        consumer.vertex(pose, x, y, z)
+                .color(FastColor.ARGB32.alpha(color), FastColor.ARGB32.red(color), FastColor.ARGB32.green(color), FastColor.ARGB32.blue(color))
+                .uv(u, v)
+                .overlayCoords(OverlayTexture.NO_OVERLAY)
+                .uv2(LightTexture.FULL_BRIGHT)
+                .normal(nx, ny, nz)
+                .endVertex();
     }
 
     private static float mix(float a, float b, float t) {

@@ -4,9 +4,10 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.PackOutput;
-import net.minecraft.data.recipes.RecipeOutput;
+import net.minecraft.data.recipes.FinishedRecipe;
 import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.tags.ItemTagsProvider;
+import net.minecraft.data.tags.TagsProvider;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.ItemTags;
@@ -17,15 +18,16 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.fml.loading.FMLLoader;
-import net.neoforged.neoforge.client.model.generators.ItemModelProvider;
-import net.neoforged.neoforge.common.Tags;
-import net.neoforged.neoforge.common.data.BlockTagsProvider;
-import net.neoforged.neoforge.common.data.ExistingFileHelper;
-import net.neoforged.neoforge.common.data.LanguageProvider;
-import net.neoforged.neoforge.data.event.GatherDataEvent;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraftforge.client.model.generators.ItemModelProvider;
+import net.minecraftforge.common.Tags;
+import net.minecraftforge.common.data.BlockTagsProvider;
+import net.minecraftforge.common.data.ExistingFileHelper;
+import net.minecraftforge.common.data.LanguageProvider;
+import net.minecraftforge.data.event.GatherDataEvent;
+import net.minecraftforge.eventbus.api.IEventBus;
+import net.minecraftforge.fml.loading.FMLLoader;
+import net.minecraftforge.registries.DeferredRegister;
+import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,6 +38,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -47,11 +50,11 @@ public class LyraItemRegistries {
     public final Map<ResourceLocation, List<Function<LootTable, LootPool>>> lootTableData = new HashMap<>();
 
     public final Map<String, String[]> languageGenerate = new HashMap<>();
-    public final List<BiConsumer<HolderLookup.Provider, RecipeOutput>> recipesGenerate = new ArrayList<>();
+    public final List<BiConsumer<HolderLookup.Provider, Consumer<FinishedRecipe>>> recipesGenerate = new ArrayList<>();
     public final Map<TagKey<Item>, List<ItemLike>> itemTagsGenerate = new HashMap<>();
     public final Map<ResourceLocation, BiConsumer<ItemModelProvider, ResourceLocation>> itemModelGenerate = new HashMap<>();
     private final String modid;
-    private final DeferredRegister.Items register;
+    private final DeferredRegister<Item> register;
     private final boolean development;
     private LanguageInit languageInit = null;
 
@@ -62,7 +65,7 @@ public class LyraItemRegistries {
 
     private LyraItemRegistries(String modid) {
         this.modid = modid;
-        this.register = DeferredRegister.createItems(modid);
+        this.register = DeferredRegister.create(ForgeRegistries.ITEMS, modid);
         this.development = !FMLLoader.isProduction();
         REGISTRIES.put(modid, this);
     }
@@ -72,18 +75,15 @@ public class LyraItemRegistries {
     }
 
     public <T extends Item> LyraItemRegisterBuilder<T> build(String name, Function<ResourceLocation, T> function) {
-        return new LyraItemRegisterBuilder<>(this, register.register(name, function));
+        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(modid, name);
+        return new LyraItemRegisterBuilder<>(this, register.register(name, () -> function.apply(id)));
     }
 
     public <T extends Item> LyraItemRegisterBuilder<T> build(String name, Supplier<T> supplier) {
         return build(name, location -> supplier.get());
     }
 
-    public LyraItemRegisterBuilder<Item> build(DeferredRegister.Items register, String name) {
-        return build(name, () -> new Item(new Item.Properties()));
-    }
-
-    public DeferredRegister.Items getRegister() {
+    public DeferredRegister<Item> getRegister() {
         return register;
     }
 
@@ -144,9 +144,9 @@ public class LyraItemRegistries {
                     });
                 }
             });
-            generator.addProvider(server, new RecipeProvider(packOutput, lookupProvider) {
+            generator.addProvider(server, new RecipeProvider(packOutput) {
                 @Override
-                protected void buildRecipes(@NotNull RecipeOutput recipeOutput) {
+                protected void buildRecipes(@NotNull Consumer<FinishedRecipe> recipeOutput) {
                     recipesGenerate.removeIf(generate -> {
                         generate.accept(lookupProvider.join(), recipeOutput);
                         return true;
@@ -163,29 +163,15 @@ public class LyraItemRegistries {
                 @Override
                 protected void addTags(HolderLookup.@NotNull Provider provider) {
                     itemTagsGenerate.forEach((tag, list) -> {
-                        IntrinsicTagAppender<Item> appender = tag(tag);
+                        TagsProvider.TagAppender<Item> appender = tag(tag);
                         list.forEach(itemLike -> {
                             Item item = itemLike.asItem();
                             if (BuiltInRegistries.ITEM.getKey(item).getNamespace().equals(modId)) {
-                                appender.add(item);
+                                appender.add(item.builtInRegistryHolder().key());
                                 if (item instanceof ArmorItem armorItem) {
                                     if (tag == Tags.Items.ARMORS) {
                                         EquipmentSlot equipmentSlot = armorItem.getEquipmentSlot();
-                                        switch (equipmentSlot) {
-                                            case HEAD -> tag(ItemTags.HEAD_ARMOR).add(armorItem);
-                                            case CHEST -> tag(ItemTags.CHEST_ARMOR).add(armorItem);
-                                            case LEGS -> tag(ItemTags.LEG_ARMOR).add(armorItem);
-                                            case FEET -> tag(ItemTags.FOOT_ARMOR).add(armorItem);
-                                        }
-                                    }
-                                    if (tag == ItemTags.ARMOR_ENCHANTABLE) {
-                                        EquipmentSlot equipmentSlot = armorItem.getEquipmentSlot();
-                                        switch (equipmentSlot) {
-                                            case HEAD -> tag(ItemTags.HEAD_ARMOR_ENCHANTABLE).add(armorItem);
-                                            case CHEST -> tag(ItemTags.CHEST_ARMOR_ENCHANTABLE).add(armorItem);
-                                            case LEGS -> tag(ItemTags.LEG_ARMOR_ENCHANTABLE).add(armorItem);
-                                            case FEET -> tag(ItemTags.FOOT_ARMOR_ENCHANTABLE).add(armorItem);
-                                        }
+                                        // 1.20.1 has one armor tag instead of the later per-slot split.
                                     }
                                 }
                             }

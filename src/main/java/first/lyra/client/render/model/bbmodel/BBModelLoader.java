@@ -557,7 +557,7 @@ final class BBModelLoader {
         List<BBModelClip.Segment> x = new ArrayList<>();
         List<BBModelClip.Segment> y = new ArrayList<>();
         List<BBModelClip.Segment> z = new ArrayList<>();
-        Keyframe first = keyframes.getFirst();
+        Keyframe first = keyframes.get(0);
         addSegment(x, first.pre()[0], first.pre()[0], first.time() * 20d, "linear");
         addSegment(y, first.pre()[1], first.pre()[1], first.time() * 20d, "linear");
         addSegment(z, first.pre()[2], first.pre()[2], first.time() * 20d, "linear");
@@ -572,7 +572,7 @@ final class BBModelLoader {
         List<BBModelClip.Segment> wrapY = new ArrayList<>();
         List<BBModelClip.Segment> wrapZ = new ArrayList<>();
         double firstTime = first.time() * 20d;
-        double wrapStart = keyframes.getLast().time() * 20d;
+        double wrapStart = keyframes.get(keyframes.size() - 1).time() * 20d;
         double wrapLength = loop ? animationLength - wrapStart + firstTime : 0;
         boolean seamFallback = false;
         if (loop && wrapLength <= 1.0E-6) {
@@ -642,10 +642,10 @@ final class BBModelLoader {
         if ("catmullrom".equalsIgnoreCase(interpolation)) {
             double before = index >= 2
                     ? transform(channel, axis, keyframes.get(index - 2).post()[axis])
-                    : loop ? transform(channel, axis, keyframes.getLast().post()[axis]) : start;
+                    : loop ? transform(channel, axis, keyframes.get(keyframes.size() - 1).post()[axis]) : start;
             double after = index + 1 < keyframes.size()
                     ? transform(channel, axis, keyframes.get(index + 1).pre()[axis])
-                    : loop ? transform(channel, axis, keyframes.getFirst().pre()[axis]) : end;
+                    : loop ? transform(channel, axis, keyframes.get(0).pre()[axis]) : end;
             addSampledTransition(segments, length, value -> catmullRom(before, start, end, after, value));
         } else if ("bezier".equalsIgnoreCase(interpolation)) {
             double interval = Math.max(1.0E-6, current.time() - previous.time());
@@ -676,8 +676,8 @@ final class BBModelLoader {
             String channel,
             double length
     ) {
-        Keyframe previous = keyframes.getLast();
-        Keyframe current = keyframes.getFirst();
+        Keyframe previous = keyframes.get(keyframes.size() - 1);
+        Keyframe current = keyframes.get(0);
         double start = transform(channel, axis, previous.post()[axis]);
         double end = transform(channel, axis, current.pre()[axis]);
         String interpolation = previous.interpolation();
@@ -732,7 +732,7 @@ final class BBModelLoader {
             }
             segmentStart = segmentEnd;
         }
-        return segments.getLast().endValue();
+        return segments.get(segments.size() - 1).endValue();
     }
 
     private static void addSampledTransition(

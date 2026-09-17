@@ -2,6 +2,7 @@ package first.lyra.common.attachmentEntity;
 
 import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
@@ -68,7 +69,7 @@ public abstract class MomentumAttachmentEntity extends AttachmentEntity implemen
 
     @Override
     public void setDrag(float drag) {
-        this.drag = Math.clamp(drag, 0, 1);
+        this.drag = Mth.clamp(drag, 0, 1);
     }
 
     @Override
