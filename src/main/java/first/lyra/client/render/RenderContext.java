@@ -3,22 +3,8 @@ package first.lyra.client.render;
 import first.lyra.client.render.trail.ModelConfig;
 import first.lyra.client.render.trail.TrailConfig;
 import first.lyra.common.attachmentEntity.AttachmentEntity;
+import first.lyra.common.attachmentEntity.PathNode;
 
-/**
- * 渲染上下文，封装附件实体渲染所需的所有参数和配置。
- * <p>
- * 采用强类型配置分离模式：
- * <ul>
- *   <li>{@link TrailConfig} - 拖尾渲染配置（通过子类区分类型）</li>
- *   <li>{@link ModelConfig} - 模型渲染配置</li>
- * </ul>
- * </p>
- *
- * @param <T> 附件实体类型
- * @see TrailConfig
- * @see ModelConfig
- * @see AbstractAttachmentEntityRenderer
- */
 public class RenderContext<T extends AttachmentEntity> {
 
     /**

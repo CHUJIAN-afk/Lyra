@@ -28,21 +28,9 @@ public class LyraAttachmentRegister {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<TargetCache>> TargetCache =
             Register.register("target_cache", () -> AttachmentType.builder(TargetCache::new).build());
 
-    /**
-     * 玩家盔甲套装生效状态附件（装备变化事件维护，不同步）
-     */
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ArmorSetData>> ArmorSetData =
-            Register.register("armor_set_data", () -> AttachmentType.builder(ArmorSetData::new).build());
-
-    /**
-     * Level 级批量粒子累积附件（仅服务端使用，不同步）
-     */
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ParticlesData>> BatchedParticles =
             Register.register("batched_particles", () -> AttachmentType.builder(ParticlesData::new).build());
 
-    /**
-     * Level 级伤害数字累积附件（服务端累积，客户端接收渲染，不同步）
-     */
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<DamageInfoData>> DamageInfoData =
             Register.register("damage_info_data", () -> AttachmentType.builder(DamageInfoData::new).build());
 
