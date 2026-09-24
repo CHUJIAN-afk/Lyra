@@ -133,10 +133,10 @@ public abstract class AttachmentEntity implements GeoAnimatable {
         if (!level.isClientSide()) {
             tickCount++;
             if (this instanceof IBlockCollision<?> blockCollision) {
-                blockCollision.blockCollision(this);
+                blockCollision.blockCollision();
             }
             if (this instanceof IEntityCollision<?> iEntityCollision) {
-                iEntityCollision.entityCollision(this);
+                iEntityCollision.entityCollision();
             }
         }
         historyNodes.addFirst(currentPathNode);
