@@ -1,7 +1,6 @@
 package first.lyra.register;
 
 import first.lyra.Lyra;
-import first.lyra.common.armorSet.ArmorSet;
 import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import net.minecraft.core.Registry;
@@ -18,13 +17,8 @@ public class LyraRegistries {
 
     public static final Registry<AttachmentEntityType<? extends AttachmentEntity>> ATTACHMENT_ENTITY_TYPES = new RegistryBuilder<>(ATTACHMENT_ENTITY_TYPE_KEY).sync(true).create();
 
-    private static final ResourceKey<Registry<ArmorSet>> ARMOR_SET_KEY = ResourceKey.createRegistryKey(Lyra.rl("armor_set"));
-
-    public static final Registry<ArmorSet> ARMOR_SETS = new RegistryBuilder<>(ARMOR_SET_KEY).sync(true).create();
-
     @SubscribeEvent
     public static void createRegistry(NewRegistryEvent event) {
         event.register(ATTACHMENT_ENTITY_TYPES);
-        event.register(ARMOR_SETS);
     }
 }

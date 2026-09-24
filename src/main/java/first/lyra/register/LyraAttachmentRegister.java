@@ -10,14 +10,18 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 public class LyraAttachmentRegister {
 
-    private static final DeferredRegister<AttachmentType<?>> Register =
-            DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, Lyra.MODID);
+    private static final DeferredRegister<AttachmentType<?>> Register = DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, Lyra.MODID);
 
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<AttachmentEntityData>> EntityData =
             Register.register("attachment_entity_data", () -> AttachmentType.builder(AttachmentEntityData::new)
-                    .sync(new AttachmentEntityData())
+                    .sync(new AttachmentEntityData.SyncHandler())
                     .build()
             );
+
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SummonMarkTracker>> SummonMarkData =
+            Register.register("summon_mark_tracker", () -> AttachmentType.builder(SummonMarkTracker::new)
+                    .sync(new SummonMarkTracker.SyncHandler())
+                    .build());
 
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<InvincibleData>> InvincibleData =
             Register.register("invincible_data", () -> AttachmentType.builder(InvincibleData::new).build());

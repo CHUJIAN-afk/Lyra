@@ -51,7 +51,7 @@ public class LyraItemRegisterBuilder<T extends Item> {
     }
 
     public LyraItemRegisterBuilder<T> itemLanguageTooltip(int index, String en, String zh) {
-        lyraItemRegistries.language("item." + register.getId().toLanguageKey() + ".tooltip." + index, en, zh);
+        lyraItemRegistries.language("item." + register.getId().toLanguageKey() + ".lyra_tooltip." + index, en, zh);
         return this;
     }
 

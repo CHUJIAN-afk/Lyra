@@ -8,44 +8,41 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
 @EventBusSubscriber(modid = Lyra.MODID)
 public class HealthData {
 
+    private final LivingEntity owner;
     private float amount = 0;
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void healthRegenTick(EntityTickEvent.Post event) {
-        if (event.getEntity() instanceof LivingEntity living && !living.level().isClientSide()) {
-            AttributeInstance instance = living.getAttribute(LyraAttributeRegister.HealthRegen);
-            if (instance != null && instance.getValue() != 0) {
-                float amount = living.getData(LyraAttachmentRegister.HealthData).getAmount();
-                amount += (float) (instance.getValue() / 20);
-                if (living.tickCount % 10 == 0) {
-                    if (amount > 1) {
-                        float heal = amount - 1;
-                        living.heal(heal);
-                        amount -= heal;
-                    } else if (amount < -1) {
-                        float damage = -1 - amount;
-                        InvincibleData.attack(living)
-                                .damageAmount(damage)
-                                .global()
-                                .apply();
-                        amount += damage;
-                    }
-                }
-                living.getData(LyraAttachmentRegister.HealthData).setAmount(amount);
-            }
+    public HealthData(IAttachmentHolder holder) {
+        if (holder instanceof LivingEntity living) {
+            this.owner = living;
+        } else {
+            throw new IllegalArgumentException(holder + " is not a valid HealthData");
         }
     }
 
-    public float getAmount() {
-        return amount;
-    }
-
-    public void setAmount(float amount) {
-        this.amount = amount;
+    public void tick() {
+        AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.HealthRegen);
+        if (instance != null && instance.getValue() != 0) {
+            amount += (float) (instance.getValue() / 20);
+            if (owner.tickCount % 10 == 0) {
+                if (amount > 1) {
+                    float heal = amount - 1;
+                    owner.heal(heal);
+                    amount -= heal;
+                } else if (amount < -1) {
+                    float damage = -1 - amount;
+                    InvincibleData.attack(owner)
+                            .damageAmount(damage)
+                            .global()
+                            .apply();
+                    amount += damage;
+                }
+            }
+        }
     }
 }
