@@ -14,10 +14,7 @@ import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 public class SummonMarkTracker {
 
@@ -68,6 +65,7 @@ public class SummonMarkTracker {
             float additionalDamage = 0;
             float additionalArmorPierce = 0;
             float criticalHitRate = 0;
+            float criticalDamage = 2;
             for (SummonMarkType summonMarkType : marks.keySet()) {
                 if (summonMarkType.additionalDamage() > additionalDamage) {
                     additionalDamage = summonMarkType.additionalDamage();
@@ -82,7 +80,7 @@ public class SummonMarkTracker {
             damage += additionalDamage;
             source.setArmorPierce(source.getArmorPierce() + additionalArmorPierce);
             if (criticalHitRate > owner.getRandom().nextFloat()) {
-                damage *= 2;
+                damage *= criticalDamage;
             }
         }
         return damage;
@@ -90,6 +88,10 @@ public class SummonMarkTracker {
 
     public Player getOwner() {
         return owner;
+    }
+
+    public Set<SummonMarkType> getTypes() {
+        return marks.keySet();
     }
 
     public List<SummonMarkInstance> getSummonMarkInstances() {

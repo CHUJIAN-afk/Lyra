@@ -6,6 +6,7 @@ import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
@@ -37,6 +38,7 @@ public class TargetCache {
 
     private final Int2BooleanOpenHashMap visibilityCache = new Int2BooleanOpenHashMap();
     private final Int2BooleanOpenHashMap targetCache = new Int2BooleanOpenHashMap();
+    private final Int2IntOpenHashMap hurterHistory = new Int2IntOpenHashMap();
     private final Int2FloatOpenHashMap distanceCache = new Int2FloatOpenHashMap();
     private final Long2ObjectOpenHashMap<List<LivingEntity>> spatialGroups = new Long2ObjectOpenHashMap<>();
     private final Long2ObjectOpenHashMap<LevelChunk> chunkCache = new Long2ObjectOpenHashMap<>();
@@ -51,31 +53,32 @@ public class TargetCache {
             throw new IllegalArgumentException(owner + " is not a valid TargetCache");
         }
     }
+
     public void tick() {
         this.serverLevel = owner.serverLevel();
         visibilityCache.clear();
         targetCache.clear();
+        hurterHistory.replaceAll((key, value) -> value - 1);
+        hurterHistory.values().removeIf(value -> value <= 0);
         distanceCache.clear();
         spatialGroups.clear();
         chunkCache.clear();
     }
 
+    public void record(LivingEntity target, int time) {
+        hurterHistory.put(target.getUUID().hashCode(), time);
+    }
+
     public boolean isTarget(@Nullable LivingEntity target) {
         if (target != null && owner != target && target.isAlive()) {
-            return targetCache.computeIfAbsent(owner.getUUID().hashCode() + target.getUUID().hashCode(), k -> {
+            return targetCache.computeIfAbsent(target.getUUID().hashCode(), k -> {
                 if (target instanceof Enemy) {
                     return true;
                 }
                 if (target instanceof Targeting targeting && targeting.getTarget() == owner) {
                     return true;
                 }
-                if (InvincibleData.get(target).hasAttack(owner.getUUID())) {
-                    return true;
-                }
-                if (InvincibleData.get(owner).hasAttack(target.getUUID())) {
-                    return true;
-                }
-                return false;
+                return hurterHistory.containsKey(target.getUUID().hashCode());
             });
         }
         return false;

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.IntFunction;
 
+@Deprecated
 final class BBModelCube {
 
     private record Vertex(float x, float y, float z, float u, float v) {

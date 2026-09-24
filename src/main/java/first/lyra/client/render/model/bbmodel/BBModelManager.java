@@ -18,6 +18,7 @@ import org.slf4j.Logger;
 import java.io.Reader;
 import java.util.*;
 
+@Deprecated
 public final class BBModelManager extends SimplePreparableReloadListener<BBModelManager.PreparedModels> {
 
     private static final Logger LOGGER = LogUtils.getLogger();

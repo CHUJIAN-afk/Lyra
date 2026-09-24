@@ -11,6 +11,7 @@ import java.util.List;
  * 加载时统一乘以 20，与旧 {@code GeoSideloader} 的 tick 域保持一致。
  * </p>
  */
+@Deprecated
 final class AnimatedClip {
 
     private final String name;

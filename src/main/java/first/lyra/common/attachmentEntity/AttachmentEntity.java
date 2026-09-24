@@ -1,6 +1,6 @@
 package first.lyra.common.attachmentEntity;
 
-import first.lyra.common.attachment.InvincibleData;
+import first.lyra.common.attachment.ImmunityData;
 import first.lyra.common.attachment.TargetCache;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.utils.LyraStreamCodecs;
@@ -82,12 +82,13 @@ public abstract class AttachmentEntity implements GeoAnimatable {
         return owner.getData(LyraAttachmentRegister.TargetCache);
     }
 
-    public void attack(LivingEntity target, float damageAmount, int invincibleTime) {
-        InvincibleData.attack(target)
-                .damageSource(getDamageSource())
-                .damageAmount(damageAmount)
-                .invincibleTime(invincibleTime)
-                .apply();
+    public boolean attack(LivingEntity target, float amount, int tick) {
+        ImmunityData data = ImmunityData.get(target);
+        if (!data.isActive(getUuid()) && data.attack(getDamageSource(), amount)) {
+            data.record(getUuid(), tick);
+            return true;
+        }
+        return false;
     }
 
     public void copyAttributes(AttachmentEntity other) {

@@ -19,6 +19,7 @@ import net.minecraft.resources.ResourceLocation;
  *         .render(poseStack, bufferSource);
  * }</pre>
  */
+@Deprecated
 public final class GeoRenderer {
 
     private GeoRenderer() {

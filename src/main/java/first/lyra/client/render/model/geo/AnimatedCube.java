@@ -16,6 +16,7 @@ import java.util.List;
  * 烘焙后的长方体。面、UV、法线均在 cube 局部空间生成，
  * 渲染时只做 cube pivot 旋转并交给当前骨骼 PoseStack。
  */
+@Deprecated
 final class AnimatedCube {
 
     private record Vertex(float x, float y, float z, float u, float v) {

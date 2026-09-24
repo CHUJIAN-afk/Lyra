@@ -11,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 
+@Deprecated
 public final class BBModelRenderOptions {
 
     private final ResourceLocation modelId;

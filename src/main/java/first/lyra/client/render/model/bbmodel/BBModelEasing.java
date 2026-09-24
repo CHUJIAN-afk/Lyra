@@ -2,6 +2,7 @@ package first.lyra.client.render.model.bbmodel;
 
 import java.util.Locale;
 
+@Deprecated
 final class BBModelEasing {
 
     private BBModelEasing() {

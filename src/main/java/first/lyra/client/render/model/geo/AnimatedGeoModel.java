@@ -17,6 +17,7 @@ import java.util.Map;
  * 采样动画后由 {@link #render} 递归写入顶点。
  * </p>
  */
+@Deprecated
 public final class AnimatedGeoModel {
 
     /** 资源基础 id，例如 summoner:laser_minigun */

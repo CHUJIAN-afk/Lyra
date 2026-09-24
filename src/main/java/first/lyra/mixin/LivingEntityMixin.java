@@ -4,10 +4,10 @@ import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.sugar.Local;
+import first.lyra.common.attachment.SummonMarkTracker;
 import first.lyra.common.attachmentEntity.AttachmentEntityDamageSource;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.projectile.Projectile;
-import first.lyra.mixinHandler.MixinHandler;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.server.level.ServerLevel;
@@ -101,9 +101,15 @@ public abstract class LivingEntityMixin {
 
     @WrapMethod(method = "hurt")
     public boolean hurt(DamageSource source, float amount, Operation<Boolean> original) {
-        if (source instanceof AttachmentEntityDamageSource damageSource && damageSource.getAttachmentEntity() instanceof Minion minion) {
-            LivingEntity owner = minion.getOwner();
-            amount = MixinHandler.getModifyDamage((LivingEntity) (Object) this, owner, minion, amount, damageSource);
+        if (source instanceof AttachmentEntityDamageSource damageSource) {
+            Player owner = damageSource.getOwner();
+            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonDamage);
+            amount *= instance != null ? (float) instance.getValue() : 1;
+            amount *= 0.85f + owner.getRandom().nextFloat() * 0.3f;
+            SummonMarkTracker data = owner.getData(LyraAttachmentRegister.SummonMarkData);
+            if (data.isTarget(LivingEntity.class.cast(this))) {
+                amount = data.getDamageModifier(damageSource, amount);
+            }
         }
         return original.call(source, amount);
     }

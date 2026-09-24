@@ -2,28 +2,13 @@ package first.lyra.register;
 
 import first.lyra.Lyra;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.event.entity.EntityAttributeModificationEvent;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class LyraAttributeRegister {
-
-    public static void handler(EntityAttributeModificationEvent event) {
-        for (EntityType<? extends LivingEntity> type : event.getTypes()) {
-            event.add(type, LyraAttributeRegister.HealthRegen);
-        }
-        event.add(EntityType.PLAYER, LyraAttributeRegister.MinionMaxCount);
-        event.add(EntityType.PLAYER, LyraAttributeRegister.SentryMaxCount);
-        event.add(EntityType.PLAYER, LyraAttributeRegister.SummonDamage);
-        event.add(EntityType.PLAYER, LyraAttributeRegister.SummonKnockback);
-        event.add(EntityType.PLAYER, LyraAttributeRegister.SummonArmorPierce);
-        event.add(EntityType.PLAYER, LyraAttributeRegister.SummonSearchRange);
-    }
 
     private static final DeferredRegister<Attribute> Register = DeferredRegister.create(Registries.ATTRIBUTE, Lyra.MODID);
 

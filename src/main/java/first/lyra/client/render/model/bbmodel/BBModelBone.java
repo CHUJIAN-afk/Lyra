@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntFunction;
 
+@Deprecated
 final class BBModelBone {
 
     private final String name;

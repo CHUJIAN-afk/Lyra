@@ -4,6 +4,7 @@ import net.minecraft.util.Mth;
 
 import java.util.List;
 
+@Deprecated
 final class BBModelClip {
 
     private final String name;

@@ -16,6 +16,7 @@ import java.util.Set;
  * 动画模型渲染请求。经 {@code LyraModelRenderer.geo(...)} 创建，
  * 所有方法返回 this 以便链式使用。
  */
+@Deprecated
 public final class GeoRenderOptions {
 
     private final ResourceLocation modelId;

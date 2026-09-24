@@ -22,6 +22,7 @@ import java.util.Map;
  * 纹理默认推导为 {@code lyra_model/geo/foo/foo.png}。
  * </p>
  */
+@Deprecated
 public final class GeoModelManager extends SimpleJsonResourceReloadListener {
 
     private static final Logger LOGGER = LogUtils.getLogger();

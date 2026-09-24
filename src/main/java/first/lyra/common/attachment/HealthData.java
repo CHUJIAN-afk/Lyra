@@ -1,17 +1,12 @@
 package first.lyra.common.attachment;
 
-import first.lyra.Lyra;
-import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
+import first.lyra.register.LyraDamageRegister;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
-import net.neoforged.neoforge.event.tick.EntityTickEvent;
 
-@EventBusSubscriber(modid = Lyra.MODID)
 public class HealthData {
 
     private final LivingEntity owner;
@@ -36,10 +31,8 @@ public class HealthData {
                     amount -= heal;
                 } else if (amount < -1) {
                     float damage = -1 - amount;
-                    InvincibleData.attack(owner)
-                            .damageAmount(damage)
-                            .global()
-                            .apply();
+                    // 自伤不来自 AttachmentEntity，直接走 ImmunityData：清零无敌帧后结算，不写入无敌记录
+                    ImmunityData.get(owner).attack(LyraDamageRegister.getDamageSource(DamageTypes.GENERIC, owner.level()), damage);
                     amount += damage;
                 }
             }

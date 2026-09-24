@@ -5,6 +5,7 @@ import java.util.Locale;
 /**
  * Gecko/Bedrock easing 名称的轻量实现，不依赖 GeckoLib。
  */
+@Deprecated
 final class GeoEasing {
 
     private GeoEasing() {

@@ -15,6 +15,7 @@ import java.util.List;
  * 动画 keyframe 的 rotation 也按相同规则转换。
  * </p>
  */
+@Deprecated
 public final class AnimatedBone {
 
     private final String name;

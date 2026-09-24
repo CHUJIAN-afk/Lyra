@@ -1,8 +1,6 @@
 package first.lyra;
 
-import first.lyra.client.ClientEvent;
 import first.lyra.client.config.ClientConfig;
-import first.lyra.common.Event;
 import first.lyra.register.*;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
@@ -25,13 +23,12 @@ public class Lyra {
 
     public Lyra(IEventBus eventBus, Dist dist, ModContainer container) {
         Registries.register(eventBus, null);
-        Event.init(eventBus);
+        // Event / ClientEvent 通过 @EventBusSubscriber 注解自动注册，无需手动挂总线
         LyraAttachmentRegister.register(eventBus);
         LyraAttributeRegister.register(eventBus);
         LyraDataComponentRegister.register(eventBus);
         LyraParticleRegister.register(eventBus);
         if (dist.isClient()) {
-            ClientEvent.init(eventBus);
             container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.Spec);
             container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
         }

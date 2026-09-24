@@ -35,6 +35,7 @@ public final class LyraModelRenderer {
         return JsonModelRenderer.standaloneLocation(Objects.requireNonNull(modelId, "modelId"));
     }
 
+    @Deprecated
     public static GeoRenderOptions geo(ResourceLocation modelId) {
         return new GeoRenderOptions(Objects.requireNonNull(modelId, "modelId"));
     }
@@ -48,6 +49,7 @@ public final class LyraModelRenderer {
         return virtualEntity(Objects.requireNonNull(entityType, "Unknown entity type " + entityTypeId), partialTick);
     }
 
+    @Deprecated
     public static BBModelRenderOptions bbmodel(ResourceLocation modelId) {
         return new BBModelRenderOptions(Objects.requireNonNull(modelId, "modelId"));
     }

@@ -16,6 +16,7 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import software.bernie.geckolib.renderer.GeoRenderer;
 
+@Deprecated
 public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntity> implements IAttachmentEntityRenderer<T> {
 
     protected abstract RenderContext<T> createContext(T entity, float partialTick);

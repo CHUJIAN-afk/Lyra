@@ -16,6 +16,7 @@ import org.jetbrains.annotations.NotNull;
  * 所有通过此缓冲源获取的 VertexConsumer 都会应用包装。
  * </p>
  */
+@Deprecated
 public class ColorBufferSource implements MultiBufferSource {
 
     private final MultiBufferSource inner;

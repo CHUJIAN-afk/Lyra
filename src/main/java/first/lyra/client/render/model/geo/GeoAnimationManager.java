@@ -17,6 +17,7 @@ import java.util.*;
  * 文件 {@code assets/ns/lyra_model/geo/foo/foo.animation.json} 对应模型 id {@code ns:foo}。
  * </p>
  */
+@Deprecated
 public final class GeoAnimationManager extends SimpleJsonResourceReloadListener {
 
     private static final Logger LOGGER = LogUtils.getLogger();

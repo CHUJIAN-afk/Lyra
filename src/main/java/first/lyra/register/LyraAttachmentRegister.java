@@ -23,6 +23,9 @@ public class LyraAttachmentRegister {
                     .sync(new SummonMarkTracker.SyncHandler())
                     .build());
 
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ImmunityData>> ImmunityData =
+            Register.register("immunity_data", () -> AttachmentType.builder(ImmunityData::new).build());
+
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<InvincibleData>> InvincibleData =
             Register.register("invincible_data", () -> AttachmentType.builder(InvincibleData::new).build());
 

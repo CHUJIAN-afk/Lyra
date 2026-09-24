@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
+@Deprecated
 final class BBModelLoader {
 
     private static final Logger LOGGER = LogUtils.getLogger();

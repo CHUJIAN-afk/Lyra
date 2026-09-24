@@ -113,7 +113,7 @@ public abstract class Minion extends AttachmentEntity {
     }
 
     public void setTarget(LivingEntity target) {
-        if (this.target != target) {
+        if (this.target != null && this.target != target) {
             setTargetChange(true);
         }
         this.target = target;

@@ -14,6 +14,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
+@Deprecated
 public class InvincibleData {
 
     public static void handler(LivingDamageEvent.Post event) {
