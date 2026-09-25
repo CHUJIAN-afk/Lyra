@@ -1,7 +1,5 @@
 package first.lyra.client.render.model;
 
-import first.lyra.client.render.model.bbmodel.BBModelRenderOptions;
-import first.lyra.client.render.model.geo.GeoRenderOptions;
 import first.lyra.client.render.model.json.JsonModelRenderOptions;
 import first.lyra.client.render.model.json.JsonModelRenderer;
 import first.lyra.client.render.model.virtual.VirtualEntityRenderOptions;
@@ -10,47 +8,29 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 
-import java.util.Objects;
-
-/**
- * Unified entry point for all Lyra model renderers.
- *
- * <p>Each factory returns a module-specific options type, so a caller can only
- * use operations supported by that model format.</p>
- */
 public final class LyraModelRenderer {
 
     private LyraModelRenderer() {
     }
 
     public static JsonModelRenderOptions json(ModelResourceLocation model) {
-        return new JsonModelRenderOptions(Objects.requireNonNull(model, "model"));
+        return new JsonModelRenderOptions(model);
     }
 
     public static JsonModelRenderOptions json(ResourceLocation modelId) {
-        return new JsonModelRenderOptions(JsonModelRenderer.standaloneLocation(Objects.requireNonNull(modelId, "modelId")));
+        return new JsonModelRenderOptions(JsonModelRenderer.standaloneLocation(modelId));
     }
 
     public static ModelResourceLocation jsonLocation(ResourceLocation modelId) {
-        return JsonModelRenderer.standaloneLocation(Objects.requireNonNull(modelId, "modelId"));
-    }
-
-    @Deprecated
-    public static GeoRenderOptions geo(ResourceLocation modelId) {
-        return new GeoRenderOptions(Objects.requireNonNull(modelId, "modelId"));
+        return JsonModelRenderer.standaloneLocation(modelId);
     }
 
     public static VirtualEntityRenderOptions virtualEntity(EntityType<?> entityType, float partialTick) {
-        return new VirtualEntityRenderOptions(Objects.requireNonNull(entityType, "entityType"), partialTick);
+        return new VirtualEntityRenderOptions(entityType, partialTick);
     }
 
     public static VirtualEntityRenderOptions virtualEntity(ResourceLocation entityTypeId, float partialTick) {
-        EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(Objects.requireNonNull(entityTypeId, "entityTypeId"));
-        return virtualEntity(Objects.requireNonNull(entityType, "Unknown entity type " + entityTypeId), partialTick);
-    }
-
-    @Deprecated
-    public static BBModelRenderOptions bbmodel(ResourceLocation modelId) {
-        return new BBModelRenderOptions(Objects.requireNonNull(modelId, "modelId"));
+        EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(entityTypeId);
+        return virtualEntity(entityType, partialTick);
     }
 }
