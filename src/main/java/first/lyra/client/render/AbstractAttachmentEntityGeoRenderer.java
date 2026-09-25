@@ -3,12 +3,16 @@ package first.lyra.client.render;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import first.lyra.client.render.trail.ModelConfig;
+import first.lyra.client.render.trail.TrailConfig;
 import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.attachmentEntity.PathNode;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -22,6 +26,7 @@ import software.bernie.geckolib.util.Color;
 import java.util.List;
 import java.util.function.Function;
 
+@SuppressWarnings("UnstableApiUsage")
 public abstract class AbstractAttachmentEntityGeoRenderer<T extends AttachmentEntity> implements IAttachmentEntityRenderer<T>, GeoRenderer<T> {
 
     protected final AttachmentEntityGeoModel model;
@@ -37,57 +42,67 @@ public abstract class AbstractAttachmentEntityGeoRenderer<T extends AttachmentEn
         this.renderer = new AttachmentEntityGeoRenderer(this.model);
     }
 
-    public final class GeoRenderContext {
-        public final T entity;
-        public final PathNode visualNode;
-        public final Color color;
-        public final float partialTick;
-        public final int packedLight;
-        public final RenderContext<T> renderContext;
-
-        public GeoRenderContext(T entity, PathNode visualNode, Color color, float partialTick, int packedLight, RenderContext<T> renderContext) {
-            this.entity = entity;
-            this.visualNode = visualNode;
-            this.color = color;
-            this.partialTick = partialTick;
-            this.packedLight = packedLight;
-            this.renderContext = renderContext;
-        }
+    protected GeoRenderContext createContext(T entity, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, int packedLight, PathNode visualNode) {
+        Color color = Color.ofARGB(getAlpha(visualNode.pos(), entity.getOwner().getEyePosition(partialTick)), 1, 1, 1);
+        return new GeoRenderContext(entity, visualNode, color, partialTick, packedLight, null, null);
     }
 
-    protected abstract GeoRenderContext createContext(T entity, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, int packedLight, PathNode visualNode);
+    protected void render(PoseStack poseStack, MultiBufferSource bufferSource) {
+    }
 
     @Override
     public void render(T entity, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, int packedLight, PathNode visualNode) {
         context = createContext(entity, poseStack, bufferSource, partialTick, packedLight, visualNode);
         if (context != null) {
             model.resolve();
-            if (context.renderContext.hasTrail()) {
-                context.renderContext.trail.render(entity, poseStack, bufferSource, partialTick, visualNode, LyraRenderTypes.getTrail());
+            if (context.trail != null && context.trail.timer > 0) {
+                context.trail.render(entity, poseStack, bufferSource, partialTick, visualNode, LyraRenderTypes.getTrail());
             }
             modelModify(poseStack, bufferSource);
         }
     }
 
+    protected float getAlpha(Vec3 visualPos, Vec3 eyePos) {
+        Minecraft minecraft = Minecraft.getInstance();
+        Player player = minecraft.player;
+        if (player != null && minecraft.options.getCameraType().isFirstPerson()) {
+            double distance = visualPos.distanceTo(eyePos);
+            float minDistance = 0.5f;
+            float maxDistance = 4.0f;
+            if (distance <= minDistance) {
+                return 0.0f;
+            }
+            if (distance >= maxDistance) {
+                return 1.0f;
+            }
+            float alpha = (float) ((distance - minDistance) / (maxDistance - minDistance));
+            return Math.clamp(alpha, 0.102f, 1.0f);
+        }
+        return 1.0f;
+    }
+
     protected void modelModify(PoseStack poseStack, MultiBufferSource bufferSource) {
-        ModelConfig<T> model = context.renderContext.model;
-        PathNode visualNode = context.visualNode;
-        T entity = context.entity;
-        float partialTick = context.partialTick;
-        int packedLight = context.packedLight;
-        poseStack.pushPose();
-        poseStack.mulPose(new Quaternionf()
-                                  .mul(Axis.YN.rotationDegrees(visualNode.yaw()))
-                                  .mul(Axis.XP.rotationDegrees(visualNode.pitch()))
-                                  .mul(Axis.ZP.rotationDegrees(visualNode.roll()))
-                                  .mul(Axis.YN.rotationDegrees(model.yawOffset))
-                                  .mul(Axis.XP.rotationDegrees(model.pitchOffset))
-                                  .mul(Axis.ZP.rotationDegrees(model.rollOffset)));
-        poseStack.scale(model.scale, model.scale, model.scale);
-        poseStack.translate(model.translateX, model.translateY, model.translateZ);
-        RenderType renderType = getRenderType(entity, getTextureLocation(entity), bufferSource, partialTick);
-        defaultRender(poseStack, entity, bufferSource, renderType, renderType != null ? bufferSource.getBuffer(renderType) : null, 0.0F, partialTick, packedLight);
-        poseStack.popPose();
+        GeoRenderContext.ModelContext modelContext = context.modelContext;
+        if (modelContext != null) {
+            PathNode visualNode = context.visualNode;
+            T entity = context.entity;
+            float partialTick = context.partialTick;
+            int packedLight = context.packedLight;
+            poseStack.pushPose();
+            poseStack.mulPose(new Quaternionf()
+                                      .mul(Axis.YN.rotationDegrees(visualNode.yaw()))
+                                      .mul(Axis.XP.rotationDegrees(visualNode.pitch()))
+                                      .mul(Axis.ZP.rotationDegrees(visualNode.roll()))
+                                      .mul(Axis.YN.rotationDegrees(modelContext.yawOffset))
+                                      .mul(Axis.XP.rotationDegrees(modelContext.pitchOffset))
+                                      .mul(Axis.ZP.rotationDegrees(modelContext.rollOffset)));
+            poseStack.scale(modelContext.scaleX, modelContext.scaleY, modelContext.scaleZ);
+            poseStack.translate(modelContext.translateX, modelContext.translateY, modelContext.translateZ);
+            RenderType renderType = getRenderType(entity, getTextureLocation(entity), bufferSource, partialTick);
+            renderer.render(poseStack, entity, bufferSource, renderType, renderType != null ? bufferSource.getBuffer(renderType) : null, packedLight, partialTick);
+            render(poseStack, bufferSource);
+            poseStack.popPose();
+        }
     }
 
     @Override
@@ -97,7 +112,7 @@ public abstract class AbstractAttachmentEntityGeoRenderer<T extends AttachmentEn
 
     @Override
     public RenderType getRenderType(T animatable, ResourceLocation texture, MultiBufferSource bufferSource, float partialTick) {
-        return RenderType.entityTranslucent(texture);
+        return RenderType.entityTranslucentCull(texture);
     }
 
     @Override
@@ -205,6 +220,66 @@ public abstract class AbstractAttachmentEntityGeoRenderer<T extends AttachmentEn
         @Override
         public ResourceLocation getAnimationResource(T animatable) {
             return animation;
+        }
+    }
+
+    public final class GeoRenderContext {
+        public final @NotNull T entity;
+        public final @NotNull PathNode visualNode;
+        public @NotNull Color color;
+        public final float partialTick;
+        public int packedLight;
+        public @Nullable TrailConfig<T, ?> trail;
+        public @Nullable ModelContext modelContext;
+
+        public GeoRenderContext(@NotNull T entity, @NotNull PathNode visualNode, @NotNull Color color, float partialTick, int packedLight, @Nullable TrailConfig<T, ?> trail, @Nullable ModelContext modelContext) {
+            this.entity = entity;
+            this.visualNode = visualNode;
+            this.color = color;
+            this.partialTick = partialTick;
+            this.packedLight = packedLight;
+            this.trail = trail;
+            this.modelContext = modelContext;
+        }
+
+        public static final class ModelContext {
+            public float scaleX = 1.0F;
+            public float scaleY = 1.0F;
+            public float scaleZ = 1.0F;
+            public float translateX = 0.0F;
+            public float translateY = 0.0F;
+            public float translateZ = 0.0F;
+            public float yawOffset = 0.0F;
+            public float pitchOffset = 0.0F;
+            public float rollOffset = 0.0F;
+
+            public ModelContext scale(float scale) {
+                this.scaleX = scale;
+                this.scaleY = scale;
+                this.scaleZ = scale;
+                return this;
+            }
+
+            public ModelContext scale(float scaleX, float scaleY, float scaleZ) {
+                this.scaleX = scaleX;
+                this.scaleY = scaleY;
+                this.scaleZ = scaleZ;
+                return this;
+            }
+
+            public ModelContext translateOffset(float x, float y, float z) {
+                this.translateX = x;
+                this.translateY = y;
+                this.translateZ = z;
+                return this;
+            }
+
+            public ModelContext rotationOffset(float yaw, float pitch, float roll) {
+                this.yawOffset = yaw;
+                this.pitchOffset = pitch;
+                this.rollOffset = roll;
+                return this;
+            }
         }
     }
 }

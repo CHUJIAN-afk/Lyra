@@ -1,5 +1,6 @@
 package first.lyra.common.attachmentEntity;
 
+import first.lyra.common.attachment.TargetCache;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
@@ -141,7 +142,7 @@ public interface IEntityCollision<T extends AttachmentEntity> {
     }
 
     private List<LivingEntity> findPotentialTargets(T entity, Sweep sweep) {
-        return entity.getTargetCache().getEntitiesInRadius(entity.getPos(), sweep.bounds().getSize() * 1.5f, target -> isValidCollisionTarget(entity, target));
+        return entity.getTargetCache().getEntitiesInRadius(sweep.bounds().getCenter(), sweep.bounds().getSize() * 1.5f, target -> isValidCollisionTarget(entity, target));
     }
 
     /**

@@ -29,12 +29,12 @@ public class AttachmentEntityData {
 
     private final Map<AttachmentEntityType<?>, List<AttachmentEntity>> pendingAdd = new HashMap<>();
     private final Map<AttachmentEntityType<?>, List<AttachmentEntity>> groups = new HashMap<>();
+    private final Map<UUID, AttachmentEntity> uuidToEntity = new HashMap<>();
     private final List<AttachmentEntity> renderCache = new ArrayList<>();
     private final AtomicReference<List<byte[]>> pendingPayloads = new AtomicReference<>(List.of());
     private final Player owner;
     private Level level = null;
     private boolean changed = false;
-    private boolean hasCarryMinion = false;
 
     public AttachmentEntityData(IAttachmentHolder owner) {
         if (owner instanceof Player player) {
@@ -45,6 +45,12 @@ public class AttachmentEntityData {
     }
 
     public void tick() {
+        uuidToEntity.clear();
+        for (List<AttachmentEntity> list : groups.values()) {
+            for (AttachmentEntity entity : list) {
+                uuidToEntity.put(entity.getUuid(), entity);
+            }
+        }
         if (isClientSide()) {
             applyPendingSync();
             renderCache.clear();
@@ -58,7 +64,6 @@ public class AttachmentEntityData {
             }
         } else {
             if (isRunning()) {
-                hasCarryMinion = false;
                 boolean levelChange = level != null && level != owner.level();
                 level = owner.level();
                 Map<Long, List<Minion>> sameCache = new HashMap<>();
@@ -149,6 +154,10 @@ public class AttachmentEntityData {
         }
     }
 
+    public @Nullable AttachmentEntity getEntity(UUID uuid) {
+        return uuidToEntity.get(uuid);
+    }
+
     public Level getLevel() {
         return owner.level();
     }
@@ -202,14 +211,6 @@ public class AttachmentEntityData {
 
     public List<AttachmentEntity> getRenderCache() {
         return renderCache;
-    }
-
-    public boolean isHasCarryMinion() {
-        return hasCarryMinion;
-    }
-
-    public void setHasCarryMinion(boolean hasCarryMinion) {
-        this.hasCarryMinion = hasCarryMinion;
     }
 
     /**
