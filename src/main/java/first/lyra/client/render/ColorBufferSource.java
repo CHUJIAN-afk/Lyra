@@ -7,16 +7,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.FastColor;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * 颜色与透明度双包装的 MultiBufferSource（26.2 ColorVertexConsumer 向下移植）。
- * <p>
- * 统一原 {@code TintedVertexConsumer}（固定染色）与 {@code AlphaBufferSource}（透明度乘数）：
- * {@link #setColor(int)} 拦截最终颜色（RGB+alpha 整体替换，-1 不启用），
- * {@link #setAlpha(float)} 调整最终透明度（乘数，1.0 不启用），两者可独立或组合使用。
- * 所有通过此缓冲源获取的 VertexConsumer 都会应用包装。
- * </p>
- */
-@Deprecated
+
 public class ColorBufferSource implements MultiBufferSource {
 
     private final MultiBufferSource inner;

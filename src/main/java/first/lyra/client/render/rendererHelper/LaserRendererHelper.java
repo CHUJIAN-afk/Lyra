@@ -187,7 +187,7 @@ public class LaserRendererHelper {
     /**
      * 提交单个顶点（{@code NEW_ENTITY} 格式）。
      * <p>
-     * 调用顺序对齐 {@code TrailConfig.emitQuad}：setNormal 在最后以触发顶点提交。
+     * 调用顺序对齐拖尾顶点提交：setNormal 在最后以触发顶点提交。
      * UV0 保留 (周向u, 轴向v) 供纹理坐标使用（emissive 着色器会读取，无纹理时仅占位）。
      * </p>
      */

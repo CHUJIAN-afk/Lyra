@@ -28,7 +28,6 @@ import java.lang.reflect.Field;
  * 其他实现回退逐顶点 addVertex。
  * </p>
  */
-@SuppressWarnings("deprecation")
 public final class RenderUtil {
 
     /** 全亮光照常量（packed）。 */

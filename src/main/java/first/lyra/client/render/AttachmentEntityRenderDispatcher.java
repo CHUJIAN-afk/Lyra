@@ -33,6 +33,7 @@ public class AttachmentEntityRenderDispatcher {
         for (AbstractClientPlayer player : players) {
             List<AttachmentEntity> entities = player.getData(LyraAttachmentRegister.EntityData).getRenderCache();
             Vec3 cameraPos = camera.getPosition();
+            int playerLight = getLightCoords(level, player.getLightProbePosition(partialTick));
             boolean showHitboxes = Minecraft.getInstance().getEntityRenderDispatcher().shouldRenderHitBoxes();
             VertexConsumer debugConsumer = showHitboxes ? bufferSource.getBuffer(RenderType.lines()) : null;
             for (AttachmentEntity entity : entities) {
@@ -40,7 +41,7 @@ public class AttachmentEntityRenderDispatcher {
                 PathNode renderNode = entity.getRenderNode(partialTick);
                 Vec3 pos = renderNode.pos();
                 poseStack.translate(pos.x() - cameraPos.x(), pos.y() - cameraPos.y(), pos.z() - cameraPos.z());
-                int lightCoords = getLightCoords(level, BlockPos.containing(pos));
+                int lightCoords = Math.max(playerLight, getLightCoords(level, pos));
                 // 渲染实体模型
                 IAttachmentEntityRenderer<AttachmentEntity> renderer = getRenderer(entity);
                 if (renderer != null) {
@@ -54,11 +55,12 @@ public class AttachmentEntityRenderDispatcher {
         }
     }
 
-    private static int getLightCoords(Level level, BlockPos pos) {
-        int sky = level.getBrightness(LightLayer.SKY, pos);
-        int block = Math.max(level.getBrightness(LightLayer.BLOCK, pos), level.getBlockState(pos).getLightEmission(level, pos));
+    private static int getLightCoords(Level level, Vec3 pos) {
+        BlockPos blockPos = BlockPos.containing(pos);
+        int sky = level.getBrightness(LightLayer.SKY, blockPos);
+        int block = Math.max(level.getBrightness(LightLayer.BLOCK, blockPos), level.getBlockState(blockPos).getLightEmission(level, blockPos));
         int packed = LightTexture.pack(block, sky);
-        return DynamicLightDispatcher.getDynamicLight(Vec3.atCenterOf(pos), packed);
+        return DynamicLightDispatcher.getDynamicLight(pos, packed);
     }
 
     private static void debugRender(PoseStack poseStack, AttachmentEntity entity, boolean showHitboxes, PathNode renderNode, VertexConsumer debugConsumer) {

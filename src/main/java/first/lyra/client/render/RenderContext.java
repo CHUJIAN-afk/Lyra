@@ -1,35 +1,56 @@
 package first.lyra.client.render;
 
-import first.lyra.client.render.trail.ModelConfig;
-import first.lyra.client.render.trail.TrailConfig;
+import first.lyra.client.render.trail.TrailContext;
 import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.attachmentEntity.PathNode;
+import software.bernie.geckolib.util.Color;
 
+/**
+ * 渲染上下文：包裹实体、视觉节点与当帧参数，以及拖尾/模型子上下文，链式构建。
+ * <p>
+ * 渲染器在 {@code createContext} 里配置本帧所需内容，后续渲染方法统一从 {@code context} 取值，
+ * 颜色（含透明度）只在这里写入一次。
+ * </p>
+ */
 public class RenderContext<T extends AttachmentEntity> {
 
-    /**
-     * 拖尾配置，null 表示无拖尾
-     */
-    public final TrailConfig<T, ?> trail;
+    public final T entity;
+    public final PathNode visualNode;
+    public final float partialTick;
 
-    /** 模型配置 */
-    public final ModelConfig<T> model;
+    public int packedLight;
+    public Color color = Color.WHITE;
+    public TrailContext<T> trail;
+    public ModelContext model = new ModelContext();
 
-    private RenderContext(TrailConfig<T, ?> trail, ModelConfig<T> model) {
+    public RenderContext(T entity, PathNode visualNode, float partialTick, int packedLight) {
+        this.entity = entity;
+        this.visualNode = visualNode;
+        this.partialTick = partialTick;
+        this.packedLight = packedLight;
+    }
+
+    public RenderContext<T> packedLight(int packedLight) {
+        this.packedLight = packedLight;
+        return this;
+    }
+
+    public RenderContext<T> color(Color color) {
+        this.color = color;
+        return this;
+    }
+
+    public RenderContext<T> trail(TrailContext<T> trail) {
         this.trail = trail;
+        return this;
+    }
+
+    public RenderContext<T> model(ModelContext model) {
         this.model = model;
+        return this;
     }
 
-    /** 创建 MinionWeaponItemBuilder 实例 */
-    public static <T extends AttachmentEntity> Builder<T> builder() {
-        return new Builder<>();
-    }
-
-    // ===================== 函数式接口定义 =====================
-
-    /**
-     * 是否有拖尾
-     */
+    /** 是否有拖尾 */
     public boolean hasTrail() {
         return trail != null && trail.timer > 0;
     }
@@ -56,28 +77,5 @@ public class RenderContext<T extends AttachmentEntity> {
     @FunctionalInterface
     public interface BrightnessBoostFunction<T extends AttachmentEntity> {
         float getBoost(T entity, float progress);
-    }
-
-    /** 渲染上下文构建器 */
-    public static class Builder<T extends AttachmentEntity> {
-        private TrailConfig<T, ?> trail;
-        private ModelConfig<T> model = new ModelConfig<>();
-
-        /** 设置拖尾配置 */
-        public Builder<T> trail(TrailConfig<T, ?> trail) {
-            this.trail = trail;
-            return this;
-        }
-
-        /** 设置模型配置 */
-        public Builder<T> model(ModelConfig<T> model) {
-            this.model = model;
-            return this;
-        }
-
-        /** 构建渲染上下文 */
-        public RenderContext<T> build() {
-            return new RenderContext<>(trail, model);
-        }
     }
 }

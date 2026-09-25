@@ -37,8 +37,11 @@ public class LyraRenderTypes extends RenderType {
         return create("lyra_texture_no_depth", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 1536, true, true, state);
     });
 
+    private static final RenderType TRAIL = RenderType.entityTranslucentEmissive(Lyra.rl("textures/trail.png"));
+
+    /** 拖尾渲染类型（无剔除 + 全亮 + 半透明）：复用同一实例，使同帧拖尾共享顶点缓冲 */
     public static RenderType getTrail() {
-        return RenderType.entityTranslucentEmissive(Lyra.rl("textures/trail.png"));
+        return TRAIL;
     }
 
     public static RenderType getModel() {
