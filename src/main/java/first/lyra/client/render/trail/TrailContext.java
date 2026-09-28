@@ -110,10 +110,14 @@ public abstract class TrailContext<T extends AttachmentEntity> {
         if (actualLength < 2) {
             return List.of();
         }
+        // 历史节点是逐 tick 的离散值，只有头尾需要跨帧平滑：头用视觉节点，尾在自身与新一号节点间插值，
+        // 使窗口每 tick 前移时尾端连续滑出而不是直接跳变；中间节点保持原值，避免整条链被分刻二次压缩。
         PathNode[] nodes = new PathNode[actualLength];
-        for (int i = 0; i < actualLength; i++) {
-            nodes[i] = history.get(i).lerp(history.get(Math.max(0, i - 1)), partialTick);
+        nodes[0] = visualNode;
+        for (int i = 1; i < actualLength - 1; i++) {
+            nodes[i] = history.get(i);
         }
+        nodes[actualLength - 1] = history.get(actualLength - 1).lerp(history.get(actualLength - 2), partialTick);
         int endIndex = nodes.length - 1;
 
         List<InterpolatedNode> result = new ArrayList<>(endIndex * segmentsPerNode + 1);
