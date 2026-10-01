@@ -19,7 +19,10 @@
     "CreativeModeInventoryScreenMixin",
     "EntityRendererMixin",
     "LevelRendererMixin",
-    "WalkAnimationStateAccessor"
+    "WalkAnimationStateAccessor",
+    "sodium.SodiumAoFaceDataMixin",
+    "sodium.SodiumFlatLightPipelineMixin",
+    "sodium.SodiumLightDataAccessMixin"
   ],
   "injectors": {
     "defaultRequire": 1

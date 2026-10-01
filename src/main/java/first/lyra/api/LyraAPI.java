@@ -22,6 +22,6 @@ public interface LyraAPI {
     }
 
     static void light(Vec3 pos, int light) {
-        DynamicLightDispatcher.addLightSources(pos, light);
+        DynamicLightDispatcher.INSTANCE.addLightSource(new DynamicLightDispatcher.LightSource(pos, light));
     }
 }

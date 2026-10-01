@@ -39,7 +39,7 @@ public class LevelRendererMixin {
             at = @At("RETURN")
     )
     private static int getLightColor(int original, BlockAndTintGetter level, BlockState state, BlockPos pos) {
-        return DynamicLightDispatcher.getDynamicLight(level, state, pos, original);
+        return DynamicLightDispatcher.INSTANCE.getDynamicLight(level, state, pos, original);
     }
 
     @Inject(
@@ -60,6 +60,6 @@ public class LevelRendererMixin {
 
     @Inject(method = "renderLevel", at = @At(value = "TAIL"))
     private void renderLevel(DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f frustumMatrix, Matrix4f projectionMatrix, CallbackInfo ci) {
-        DynamicLightDispatcher.update((LevelRendererAccessor) this);
+        DynamicLightDispatcher.INSTANCE.update((LevelRendererAccessor) this);
     }
 }

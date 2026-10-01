@@ -60,7 +60,7 @@ public class AttachmentEntityRenderDispatcher {
         int sky = level.getBrightness(LightLayer.SKY, blockPos);
         int block = Math.max(level.getBrightness(LightLayer.BLOCK, blockPos), level.getBlockState(blockPos).getLightEmission(level, blockPos));
         int packed = LightTexture.pack(block, sky);
-        return DynamicLightDispatcher.getDynamicLight(pos, packed);
+        return DynamicLightDispatcher.INSTANCE.getDynamicLight(pos, packed);
     }
 
     private static void debugRender(PoseStack poseStack, AttachmentEntity entity, boolean showHitboxes, PathNode renderNode, VertexConsumer debugConsumer) {
