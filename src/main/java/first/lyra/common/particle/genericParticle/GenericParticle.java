@@ -1,6 +1,7 @@
 package first.lyra.common.particle.genericParticle;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import first.lyra.api.LyraAPI;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleRenderType;
@@ -74,6 +75,8 @@ public class GenericParticle extends TextureSheetParticle {
         float x = (float) (Mth.lerp(partialTick, this.xo, this.x) - cameraPos.x);
         float y = (float) (Mth.lerp(partialTick, this.yo, this.y) - cameraPos.y);
         float z = (float) (Mth.lerp(partialTick, this.zo, this.z) - cameraPos.z);
+
+        LyraAPI.light(new Vec3(x, y, z), 8);
 
         Quaternionf quaternion = new Quaternionf();
         this.getFacingCameraMode().setRotation(quaternion, camera, partialTick);

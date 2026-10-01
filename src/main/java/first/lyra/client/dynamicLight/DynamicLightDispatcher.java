@@ -1,6 +1,7 @@
 package first.lyra.client.dynamicLight;
 
 import first.lyra.mixin.LevelRendererAccessor;
+import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.core.BlockPos;
@@ -18,25 +19,30 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public final class DynamicLightDispatcher {
 
-    public static final DynamicLightDispatcher INSTANCE = new DynamicLightDispatcher();
+    public static final DynamicLightDispatcher INSTANCE = new DynamicLightDispatcher(7.75);
 
-    private static final double MAX_RADIUS = 7.75;
-    private static final double MAX_RADIUS_SQUARED = MAX_RADIUS * MAX_RADIUS;
-    private static final double FALLOFF = 15.0 / MAX_RADIUS;
-    private static final int SECTION_BITS = 4;
-    private static final double SMOOTH_SCALE = 16.0;
-    private static final int SMOOTH_BIAS = 8;
+    private final Object2ObjectOpenHashMap<SectionPos, Object2ObjectLinkedOpenHashMap<LightSource, AtomicInteger>> lightSources;
+    private final double maxRadiusSquared;
+    private final double falloff;
+    private volatile Object2ObjectOpenHashMap<SectionPos, LightSource[]> snapshot;
 
-    private final Object2ObjectOpenHashMap<SectionPos, Object2ObjectOpenHashMap<LightSource, AtomicInteger>> lightSources = new Object2ObjectOpenHashMap<>();
-    private volatile Object2ObjectOpenHashMap<SectionPos, LightSource[]> snapshot = new Object2ObjectOpenHashMap<>();
-
-    private DynamicLightDispatcher() {
+    private DynamicLightDispatcher(double maxRadius) {
+        this.lightSources = new Object2ObjectOpenHashMap<>();
+        this.maxRadiusSquared = maxRadius * maxRadius;
+        this.falloff = 15.0 / maxRadius;
+        this.snapshot = new Object2ObjectOpenHashMap<>();
     }
 
     public void addLightSource(LightSource source) {
         if (source.luminance() > 0) {
-            Object2ObjectOpenHashMap<LightSource, AtomicInteger> data = lightSources.computeIfAbsent(SectionPos.of(source.position()), k -> new Object2ObjectOpenHashMap<>());
-            data.put(source, new AtomicInteger(data.containsKey(source) ? 1 : 2));
+            SectionPos section = SectionPos.of(source.position());
+            Object2ObjectLinkedOpenHashMap<LightSource, AtomicInteger> data = lightSources.computeIfAbsent(section, k -> new Object2ObjectLinkedOpenHashMap<>());
+            AtomicInteger counter = data.get(source);
+            if (counter == null) {
+                data.put(source, new AtomicInteger(2));
+            } else {
+                counter.set(1);
+            }
         }
     }
 
@@ -45,7 +51,7 @@ public final class DynamicLightDispatcher {
         Object2ObjectOpenHashMap<SectionPos, LightSource[]> snapshot = new Object2ObjectOpenHashMap<>(lightSources.size() * 2);
         if (!lightSources.isEmpty()) {
             lightSources.entrySet().removeIf(entry -> {
-                Object2ObjectOpenHashMap<LightSource, AtomicInteger> data = entry.getValue();
+                Object2ObjectLinkedOpenHashMap<LightSource, AtomicInteger> data = entry.getValue();
                 data.entrySet().removeIf(integerEntry -> {
                     LightSource lightSource = integerEntry.getKey();
                     AtomicInteger atomicInteger = integerEntry.getValue();
@@ -72,7 +78,7 @@ public final class DynamicLightDispatcher {
 
     public List<SectionPos> getImpactSectionPos(LightSource lightSource) {
         Vec3 position = lightSource.position();
-        double radius = Mth.clamp(lightSource.luminance(), 0, 15) / FALLOFF;
+        double radius = Mth.clamp(lightSource.luminance(), 0, 15) / falloff;
         int minX = SectionPos.blockToSectionCoord(position.x() - radius);
         int maxX = SectionPos.blockToSectionCoord(position.x() + radius);
         int minY = SectionPos.blockToSectionCoord(position.y() - radius);
@@ -117,7 +123,7 @@ public final class DynamicLightDispatcher {
         }
         double result = 0;
         int fx = Mth.floor(x), fy = Mth.floor(y), fz = Mth.floor(z);
-        int cx = fx >> SECTION_BITS, cy = fy >> SECTION_BITS, cz = fz >> SECTION_BITS;
+        int cx = fx >> 4, cy = fy >> 4, cz = fz >> 4;
         int ox = fx & 15, oy = fy & 15, oz = fz & 15;
         int x0 = ox <= 6 ? cx - 1 : cx;
         int x1 = ox >= 9 ? cx + 1 : cx;
@@ -136,8 +142,8 @@ public final class DynamicLightDispatcher {
                             double dy = y - pos.y;
                             double dz = z - pos.z;
                             double distSq = dx * dx + dy * dy + dz * dz;
-                            if (distSq <= MAX_RADIUS_SQUARED) {
-                                double light = lightSource.luminance() - Math.sqrt(distSq) * FALLOFF;
+                            if (distSq <= maxRadiusSquared) {
+                                double light = lightSource.luminance() - Math.sqrt(distSq) * falloff;
                                 if (light > result) {
                                     result = light;
                                 }
@@ -151,20 +157,53 @@ public final class DynamicLightDispatcher {
     }
 
     private static int withDynamicLight(int originalLight, double dynamicLight) {
-        int smooth = (int) (dynamicLight * SMOOTH_SCALE) + SMOOTH_BIAS;
+        int smooth = (int) (dynamicLight * 16.0) + 8;
         return (originalLight & 0xfff00000) | smooth;
     }
 
-    public record LightSource(Vec3 position, int luminance) {
+    public static final class LightSource {
+
+        private final Vec3 position;
+        private final int luminance;
+        private final int hash;
+
+        public LightSource(Vec3 position, int luminance) {
+            this.position = position;
+            this.luminance = luminance;
+            long xb = Double.doubleToLongBits(position.x());
+            long yb = Double.doubleToLongBits(position.y());
+            long zb = Double.doubleToLongBits(position.z());
+            long h = xb * 0x9E3779B97F4A7C15L ^ yb * 0xBF58476D1CE4E5B9L ^ zb * 0x94D049BB133111EBL ^ (long) luminance * 0x27D4EB2F165667C5L;
+            this.hash = Long.hashCode(h);
+        }
+
+        public Vec3 position() {
+            return position;
+        }
+
+        public int luminance() {
+            return luminance;
+        }
 
         @Override
         public int hashCode() {
-            double x = position.x();
-            double y = position.y();
-            double z = position.z();
-            long h = Double.doubleToRawLongBits(x) * 0x9E3779B97F4A7C15L ^ Double.doubleToRawLongBits(y) * 0xBF58476D1CE4E5B9L ^ Double.doubleToRawLongBits(z) * 0x94D049BB133111EBL ^ Double.doubleToRawLongBits(luminance) * 0x27D4EB2F165667C5L;
-            h ^= h >>> 32;
-            return Long.hashCode(h);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o instanceof LightSource other) {
+                return luminance == other.luminance && position.equals(other.position);
+            }
+            return false;
+        }
+
+        @Override
+        public String toString() {
+            return "LightSource[position=" + position + ", luminance=" + luminance + "]";
         }
     }
 }
