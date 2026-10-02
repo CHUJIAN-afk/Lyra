@@ -76,8 +76,6 @@ public class GenericParticle extends TextureSheetParticle {
         float y = (float) (Mth.lerp(partialTick, this.yo, this.y) - cameraPos.y);
         float z = (float) (Mth.lerp(partialTick, this.zo, this.z) - cameraPos.z);
 
-        LyraAPI.light(new Vec3(x, y, z), 8);
-
         Quaternionf quaternion = new Quaternionf();
         this.getFacingCameraMode().setRotation(quaternion, camera, partialTick);
         if (this.roll != 0.0F) {

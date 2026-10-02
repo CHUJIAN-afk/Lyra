@@ -58,8 +58,8 @@ public class LevelRendererMixin {
         DamageInfoRenderDispatcher.render(level, camera, bufferSource, partialTick);
     }
 
-    @Inject(method = "renderLevel", at = @At(value = "TAIL"))
-    private void renderLevel(DeltaTracker deltaTracker, boolean renderBlockOutline, Camera camera, GameRenderer gameRenderer, LightTexture lightTexture, Matrix4f frustumMatrix, Matrix4f projectionMatrix, CallbackInfo ci) {
+    @Inject(method = "compileSections", at = @At(value = "HEAD"))
+    private void renderLevel(Camera camera, CallbackInfo ci) {
         DynamicLightDispatcher.INSTANCE.update((LevelRendererAccessor) this);
     }
 }

@@ -41,10 +41,10 @@ public class AttachmentEntityRenderDispatcher {
                 PathNode renderNode = entity.getRenderNode(partialTick);
                 Vec3 pos = renderNode.pos();
                 poseStack.translate(pos.x() - cameraPos.x(), pos.y() - cameraPos.y(), pos.z() - cameraPos.z());
-                int lightCoords = Math.max(playerLight, getLightCoords(level, pos));
                 // 渲染实体模型
                 IAttachmentEntityRenderer<AttachmentEntity> renderer = getRenderer(entity);
                 if (renderer != null) {
+                    int lightCoords = Math.max(playerLight, getLightCoords(level, pos));
                     renderer.render(entity, poseStack, bufferSource, partialTick, lightCoords, renderNode);
                 }
                 if (ClientConfig.DebugMode.isTrue()) {
