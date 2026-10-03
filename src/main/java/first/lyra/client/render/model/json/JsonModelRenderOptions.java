@@ -19,7 +19,6 @@ public final class JsonModelRenderOptions {
         this.model = model;
     }
 
-    /** Overall ARGB tint, -1 keeps the model colors unchanged. */
     public JsonModelRenderOptions color(int argb) {
         this.color = argb;
         return this;

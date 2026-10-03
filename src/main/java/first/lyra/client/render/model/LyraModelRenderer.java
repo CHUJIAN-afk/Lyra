@@ -17,14 +17,6 @@ public final class LyraModelRenderer {
         return new JsonModelRenderOptions(model);
     }
 
-    public static JsonModelRenderOptions json(ResourceLocation modelId) {
-        return new JsonModelRenderOptions(JsonModelRenderer.standaloneLocation(modelId));
-    }
-
-    public static ModelResourceLocation jsonLocation(ResourceLocation modelId) {
-        return JsonModelRenderer.standaloneLocation(modelId);
-    }
-
     public static VirtualEntityRenderOptions virtualEntity(EntityType<?> entityType, float partialTick) {
         return new VirtualEntityRenderOptions(entityType, partialTick);
     }
