@@ -1,31 +1,23 @@
 package first.lyra.client.render;
 
-import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import first.lyra.mixin.BufferBuilderAccessor;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.FastColor;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import sun.misc.Unsafe;
-
-import java.lang.reflect.Field;
 
 /**
  * 通用顶点与贴图渲染工具（26.2 行为对齐）。
  * <p>
- * 顶点写入使用<b>完整实体顶点格式</b>（位置/颜色/UV/overlay/光照/法线），
- * 法线取 quad 朝向并经姿态 normal 矩阵变换（不忽略法线、不写死 0,0,1）。
- * consumer 为 BufferBuilder 时一次 reserve + Unsafe 直写（跳过逐顶点 addVertex 检查）；
- * 其他实现回退逐顶点 addVertex。
+ * 顶点统一以<b>完整实体顶点格式</b>（位置/颜色/UV/overlay/光照/法线）
+ * 经 {@link VertexConsumer#addVertex(float, float, float, int, float, float, int, int, float, float, float)} 提交。
  * </p>
  */
 public final class RenderUtil {
@@ -56,106 +48,17 @@ public final class RenderUtil {
         Matrix4f matrix = new Matrix4f().rotate(rotation).setTranslation((float) (center.x - camPos.x), (float) (center.y - camPos.y), (float) (center.z - camPos.z));
         float halfWidth = width / 2f;
         float halfHeight = height / 2f;
-        // 每顶点 5 float（已变换 x,y,z + u,v）+ 颜色
-        float[] xyzuvData = new float[4 * 5];
-        int[] colorData = new int[4];
-        Vector3f v = new Vector3f();
-        int vertexIndex = 0;
-        // 四边形顶点：x,y,z 偏移 + u,v（26.2 同序：u 随宽度、v 随高度）
+        // 四边形顶点：x,y 偏移 + u,v（26.2 同序：u 随宽度、v 随高度）
         float[][] corners = {
-                {-halfWidth, -halfHeight, 0f, 0f, 0f},
-                {-halfWidth, halfHeight, 0f, 0f, 1f},
-                {halfWidth, halfHeight, 0f, 1f, 1f},
-                {halfWidth, -halfHeight, 0f, 1f, 0f}
+                {-halfWidth, -halfHeight, 0f, 0f},
+                {-halfWidth, halfHeight, 0f, 1f},
+                {halfWidth, halfHeight, 1f, 1f},
+                {halfWidth, -halfHeight, 1f, 0f}
         };
+        Vector3f v = new Vector3f();
         for (float[] corner : corners) {
-            matrix.transformPosition(corner[0], corner[1], corner[2], v);
-            int dataIndex = vertexIndex * 5;
-            xyzuvData[dataIndex] = v.x();
-            xyzuvData[dataIndex + 1] = v.y();
-            xyzuvData[dataIndex + 2] = v.z();
-            xyzuvData[dataIndex + 3] = corner[3];
-            xyzuvData[dataIndex + 4] = corner[4];
-            colorData[vertexIndex] = tintColor;
-            vertexIndex++;
-        }
-        writeVertices(consumer, xyzuvData, colorData, FULL_LIGHT, 4);
-    }
-
-    /**
-     * 通用顶点批量写入（Unsafe 直写，轨迹/伤害数字等共用，26.2 移植）。
-     * <p>
-     * 数据约定：每顶点 5 float（已变换 x,y,z + u,v）+ 每顶点 1 int（ARGB 颜色）。
-     * 按目标格式布局写入：ITEM/NEW_ENTITY（36B，overlay=0、normal=0,0,1）与 BLOCK（32B，无 overlay）。
-     * </p>
-     *
-     * @param consumer    顶点消费者
-     * @param xyzuvData   每顶点 5 float（x,y,z,u,v，模型视图空间已变换）
-     * @param colorData   每顶点 1 int（ARGB）
-     * @param packedLight 打包光照
-     * @param vertexCount 顶点数
-     */
-    public static void writeVertices(VertexConsumer consumer, float[] xyzuvData, int[] colorData, int packedLight, int vertexCount) {
-        if (consumer instanceof BufferBuilder builder) {
-            BufferBuilderAccessor accessor = (BufferBuilderAccessor) builder;
-            int vertexSize = accessor.getFormat().getVertexSize();
-            long totalBytes = (long) vertexCount * vertexSize;
-            long pointer = accessor.getBuffer().reserve((int) totalBytes);
-            boolean entityFormat = vertexSize == 36;
-            Unsafe unsafe = UNSAFE;
-            long offset = 0;
-            for (int i = 0; i < vertexCount; i++) {
-                int sourceIndex = i * 5;
-                unsafe.putFloat(pointer + offset, xyzuvData[sourceIndex]);
-                offset += 4;
-                unsafe.putFloat(pointer + offset, xyzuvData[sourceIndex + 1]);
-                offset += 4;
-                unsafe.putFloat(pointer + offset, xyzuvData[sourceIndex + 2]);
-                offset += 4;
-                unsafe.putInt(pointer + offset, FastColor.ABGR32.fromArgb32(colorData[i]));
-                offset += 4;
-                unsafe.putFloat(pointer + offset, xyzuvData[sourceIndex + 3]);
-                offset += 4;
-                unsafe.putFloat(pointer + offset, xyzuvData[sourceIndex + 4]);
-                offset += 4;
-                // BLOCK 32B = 28 数据 + Normal 3 + 对齐 1
-                if (entityFormat) {
-                    unsafe.putInt(pointer + offset, OverlayTexture.NO_OVERLAY);
-                    offset += 4;
-                }
-                unsafe.putInt(pointer + offset, packedLight);
-                offset += 4;
-                unsafe.putByte(pointer + offset, (byte) 0);
-                offset += 1;
-                unsafe.putByte(pointer + offset, (byte) 0);
-                offset += 1;
-                unsafe.putByte(pointer + offset, (byte) 127);
-                offset += 1;
-                offset += 1; // 对齐
-            }
-            accessor.setVertices(accessor.getVertices() + vertexCount);
-            accessor.setElementsToFill(0);
-        } else {
-            // 回退：逐顶点写入（非 BufferBuilder consumer）
-            for (int i = 0; i < vertexCount; i++) {
-                int sourceIndex = i * 5;
-                consumer.addVertex(xyzuvData[sourceIndex], xyzuvData[sourceIndex + 1], xyzuvData[sourceIndex + 2],
-                        colorData[i], xyzuvData[sourceIndex + 3], xyzuvData[sourceIndex + 4],
-                        OverlayTexture.NO_OVERLAY, packedLight, 0, 0, 1);
-            }
-        }
-    }
-
-    /** Unsafe（sun.misc，反射取 theUnsafe 实例；Java 21 无 java.lang.foreign 正式 API）。 */
-    private static final Unsafe UNSAFE = getUnsafe();
-
-    private static Unsafe getUnsafe() {
-        try {
-            Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            return (Unsafe) field.get(null);
-        } catch (Exception exception) {
-            throw new RuntimeException("Failed to obtain Unsafe", exception);
+            matrix.transformPosition(corner[0], corner[1], 0f, v);
+            consumer.addVertex(v.x, v.y, v.z, tintColor, corner[2], corner[3], OverlayTexture.NO_OVERLAY, FULL_LIGHT, 0f, 0f, 1f);
         }
     }
 }

@@ -35,7 +35,7 @@ public class DamageInfoRenderDispatcher {
             EntityRenderDispatcher dispatcher = minecraft.getEntityRenderDispatcher();
             Quaternionf baseRotation = dispatcher.cameraOrientation().mul(Axis.XN.rotationDegrees(180), new Quaternionf());
             for (Map.Entry<ResourceLocation, List<DamageInfo>> group : infos.entrySet()) {
-                VertexConsumer consumer = bufferSource.getBuffer(RenderType.entityTranslucent(group.getKey(), false));
+                VertexConsumer consumer = bufferSource.getBuffer(RenderType.entityTranslucentCull(group.getKey()));
                 for (DamageInfo info : group.getValue()) {
                     info.render(consumer, baseRotation, camPos, partialTick);
                 }
