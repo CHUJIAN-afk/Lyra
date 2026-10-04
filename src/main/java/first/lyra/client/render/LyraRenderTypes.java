@@ -23,6 +23,20 @@ public class LyraRenderTypes extends RenderType {
         super(name, format, mode, bufferSize, affectsCrumbling, sortOnUpload, setupState, clearState);
     }
 
+    private static final RenderType TRAIL = RenderType.entityTranslucent(Lyra.rl("textures/trail.png"));
+
+    public static RenderType getTrail() {
+        return TRAIL;
+    }
+
+    public static RenderType getModel() {
+        return Sheets.translucentItemSheet();
+    }
+
+    public static RenderType texture(ResourceLocation texture, boolean alwaysVisible) {
+        return alwaysVisible ? NO_DEPTH_TEXTURE.apply(texture) : RenderType.entityTranslucent(texture);
+    }
+
     private static final Function<ResourceLocation, RenderType> NO_DEPTH_TEXTURE = Util.memoize(texture -> {
         CompositeState state = CompositeState.builder()
                 .setShaderState(RENDERTYPE_ENTITY_TRANSLUCENT_SHADER)
@@ -36,25 +50,4 @@ public class LyraRenderTypes extends RenderType {
                 .createCompositeState(true);
         return create("lyra_texture_no_depth", DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 1536, true, true, state);
     });
-
-    private static final RenderType TRAIL = RenderType.entityTranslucentEmissive(Lyra.rl("textures/trail.png"));
-
-    /** 拖尾渲染类型（无剔除 + 全亮 + 半透明）：复用同一实例，使同帧拖尾共享顶点缓冲 */
-    public static RenderType getTrail() {
-        return TRAIL;
-    }
-
-    public static RenderType getModel() {
-        return Sheets.translucentItemSheet();
-    }
-
-    /**
-     * 通用贴图渲染类型（1.21.1 对应 26.2 LyraRenderTypes.texture）。
-     *
-     * @param texture       贴图路径
-     * @param alwaysVisible true = 无深度测试变体（可透视，用于召唤标记等）
-     */
-    public static RenderType texture(ResourceLocation texture, boolean alwaysVisible) {
-        return alwaysVisible ? NO_DEPTH_TEXTURE.apply(texture) : RenderType.entityTranslucent(texture);
-    }
 }
