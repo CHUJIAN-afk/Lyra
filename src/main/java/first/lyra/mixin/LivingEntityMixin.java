@@ -4,15 +4,14 @@ import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.sugar.Local;
+import first.lyra.common.attachment.SummonMarkTracker;
 import first.lyra.common.attachmentEntity.AttachmentEntityDamageSource;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.projectile.Projectile;
-import first.lyra.mixinHandler.MixinHandler;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -49,6 +48,11 @@ public abstract class LivingEntityMixin {
     @Shadow
     public abstract int getExperienceReward();
 
+    @Shadow
+    @Final
+    public int invulnerableDuration;
+
+    @SuppressWarnings("DataFlowIssue")
     @WrapWithCondition(
             method = "dropAllDeathLoot",
             at = @At(
@@ -60,16 +64,10 @@ public abstract class LivingEntityMixin {
         if (damageSource instanceof AttachmentEntityDamageSource source) {
             Player player = null;
             if (source.getAttachmentEntity() instanceof Minion minion) {
-                Player owner = minion.getOwner();
-                if (owner != null) {
-                    player = owner;
-                }
+                player = minion.getOwner();
             }
             if (source.getAttachmentEntity() instanceof Projectile projectile) {
-                Player owner = projectile.getOwner();
-                if (owner != null) {
-                    player = owner;
-                }
+                player = projectile.getOwner();
             }
             if (player != null && instance.level() instanceof ServerLevel serverlevel && !wasExperienceConsumed() && (isAlwaysExperienceDropper() || lastHurtByPlayerTime > 0 && instance.shouldDropExperience() && serverlevel.getGameRules().getBoolean(GameRules.RULE_DOMOBLOOT))) {
                 int reward = ForgeEventFactory.getExperienceDrop(instance, lastHurtByPlayer, getExperienceReward());
@@ -102,9 +100,15 @@ public abstract class LivingEntityMixin {
 
     @WrapMethod(method = "hurt")
     public boolean hurt(DamageSource source, float amount, Operation<Boolean> original) {
-        if (source instanceof AttachmentEntityDamageSource damageSource && damageSource.getAttachmentEntity() instanceof Minion minion) {
-            LivingEntity owner = minion.getOwner();
-            amount = MixinHandler.getModifyDamage((LivingEntity) (Object) this, owner, minion, amount, damageSource);
+        if (source instanceof AttachmentEntityDamageSource damageSource) {
+            Player owner = damageSource.getOwner();
+            AttributeInstance instance = owner.getAttribute(LyraAttributeRegister.SummonDamage);
+            amount *= instance != null ? (float) instance.getValue() : 1;
+            amount *= 0.85f + owner.getRandom().nextFloat() * 0.3f;
+            SummonMarkTracker data = owner.getData(LyraAttachmentRegister.SummonMarkData);
+            if (data.isTarget(LivingEntity.class.cast(this))) {
+                amount = data.getDamageModifier(damageSource, amount);
+            }
         }
         return original.call(source, amount);
     }

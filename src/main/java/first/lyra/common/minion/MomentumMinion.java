@@ -11,9 +11,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
 
-/**
- * 基于动量物理的仆从抽象基类。
- */
 public abstract class MomentumMinion extends Minion implements IMomentumAttachmentEntity {
 
     private float desiredYaw = 0;
@@ -85,7 +82,7 @@ public abstract class MomentumMinion extends Minion implements IMomentumAttachme
 
     @Override
     public void setDrag(float drag) {
-        this.drag = net.minecraft.util.Mth.clamp(drag, 0, 1);
+        this.drag = Mth.clamp(drag, 0, 1);
     }
 
     @Override
@@ -98,21 +95,16 @@ public abstract class MomentumMinion extends Minion implements IMomentumAttachme
         this.gravity = gravity;
     }
 
-    /**
-     * 看向指定位置
-     */
     public void lookAtPos(Vec3 targetPos) {
         lookAtDirection(targetPos.subtract(getPos()).normalize());
     }
 
-    /** 看向指定方向 */
     public void lookAtDirection(Vec3 direction) {
         float targetYaw = (float) Math.toDegrees(Math.atan2(-direction.x, direction.z));
         float targetPitch = (float) Math.toDegrees(Math.asin(-direction.y));
         setDesiredRotation(targetYaw, targetPitch, getRoll());
     }
 
-    /** 设置期望朝向 */
     public void setDesiredRotation(float yaw, float pitch, float roll) {
         this.desiredYaw = yaw;
         this.desiredPitch = pitch;

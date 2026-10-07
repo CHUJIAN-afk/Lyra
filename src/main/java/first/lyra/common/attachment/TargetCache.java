@@ -2,9 +2,11 @@ package first.lyra.common.attachment;
 
 import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.minion.Minion;
+import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
@@ -25,6 +27,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
+import org.mesdag.portlib.attachment.IPortAttachmentHolder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,39 +38,47 @@ public class TargetCache {
 
     private final Int2BooleanOpenHashMap visibilityCache = new Int2BooleanOpenHashMap();
     private final Int2BooleanOpenHashMap targetCache = new Int2BooleanOpenHashMap();
+    private final Int2IntOpenHashMap hurterHistory = new Int2IntOpenHashMap();
     private final Int2FloatOpenHashMap distanceCache = new Int2FloatOpenHashMap();
     private final Long2ObjectOpenHashMap<List<LivingEntity>> spatialGroups = new Long2ObjectOpenHashMap<>();
     private final Long2ObjectOpenHashMap<LevelChunk> chunkCache = new Long2ObjectOpenHashMap<>();
     private final BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
-    private ServerPlayer owner = null;
+    private final ServerPlayer owner;
     private ServerLevel serverLevel;
 
-    public void tick(ServerPlayer player) {
-        this.owner = player;
+    public TargetCache(IPortAttachmentHolder owner) {
+        if (owner instanceof ServerPlayer player) {
+            this.owner = player;
+        } else {
+            throw new IllegalArgumentException(owner + " is not a valid TargetCache");
+        }
+    }
+
+    public void tick() {
         this.serverLevel = owner.serverLevel();
         visibilityCache.clear();
         targetCache.clear();
+        hurterHistory.replaceAll((key, value) -> value - 1);
+        hurterHistory.values().removeIf(value -> value <= 0);
         distanceCache.clear();
         spatialGroups.clear();
         chunkCache.clear();
     }
 
+    public void record(LivingEntity target, int time) {
+        hurterHistory.put(target.getUUID().hashCode(), time);
+    }
+
     public boolean isTarget(@Nullable LivingEntity target) {
-        if (owner != null && target != null && owner != target && target.isAlive()) {
-            return targetCache.computeIfAbsent(owner.getUUID().hashCode() + target.getUUID().hashCode(), k -> {
-                if (owner != null && target instanceof Enemy) {
+        if (target != null && owner != target && target.isAlive()) {
+            return targetCache.computeIfAbsent(target.getUUID().hashCode(), k -> {
+                if (target instanceof Enemy) {
                     return true;
                 }
                 if (target instanceof Targeting targeting && targeting.getTarget() == owner) {
                     return true;
                 }
-                if (InvincibleData.get(target).hasAttack(owner.getUUID())) {
-                    return true;
-                }
-                if (InvincibleData.get(owner).hasAttack(target.getUUID())) {
-                    return true;
-                }
-                return false;
+                return hurterHistory.containsKey(target.getUUID().hashCode());
             });
         }
         return false;
@@ -139,16 +150,17 @@ public class TargetCache {
         return new AABB(cellX << 4, cellY << 4, cellZ << 4, (cellX + 1) << 4, (cellY + 1) << 4, (cellZ + 1) << 4);
     }
 
-    // ==================== Chunk 缓存（每tick预加载） ====================
-
     public LivingEntity getNewTarget(Minion minion, List<LivingEntity> targets, float ownerWarningDistance, boolean selfCenter) {
         LivingEntity owner = minion.getOwner();
         LivingEntity currentTarget = minion.getTarget();
         LivingEntity newTarget = null;
         double bestScore = Double.MAX_VALUE;
         for (LivingEntity entity : targets) {
-            double score = selfCenter || owner == null ? getDistance(minion, entity) : getDistance(owner, entity);
-            if (owner != null && ownerWarningDistance > 0 && getDistance(owner, entity) < ownerWarningDistance) {
+            if (owner.getData(LyraAttachmentRegister.TargetCache).isTarget(entity)) {
+                return entity;
+            }
+            double score = selfCenter ? getDistance(minion, entity) : getDistance(owner, entity);
+            if (ownerWarningDistance > 0 && getDistance(owner, entity) < ownerWarningDistance) {
                 score -= 10000.0;
             }
             if (entity == currentTarget) {
@@ -183,7 +195,6 @@ public class TargetCache {
         return distance;
     }
 
-    //此缓存不能被共享，极易卡顿，不建议使用
     @Deprecated
     public boolean isVisibility(AttachmentEntity attachmentEntity, LivingEntity living) {
         Integer key = attachmentEntity.getUuid().hashCode() + living.getUUID().hashCode();
@@ -193,7 +204,7 @@ public class TargetCache {
     public boolean isVisibility(@Nullable LivingEntity living1, @Nullable LivingEntity living2) {
         if (living1 != null && living2 != null) {
             Integer key = living1.getUUID().hashCode() + living2.getUUID().hashCode();
-            return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(living1.getBoundingBox().getCenter(), living2.getBoundingBox().getCenter()));
+            return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(living1.getEyePosition(), living2.getEyePosition()));
         }
         return false;
     }
@@ -236,7 +247,6 @@ public class TargetCache {
         int minBuildHeight = serverLevel.getMinBuildHeight();
         int maxBuildHeight = serverLevel.getMaxBuildHeight();
 
-        // 局部缓存：同一条射线内复用 chunk/section 引用
         long lastChunkKey = Long.MIN_VALUE;
         LevelChunk chunk = null;
         int lastSectionY = Integer.MIN_VALUE;
@@ -247,7 +257,6 @@ public class TargetCache {
                 return true;
             }
 
-            // 步进
             if (tMaxX < tMaxY) {
                 if (tMaxX < tMaxZ) {
                     curX += stepX;
@@ -266,12 +275,10 @@ public class TargetCache {
                 }
             }
 
-            // 高度裁剪
             if (curY < minBuildHeight || curY >= maxBuildHeight) {
                 continue;
             }
 
-            // 从缓存取 chunk，未命中则加载并写入缓存
             int chunkX = SectionPos.blockToSectionCoord(curX);
             int chunkZ = SectionPos.blockToSectionCoord(curZ);
             long chunkKey = ChunkPos.asLong(chunkX, chunkZ);
@@ -291,7 +298,6 @@ public class TargetCache {
                 return false;
             }
 
-            // 缓存 Section
             int sectionY = chunk.getSectionIndex(curY);
             if (sectionY != lastSectionY) {
                 section = chunk.getSection(sectionY);

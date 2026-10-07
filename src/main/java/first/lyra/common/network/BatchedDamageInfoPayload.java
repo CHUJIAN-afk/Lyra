@@ -18,15 +18,6 @@ import org.mesdag.portlib.network.codec.PortStreamCodec;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 批量伤害数字网络包（服务端 → 客户端）。
- * <p>
- * 服务端只发送最小数据（伤害类型、伤害值、位置、速度、暴击标记），
- * 客户端收到后根据伤害类型从 {@link DamageInfoStyleManager} 查询样式重建完整渲染参数。
- * </p>
- *
- * @param entries 伤害数字记录列表
- */
 public record BatchedDamageInfoPayload(List<Entry> entries) implements IPortPacket.S2C {
 
     public static final ResourceLocation ID = Lyra.rl("damage_info");
@@ -37,9 +28,6 @@ public record BatchedDamageInfoPayload(List<Entry> entries) implements IPortPack
             BatchedDamageInfoPayload::new
     );
 
-    /**
-     * 客户端处理：逐条转为 {@link DamageInfo} 写入客户端 Level 附件。
-     */
     @Override
     public void work(Player player) {
         Level level = player.level();
@@ -67,13 +55,6 @@ public record BatchedDamageInfoPayload(List<Entry> entries) implements IPortPack
         return ID;
     }
 
-    /**
-     * 单条伤害数字记录：伤害类型 + 伤害值 + 位置 + 速度 + 暴击标记。
-     * <p>
-     * 渲染参数（贴图、颜色、尺寸等）由客户端根据 damageType 从 JSON 样式表查询，
-     * 不通过网络同步，大幅减少流量。
-     * </p>
-     */
     public record Entry(String damageType, float damageAmount, double x, double y, double z, double vx, double vy, double vz, boolean critical) {
 
         public static final PortStreamCodec<PortRegistryFriendlyByteBuf, Entry> STREAM_CODEC = PortStreamCodec.ofMember(

@@ -25,9 +25,9 @@ import net.minecraftforge.common.data.LanguageProvider;
 import net.minecraftforge.data.event.GatherDataEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.loading.FMLLoader;
-import net.minecraftforge.registries.DeferredRegister;
-import net.minecraftforge.registries.ForgeRegistries;
 import org.jetbrains.annotations.NotNull;
+import org.mesdag.portlib.registries.PortItemRegistration;
+import org.mesdag.portlib.registries.PortRegisterHandler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -52,7 +52,7 @@ public class LyraItemRegistries {
     public final Map<TagKey<Item>, List<ItemLike>> itemTagsGenerate = new HashMap<>();
     public final Map<ResourceLocation, BiConsumer<ItemModelProvider, ResourceLocation>> itemModelGenerate = new HashMap<>();
     private final String modid;
-    private final DeferredRegister<Item> register;
+    private final PortItemRegistration register;
     private final boolean development;
     private LanguageInit languageInit = null;
 
@@ -63,7 +63,7 @@ public class LyraItemRegistries {
 
     private LyraItemRegistries(String modid) {
         this.modid = modid;
-        this.register = DeferredRegister.create(ForgeRegistries.ITEMS, modid);
+        this.register = PortRegisterHandler.item(modid);
         this.development = !FMLLoader.isProduction();
         REGISTRIES.put(modid, this);
     }
@@ -73,15 +73,14 @@ public class LyraItemRegistries {
     }
 
     public <T extends Item> LyraItemRegisterBuilder<T> build(String name, Function<ResourceLocation, T> function) {
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(modid, name);
-        return new LyraItemRegisterBuilder<>(this, register.register(name, () -> function.apply(id)));
+        return new LyraItemRegisterBuilder<>(this, register.register(name, function));
     }
 
     public <T extends Item> LyraItemRegisterBuilder<T> build(String name, Supplier<T> supplier) {
         return build(name, location -> supplier.get());
     }
 
-    public DeferredRegister<Item> getRegister() {
+    public PortItemRegistration getRegister() {
         return register;
     }
 
@@ -101,7 +100,6 @@ public class LyraItemRegistries {
     }
 
     public void register(IEventBus eventBus) {
-        register.register(eventBus);
         eventBus.addListener((GatherDataEvent event) -> {
             boolean client = event.includeClient();
             boolean server = event.includeServer();
@@ -161,12 +159,17 @@ public class LyraItemRegistries {
                         TagsProvider.TagAppender<Item> appender = tag(tag);
                         list.forEach(itemLike -> {
                             Item item = itemLike.asItem();
-                            if (BuiltInRegistries.ITEM.getKey(item).getNamespace().equals(modId)) {
+                            if (BuiltInRegistries.ITEM.getKey(item).getNamespace().equals(modid)) {
                                 appender.add(item.builtInRegistryHolder().key());
                                 if (item instanceof ArmorItem armorItem) {
                                     if (tag == Tags.Items.ARMORS) {
                                         EquipmentSlot equipmentSlot = armorItem.getEquipmentSlot();
-                                        // 1.20.1 has one armor tag instead of the later per-slot split.
+                                        switch (equipmentSlot) {
+                                            case HEAD -> tag(Tags.Items.ARMORS_HELMETS).add(armorItem);
+                                            case CHEST -> tag(Tags.Items.ARMORS_CHESTPLATES).add(armorItem);
+                                            case LEGS -> tag(Tags.Items.ARMORS_LEGGINGS).add(armorItem);
+                                            case FEET -> tag(Tags.Items.ARMORS_BOOTS).add(armorItem);
+                                        }
                                     }
                                 }
                             }

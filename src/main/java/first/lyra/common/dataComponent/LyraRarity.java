@@ -9,10 +9,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.fml.loading.FMLLoader;
+import org.mesdag.portlib.client.PortDeltaTicker;
 import org.mesdag.portlib.network.PortRegistryFriendlyByteBuf;
 import org.mesdag.portlib.network.codec.PortByteBufCodecs;
 import org.mesdag.portlib.network.codec.PortStreamCodec;
-import org.mesdag.portlib.client.PortDeltaTicker;
 
 import java.util.HashMap;
 import java.util.Map;

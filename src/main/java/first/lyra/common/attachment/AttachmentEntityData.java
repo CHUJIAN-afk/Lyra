@@ -25,26 +25,32 @@ import org.mesdag.portlib.network.PortRegistryFriendlyByteBuf;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * 统一的世界级附件实体数据附件。
- * <p>
- * 使用 AttachmentEntityType 分组存储实体。
- * 移除通过 setRemove() 标记完成，添加通过延迟队列在 tick 后统一处理。
- * </p>
- */
-public class AttachmentEntityData implements PortAttachmentSyncHandler<AttachmentEntityData> {
+public class AttachmentEntityData {
 
     private final Map<AttachmentEntityType<?>, List<AttachmentEntity>> pendingAdd = new HashMap<>();
     private final Map<AttachmentEntityType<?>, List<AttachmentEntity>> groups = new HashMap<>();
-    private final Map<UUID, AttachmentEntity> uuidData = new HashMap<>();
+    private final Map<UUID, AttachmentEntity> uuidToEntity = new HashMap<>();
     private final List<AttachmentEntity> renderCache = new ArrayList<>();
     private final AtomicReference<List<byte[]>> pendingPayloads = new AtomicReference<>(List.of());
-    private Player player;
+    private final Player owner;
     private Level level = null;
     private boolean changed = false;
 
-    public void tick(Player player) {
-        this.player = player;
+    public AttachmentEntityData(IPortAttachmentHolder owner) {
+        if (owner instanceof Player player) {
+            this.owner = player;
+        } else {
+            throw new IllegalArgumentException(owner + " is not a valid AttachmentEntityData");
+        }
+    }
+
+    public void tick() {
+        uuidToEntity.clear();
+        for (List<AttachmentEntity> list : groups.values()) {
+            for (AttachmentEntity entity : list) {
+                uuidToEntity.put(entity.getUuid(), entity);
+            }
+        }
         if (isClientSide()) {
             applyPendingSync();
             renderCache.clear();
@@ -58,13 +64,9 @@ public class AttachmentEntityData implements PortAttachmentSyncHandler<Attachmen
             }
         } else {
             if (isRunning()) {
-                boolean levelChange = false;
-                if (level != null && level != player.level()) {
-                    levelChange = true;
-                }
-                level = player.level();
+                boolean levelChange = level != null && level != owner.level();
+                level = owner.level();
                 Map<Long, List<Minion>> sameCache = new HashMap<>();
-                // tick实体
                 for (List<AttachmentEntity> list : groups.values()) {
                     for (AttachmentEntity entity : list) {
                         if (entity instanceof Minion minion) {
@@ -82,13 +84,12 @@ public class AttachmentEntityData implements PortAttachmentSyncHandler<Attachmen
                         entity.tickCurrentPathNode();
                     }
                 }
-                // 将待添加队列合并到主分组
                 if (!pendingAdd.isEmpty()) {
                     for (Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>> entry : pendingAdd.entrySet()) {
                         List<AttachmentEntity> entities = groups.computeIfAbsent(entry.getKey(), key -> new ArrayList<>());
                         for (AttachmentEntity attachmentEntity : entry.getValue()) {
                             if (!attachmentEntity.getCurrentPathNode().pos().equals(Vec3.ZERO)) {
-                                attachmentEntity.setOwner(player);
+                                attachmentEntity.setOwner(owner);
                                 entities.add(attachmentEntity);
                             }
                         }
@@ -96,7 +97,6 @@ public class AttachmentEntityData implements PortAttachmentSyncHandler<Attachmen
                     pendingAdd.clear();
                     changed = true;
                 }
-                // 检查槽位溢出
                 Map<MinionSlotType, Integer> limits = new HashMap<>();
                 for (Minion minion : get(Minion.class)) {
                     Player owner = minion.getOwner();
@@ -120,7 +120,6 @@ public class AttachmentEntityData implements PortAttachmentSyncHandler<Attachmen
                         }
                     }
                 }
-                // 清理所有分组中标记移除的实体
                 groups.values().removeIf(list -> {
                     while (true) {
                         list.removeIf(entity -> {
@@ -145,18 +144,22 @@ public class AttachmentEntityData implements PortAttachmentSyncHandler<Attachmen
                 });
                 if (!groups.isEmpty() || changed) {
                     changed = false;
-                    player.syncData(LyraAttachmentRegister.EntityData.get());
+                    owner.syncData(LyraAttachmentRegister.EntityData.get());
                 }
             }
         }
     }
 
+    public @Nullable AttachmentEntity getEntity(UUID uuid) {
+        return uuidToEntity.get(uuid);
+    }
+
     public Level getLevel() {
-        return player.level();
+        return owner.level();
     }
 
     public boolean isClientSide() {
-        return player.level().isClientSide();
+        return owner.level().isClientSide();
     }
 
     public boolean isRunning() {
@@ -198,66 +201,25 @@ public class AttachmentEntityData implements PortAttachmentSyncHandler<Attachmen
         getGroups().getOrDefault(entityType, new ArrayList<>()).forEach(AttachmentEntity::setRemove);
     }
 
-    @Override
-    public void write(PortRegistryFriendlyByteBuf buf, AttachmentEntityData data, boolean initialSync) {
-        // 写入 AttachmentEntityType → 实体列表的结构
-        buf.writeVarInt(data.groups.size());
-        for (Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>> entityEntry : data.groups.entrySet()) {
-            buf.writeResourceLocation(LyraRegistries.ATTACHMENT_ENTITY_TYPES.getKey(entityEntry.getKey()));
-            List<AttachmentEntity> list = entityEntry.getValue();
-            buf.writeVarInt(list.size());
-            for (AttachmentEntity entity : list) {
-                buf.writeUUID(entity.getUuid());
-                entity.getSyncFieldDispatcher().encode(buf, entity.getLevel(), initialSync);
-                buf.writeBoolean(entity.isClientInit());
-                if (!entity.isClientInit()) {
-                    entity.setClientInit(true);
-                    LyraStreamCodecs.PATH_NODE.encode(buf, entity.getHistoryNodes().get(0));
-                }
-            }
-        }
+    public Map<AttachmentEntityType<?>, List<AttachmentEntity>> getGroups() {
+        return groups;
     }
 
-    // ===================== 网络同步 =====================
-
-    @Override
-    public AttachmentEntityData read(@NotNull IPortAttachmentHolder holder, @NotNull PortRegistryFriendlyByteBuf buf, @Nullable AttachmentEntityData oldData) {
-        AttachmentEntityData data = oldData != null ? oldData : new AttachmentEntityData();
-        ByteBuf copy = buf.copy();
-        byte[] payload = new byte[copy.readableBytes()];
-        copy.readBytes(payload);
-        if (payload.length == 0) {
-            return data;
-        }
-        data.pendingPayloads.updateAndGet(payloads -> {
-            List<byte[]> updated = new ArrayList<>(payloads.size() + 1);
-            updated.addAll(payloads);
-            updated.add(payload);
-            return List.copyOf(updated);
-        });
-        return data;
+    public List<AttachmentEntity> getRenderCache() {
+        return renderCache;
     }
 
-    /**
-     * 网络包到达时只暂存载荷，在客户端 tick 起点执行真实解码。
-     */
     private void applyPendingSync() {
         Level level = getLevel();
         List<byte[]> snapshot = pendingPayloads.getAndSet(List.of());
         for (byte[] payload : snapshot) {
             PortRegistryFriendlyByteBuf buf = new PortRegistryFriendlyByteBuf(Unpooled.wrappedBuffer(payload), level.registryAccess(), PortConnectionType.MODDED);
-            // 保留现有实体的缓存引用
             Map<UUID, AttachmentEntity> existing = new HashMap<>();
             groups.values().forEach(list -> list.forEach(entity -> existing.put(entity.getUuid(), entity)));
-            // 清空分组
             groups.clear();
-            // 读取 AttachmentEntityType → 实体列表
             int typeCount = buf.readVarInt();
             for (int i = 0; i < typeCount; i++) {
-                AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.get(buf.readResourceLocation());
-                if (entityType == null) {
-                    throw new IllegalStateException("Unknown attachment entity type");
-                }
+                AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.getHolder(buf.readResourceLocation()).orElseThrow().value();
                 List<AttachmentEntity> list = groups.computeIfAbsent(entityType, k -> new ArrayList<>());
                 int listSize = buf.readVarInt();
                 for (int k = 0; k < listSize; k++) {
@@ -267,7 +229,7 @@ public class AttachmentEntityData implements PortAttachmentSyncHandler<Attachmen
                         entity = entityType.factory().get();
                         entity.setUuid(uuid);
                     }
-                    entity.setOwner(player);
+                    entity.setOwner(owner);
                     entity.getSyncFieldDispatcher().decode(buf, level);
                     if (!buf.readBoolean()) {
                         PathNode pathNode = LyraStreamCodecs.PATH_NODE.decode(buf);
@@ -282,11 +244,43 @@ public class AttachmentEntityData implements PortAttachmentSyncHandler<Attachmen
         }
     }
 
-    public Map<AttachmentEntityType<?>, List<AttachmentEntity>> getGroups() {
-        return groups;
-    }
+    public static final class SyncHandler implements PortAttachmentSyncHandler<AttachmentEntityData> {
 
-    public List<AttachmentEntity> getRenderCache() {
-        return renderCache;
+        @Override
+        public void write(PortRegistryFriendlyByteBuf buf, AttachmentEntityData data, boolean initialSync) {
+            buf.writeVarInt(data.groups.size());
+            for (Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>> entityEntry : data.groups.entrySet()) {
+                buf.writeResourceLocation(LyraRegistries.ATTACHMENT_ENTITY_TYPES.getKey(entityEntry.getKey()));
+                List<AttachmentEntity> list = entityEntry.getValue();
+                buf.writeVarInt(list.size());
+                for (AttachmentEntity entity : list) {
+                    buf.writeUUID(entity.getUuid());
+                    entity.getSyncFieldDispatcher().encode(buf, entity.getLevel(), initialSync);
+                    buf.writeBoolean(entity.isClientInit());
+                    if (!entity.isClientInit()) {
+                        entity.setClientInit(true);
+                        LyraStreamCodecs.PATH_NODE.encode(buf, entity.getHistoryNodes().get(0));
+                    }
+                }
+            }
+        }
+
+        @Override
+        public AttachmentEntityData read(@NotNull IPortAttachmentHolder holder, @NotNull PortRegistryFriendlyByteBuf buf, @Nullable AttachmentEntityData oldData) {
+            AttachmentEntityData data = oldData != null ? oldData : new AttachmentEntityData(holder);
+            ByteBuf copy = buf.copy();
+            byte[] payload = new byte[copy.readableBytes()];
+            copy.readBytes(payload);
+            if (payload.length == 0) {
+                return data;
+            }
+            data.pendingPayloads.updateAndGet(payloads -> {
+                List<byte[]> updated = new ArrayList<>(payloads.size() + 1);
+                updated.addAll(payloads);
+                updated.add(payload);
+                return updated;
+            });
+            return data;
+        }
     }
 }

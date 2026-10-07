@@ -21,24 +21,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * 静态虚拟实体渲染器：不把实体加入世界，也不依赖真实存在的实体。
- * <p>
- * 内部按 {@link EntityType} 创建并缓存一个“幽灵”实体实例，
- * 从原版 {@code EntityRenderDispatcher} 获取该类型已注册的原版/其它模组渲染器，
- * 然后直接把当前帧姿态写入幽灵实体并调用渲染器。实体渲染器自带的
- * model setupAnim（行走、攻击、头部跟随等）会照常运行。
- * </p>
- * <pre>{@code
- * VirtualEntityRenderer.render(EntityType.ZOMBIE, poseStack, bufferSource, partialTick,
- *         VirtualEntityPose.create()
- *                 .ageTicks(100)
- *                 .look(45, 60, -10)
- *                 .walk(20, 1)
- *                 .attack(0.4f)
- *                 .scale(1.5f));
- * }</pre>
- */
 public final class VirtualEntityRenderer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(VirtualEntityRenderer.class);
@@ -49,7 +31,6 @@ public final class VirtualEntityRenderer {
     private VirtualEntityRenderer() {
     }
 
-    /** 通过原版实体注册 id 渲染，可用于运行时引用其它模组实体而无需编译期依赖。 */
     public static boolean render(ResourceLocation entityTypeId, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick) {
         EntityType<?> type = BuiltInRegistries.ENTITY_TYPE.get(entityTypeId);
         return render(type, poseStack, bufferSource, partialTick, VirtualEntityPose.create());

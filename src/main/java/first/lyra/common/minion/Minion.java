@@ -2,7 +2,6 @@ package first.lyra.common.minion;
 
 import first.lyra.common.attachment.TargetCache;
 import first.lyra.common.attachmentEntity.*;
-import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraDamageRegister;
 import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
@@ -93,9 +92,6 @@ public abstract class Minion extends AttachmentEntity {
         goalSelector.tick();
     }
 
-    /**
-     * 在所有者周围搜索有效目标
-     */
     public LivingEntity searchTarget() {
         int distance = this.getSearchDistance();
         if (distance > 0 && owner != null) {
@@ -113,7 +109,7 @@ public abstract class Minion extends AttachmentEntity {
     }
 
     public void setTarget(LivingEntity target) {
-        if (this.target != target) {
+        if (this.target != null && this.target != target) {
             setTargetChange(true);
         }
         this.target = target;

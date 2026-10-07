@@ -10,13 +10,14 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import net.minecraftforge.event.entity.living.LivingDamageEvent;
+import org.mesdag.portlib.event.entity.living.PortLivingDamageEvent;
 
 import java.util.UUID;
 
+@Deprecated
 public class InvincibleData {
 
-    public static void handler(LivingDamageEvent event) {
+    public static void handler(PortLivingDamageEvent.Post event) {
         DamageSource damageSource = event.getSource();
         LivingEntity entity = event.getEntity();
         Level level = entity.level();
@@ -53,23 +54,14 @@ public class InvincibleData {
         return living.getData(LyraAttachmentRegister.InvincibleData);
     }
 
-    /**
-     * 是否被指定 UUID 攻击过（hurtHistory 中存在记录）
-     */
     public boolean hasAttack(UUID uuid) {
         return hurtHistory.containsKey(uuid.getMostSignificantBits());
     }
 
-    /**
-     * 直接写入一条攻击历史记录（不造成伤害），用于同步"曾攻击过"标记
-     */
     public void recordHit(@NotNull UUID uuid, int ticks) {
         hurtHistory.put(uuid.getMostSignificantBits(), ticks);
     }
 
-    /**
-     * 开启一次链式攻击构建
-     */
     public static AttackBuilder attack(LivingEntity target) {
         return new AttackBuilder(target);
     }
@@ -78,9 +70,6 @@ public class InvincibleData {
         PARTIAL, GLOBAL
     }
 
-    /**
-     * 链式攻击构建器：必填 damageSource/damageAmount，可省略 attacker/invincibleTime/global
-     */
     public static final class AttackBuilder {
         private final @NotNull LivingEntity target;
         private @Nullable UUID uuid = null;
@@ -94,9 +83,6 @@ public class InvincibleData {
             this.target = target;
         }
 
-        /**
-         * 攻击者 UUID；省略表示未被跟踪的命中（null + PARTIAL 总是允许伤害且不记历史）
-         */
         public AttackBuilder attacker(@Nullable UUID uuid) {
             this.uuid = uuid;
             return this;
@@ -112,25 +98,16 @@ public class InvincibleData {
             return this;
         }
 
-        /**
-         * 无敌帧 tick；省略为 0（不设无敌帧）
-         */
         public AttackBuilder invincibleTime(int ticks) {
             this.invincibleTime = ticks;
             return this;
         }
 
-        /**
-         * 切换为全局无敌；省略则保持 PARTIAL
-         */
         public AttackBuilder global() {
             this.type = Type.GLOBAL;
             return this;
         }
 
-        /**
-         * 在完成攻击后为目标添加此效果
-         */
         public AttackBuilder effect(@Nullable MobEffectInstance mobEffectInstance) {
             this.mobEffectInstance = mobEffectInstance;
             return this;

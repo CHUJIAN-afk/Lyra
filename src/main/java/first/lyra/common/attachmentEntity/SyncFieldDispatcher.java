@@ -11,15 +11,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-/**
- * 字段同步注册器。
- * <p>
- * 子类在 {@code AttachmentEntity#registerSyncFields} 中按声明顺序注册字段：
- * </p>
- * <pre>{@code
- * fields.field(ByteBufCodecs.BOOL, () -> shooting, value -> shooting = value);
- * }</pre>
- */
 public final class SyncFieldDispatcher {
 
     public static SyncFieldDispatcher create(Consumer<SyncFieldDispatcher> consumer) {
@@ -105,7 +96,6 @@ public final class SyncFieldDispatcher {
     }
 
     public void encode(PortRegistryFriendlyByteBuf buf, Level level, boolean initialSync) {
-        // 位图标记本 tick 实际需要写入的字段，字段值仍保持各自 codec 的完整编码。
         int maskStart = buf.writerIndex();
         int maskSize = (entries.size() + 7) >>> 3;
         for (int i = 0; i < maskSize; i++) {
@@ -120,15 +110,14 @@ public final class SyncFieldDispatcher {
     }
 
     public void decode(PortRegistryFriendlyByteBuf buf, Level level) {
-        if (entries.isEmpty()) {
-            return;
-        }
-        int maskSize = (entries.size() + 7) >>> 3;
-        byte[] mask = new byte[maskSize];
-        buf.readBytes(mask);
-        for (int i = 0; i < entries.size(); i++) {
-            if ((mask[i >>> 3] & (1 << (i & 7))) != 0) {
-                entries.get(i).decode(buf, level);
+        if (!entries.isEmpty()) {
+            int maskSize = (entries.size() + 7) >>> 3;
+            byte[] mask = new byte[maskSize];
+            buf.readBytes(mask);
+            for (int i = 0; i < entries.size(); i++) {
+                if ((mask[i >>> 3] & (1 << (i & 7))) != 0) {
+                    entries.get(i).decode(buf, level);
+                }
             }
         }
     }

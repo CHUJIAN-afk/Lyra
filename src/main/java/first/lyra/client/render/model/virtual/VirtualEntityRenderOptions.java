@@ -6,10 +6,6 @@ import net.minecraft.world.entity.EntityType;
 
 import java.util.function.Consumer;
 
-/**
- * Strongly typed request for rendering a registered entity renderer without
- * adding a real entity to the client level.
- */
 public final class VirtualEntityRenderOptions {
 
     private final EntityType<?> entityType;

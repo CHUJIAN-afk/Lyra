@@ -17,6 +17,6 @@ public class LevelRendererMixin {
             at = @At("RETURN")
     )
     private static int getLightColor(int original, BlockAndTintGetter level, BlockState state, BlockPos pos) {
-        return DynamicLightDispatcher.getDynamicLight(level, state, pos, original);
+        return DynamicLightDispatcher.INSTANCE.getDynamicLight(level, state, pos, original);
     }
 }

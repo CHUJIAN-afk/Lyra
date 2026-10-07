@@ -14,6 +14,18 @@ repositories {
         name = "Jared's maven"
         url = "https://maven.blamejared.com/"
     }
+    maven {
+        name = "Modrinth"
+        url = "https://api.modrinth.com/maven"
+    }
+    maven {
+        name = "GeckoLib"
+        url = "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/"
+    }
+    maven {
+        name = "Local libs"
+        url = uri("${projectDir}/libs")
+    }
 }
 
 base {
@@ -76,6 +88,8 @@ dependencies {
     interfaceInjectionData("org.mesdag:PortLib:${portlib_version}")
     jarJar("org.mesdag:PortLib:${portlib_version}")
 
+    modImplementation("software.bernie.geckolib:geckolib-forge-${minecraft_version}:${geckolib_version}")
+
     modCompileOnly("mezz.jei:jei-${minecraft_version}-common-api:${jei_version}")
     modCompileOnly("mezz.jei:jei-${minecraft_version}-forge-api:${jei_version}")
 
@@ -104,6 +118,7 @@ var generateModMetadata = tasks.register("generateModMetadata", ProcessResources
             forge_version_range    : forge_version_range,
             loader_version_range   : loader_version_range,
             portlib_version        : portlib_version,
+            geckolib_version       : geckolib_version,
             mod_id                 : mod_id,
             mod_name               : mod_name,
             mod_license            : mod_license,

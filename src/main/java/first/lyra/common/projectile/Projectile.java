@@ -4,7 +4,6 @@ import first.lyra.common.attachmentEntity.AttachmentEntityDamageSource;
 import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import first.lyra.common.attachmentEntity.MomentumAttachmentEntity;
 import first.lyra.common.attachmentEntity.PathNode;
-import first.lyra.common.minion.MinionSlotType;
 import first.lyra.register.LyraDamageRegister;
 import net.minecraft.core.Holder;
 import net.minecraft.world.damagesource.DamageSource;

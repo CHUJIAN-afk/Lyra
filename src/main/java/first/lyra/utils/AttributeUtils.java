@@ -6,31 +6,40 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-
-import java.nio.charset.StandardCharsets;
-import java.util.UUID;
+import org.mesdag.portlib.wrapper.world.entity.ai.attributes.PortAttributeModifier;
 
 public class AttributeUtils {
 
-    public static void condition(LivingEntity livingEntity, Holder<Attribute> attribute, UUID uuid, double amount, AttributeModifier.Operation operation, boolean condition) {
-        AttributeInstance attributeInstance = livingEntity.getAttribute(attribute);
-        if (attributeInstance == null) {
-            return;
-        }
+    public static void condition(LivingEntity livingEntity, Holder<Attribute> attribute, ResourceLocation resourceLocation, double amount, AttributeModifier.Operation operation, boolean condition) {
         if (condition) {
-            AttributeModifier modifier = attributeInstance.getModifier(uuid);
-            if (modifier == null || modifier.getAmount() != amount || modifier.getOperation() != operation) {
-                if (modifier != null) {
-                    attributeInstance.removeModifier(uuid);
+            AttributeInstance attributeInstance = livingEntity.getAttribute(attribute);
+            if (attributeInstance != null) {
+                AttributeModifier attributeModifier = attributeInstance.getModifier(PortAttributeModifier.rl2uuid(resourceLocation));
+                if ((attributeModifier == null) || attributeModifier.getAmount() != amount || attributeModifier.getOperation() != operation) {
+                    addAttributeModifier(livingEntity, attribute, resourceLocation, amount, operation);
                 }
-                attributeInstance.addPermanentModifier(new AttributeModifier(uuid, uuid.toString(), amount, operation));
             }
-        } else if (attributeInstance.getModifier(uuid) != null) {
-            attributeInstance.removeModifier(uuid);
+        } else {
+            removeAttributeModifier(livingEntity, attribute, resourceLocation);
         }
     }
 
-    public static UUID modifierId(ResourceLocation resourceLocation) {
-        return UUID.nameUUIDFromBytes(resourceLocation.toString().getBytes(StandardCharsets.UTF_8));
+    public static void addAttributeModifier(LivingEntity livingEntity, Holder<Attribute> attribute, ResourceLocation resourceLocation, double amount, AttributeModifier.Operation operation) {
+        AttributeInstance attributeInstance = livingEntity.getAttribute(attribute);
+        if (attributeInstance != null) {
+            if (attributeInstance.getModifier(PortAttributeModifier.rl2uuid(resourceLocation)) != null) {
+                attributeInstance.removeModifier(PortAttributeModifier.rl2uuid(resourceLocation));
+            }
+            attributeInstance.addPermanentModifier(new PortAttributeModifier(resourceLocation, amount, PortAttributeModifier.Operation.wrap(operation)).unwrap());
+        }
+    }
+
+    public static void removeAttributeModifier(LivingEntity livingEntity, Holder<Attribute> attribute, ResourceLocation resourceLocation) {
+        AttributeInstance attributeInstance = livingEntity.getAttribute(attribute);
+        if (attributeInstance != null) {
+            if (attributeInstance.getModifier(PortAttributeModifier.rl2uuid(resourceLocation)) != null) {
+                attributeInstance.removeModifier(PortAttributeModifier.rl2uuid(resourceLocation));
+            }
+        }
     }
 }

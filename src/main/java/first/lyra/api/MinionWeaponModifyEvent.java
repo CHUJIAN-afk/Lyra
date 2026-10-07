@@ -11,12 +11,12 @@ import org.jetbrains.annotations.Nullable;
 
 public final class MinionWeaponModifyEvent extends Event {
 
-    public final ItemLike item;//物品
-    public float damage;//伤害
-    public float knockback;//击退
-    public float armorPierce;//护甲穿透
-    public @NotNull MinionSlotType type;//占用的槽位类型枚举
-    public @Nullable Holder<SoundEvent> soundEvent;//召唤时发出的声音
+    public final ItemLike item;
+    public float damage;
+    public float knockback;
+    public float armorPierce;
+    public @NotNull MinionSlotType type;
+    public @Nullable Holder<SoundEvent> soundEvent;
 
     public MinionWeaponModifyEvent(ItemLike item, MinionWeapon weapon) {
         this.item = item;

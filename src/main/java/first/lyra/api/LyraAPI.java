@@ -21,7 +21,11 @@ public interface LyraAPI {
         return DamageInfoData.build(level);
     }
 
-    static void light(Vec3 pos, int light) {
-        DynamicLightDispatcher.addLightSources(pos, light);
+    static void light(Vec3 pos, int level) {
+        DynamicLightDispatcher.INSTANCE.addLightSource(pos, level);
+    }
+
+    static void light(Vec3 pos, float strength) {
+        DynamicLightDispatcher.INSTANCE.addLightSource(pos, strength);
     }
 }

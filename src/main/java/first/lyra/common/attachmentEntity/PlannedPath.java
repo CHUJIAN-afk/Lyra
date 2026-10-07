@@ -36,9 +36,6 @@ public class PlannedPath {
         plannedRunnable.put(currentIndex, runnable);
     }
 
-    /**
-     * 获取下一个节点并推进进度（不移除列表内数据）
-     */
     public PathNode advance() {
         if (isFinished()) {
             return null;

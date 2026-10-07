@@ -16,14 +16,6 @@ import org.slf4j.Logger;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * 伤害数字样式管理器（客户端持有）。
- * <p>
- * 从数据包 JSON 加载样式定义，/reload 时自动重载。
- * 客户端收到网络包后根据 damageType 查询样式重建渲染参数。
- * 若 JSON 未定义 default，则 defaultStyle 为 null，未匹配的伤害类型将被跳过不渲染。
- * </p>
- */
 public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
 
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -31,10 +23,9 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
 
     public static final DamageInfoStyleManager INSTANCE = new DamageInfoStyleManager();
 
-    /** 默认样式（null 表示 JSON 未定义 default，未匹配的伤害类型将被跳过） */
     @Nullable
     private DamageInfoStyle defaultStyle;
-    /** 伤害类型 → 样式缓存 */
+
     private Map<ResourceLocation, DamageInfoStyle> styleMap = new HashMap<>();
 
     private DamageInfoStyleManager() {
@@ -51,7 +42,6 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
             try {
                 JsonObject root = GsonHelper.convertToJsonObject(entry.getValue(), "damage_info");
 
-                // 解析 default
                 if (root.has("default")) {
                     DamageInfoStyle style = parseStyle(GsonHelper.getAsJsonObject(root, "default"));
                     if (style != null) {
@@ -59,7 +49,6 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
                     }
                 }
 
-                // 解析 entries
                 if (root.has("entries")) {
                     for (JsonElement elem : GsonHelper.getAsJsonArray(root, "entries")) {
                         JsonObject obj = elem.getAsJsonObject();
@@ -84,15 +73,10 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
         LOGGER.info("Loaded {} damage info styles, default: {}", newMap.size(), newDefault != null ? newDefault.damageType() : "null");
     }
 
-    /**
-     * 解析单条样式，校验所有字段完整性。
-     *
-     * @return 解析后的样式，字段不完整则返回 null 并打印警告
-     */
     @Nullable
     private DamageInfoStyle parseStyle(JsonObject obj) {
         try {
-            // 校验所有必需字段存在
+
             String[] requiredFields = {"damage_type", "texture", "texture_width", "texture_height",
                     "glyph_spacing", "render_size", "max_life", "color", "critical_color"};
             for (String field : requiredFields) {
@@ -112,7 +96,6 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
             int color = DamageInfoStyle.parseHexColor(GsonHelper.getAsString(obj, "color"));
             int criticalColor = DamageInfoStyle.parseHexColor(GsonHelper.getAsString(obj, "critical_color"));
 
-            // 基本值校验
             if (textureWidth <= 0 || textureHeight <= 0) {
                 LOGGER.warn("Invalid texture dimensions {}x{} for damage_type '{}', skipping", textureWidth, textureHeight, damageType);
                 return null;
@@ -143,13 +126,6 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
         }
     }
 
-    /**
-     * 根据伤害类型 ID 查询样式。
-     * <p>
-     * 先查 styleMap，未命中时返回 defaultStyle。
-     * 若 defaultStyle 也为 null（JSON 未定义 default），返回 null，调用方应跳过该条目。
-     * </p>
-     */
     @Nullable
     public DamageInfoStyle getStyle(ResourceLocation damageTypeId) {
         DamageInfoStyle exact = styleMap.get(damageTypeId);
@@ -157,7 +133,6 @@ public class DamageInfoStyleManager extends SimpleJsonResourceReloadListener {
         return defaultStyle;
     }
 
-    /** 获取默认样式，可能为 null */
     @Nullable
     public DamageInfoStyle getDefault() {
         return defaultStyle;

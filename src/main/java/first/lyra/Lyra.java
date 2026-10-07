@@ -1,10 +1,8 @@
 package first.lyra;
 
-import first.lyra.client.ClientGameEvent;
-import first.lyra.client.ClientModEvent;
+import first.lyra.client.ClientEvent;
 import first.lyra.client.config.ClientConfig;
-import first.lyra.common.ForgeGameEvent;
-import first.lyra.common.ForgeModEvent;
+import first.lyra.common.Event;
 import first.lyra.register.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.eventbus.api.IEventBus;
@@ -28,16 +26,14 @@ public class Lyra {
     public Lyra(FMLJavaModLoadingContext context) {
         IEventBus eventBus = context.getModEventBus();
         Registries.register(eventBus);
-        LyraAttachmentRegister.register();
-        LyraAttributeRegister.register();
-        LyraDataComponentRegister.register();
+        LyraAttachmentRegister.register(eventBus);
+        LyraAttributeRegister.register(eventBus);
+        LyraDataComponentRegister.register(eventBus);
         LyraParticleRegister.register(eventBus);
         LyraNetworkPacketRegister.register();
-        ForgeGameEvent.init();
-        ForgeModEvent.init();
+        Event.init();
         if (PortEnvironment.isPhysicalClient()) {
-            ClientGameEvent.init();
-            ClientModEvent.init();
+            ClientEvent.init();
             context.registerConfig(ModConfig.Type.CLIENT, ClientConfig.Spec);
         }
     }

@@ -5,14 +5,6 @@ import net.minecraft.world.entity.Entity;
 
 import java.util.function.Consumer;
 
-/**
- * 静态渲染虚拟实体时使用的姿态/动画状态。
- * <p>
- * 所有字段都直接面向实体渲染器读取的通用状态：body/head 旋转、
- * 行走摆动、攻击进度、受伤/死亡时间、潜行/游泳、缩放与染色。
- * 模组专属实体可用 {@link #customize(Consumer)} 做额外设置。
- * </p>
- */
 public final class VirtualEntityPose {
 
     private int ageTicks;
@@ -67,7 +59,6 @@ public final class VirtualEntityPose {
         return this;
     }
 
-    /** 0~1 攻击进度。实现为当前帧已完成的 attackAnim。 */
     public VirtualEntityPose attack(float progress) {
         this.attackProgress = progress;
         return this;
@@ -98,7 +89,6 @@ public final class VirtualEntityPose {
         return this;
     }
 
-    /** 整体 ARGB 染色，-1 不启用。 */
     public VirtualEntityPose color(int argb) {
         this.color = argb;
         return this;
@@ -114,7 +104,6 @@ public final class VirtualEntityPose {
         return this;
     }
 
-    /** 额外配置幽灵实体状态；建议使用 instanceof 后调用该实体类型的公开 setter。 */
     public VirtualEntityPose customize(Consumer<Entity> customizer) {
         this.customizer = customizer;
         return this;

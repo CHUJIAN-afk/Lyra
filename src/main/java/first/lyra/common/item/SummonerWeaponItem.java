@@ -35,9 +35,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-/**
- * 仆从武器，通过数据组件保存召唤属性，可召唤/移除仆从。
- */
 public class SummonerWeaponItem<T extends Minion> extends Item {
 
     private final Supplier<AttachmentEntityType<T>> typeSupplier;
@@ -144,16 +141,10 @@ public class SummonerWeaponItem<T extends Minion> extends Item {
         return minion;
     }
 
-    /**
-     * 处理仆从召唤逻辑。
-     */
     public void summon(@NotNull Player player, @NotNull ItemStack itemStack) {
         summonConsumer.accept(this, player, itemStack);
     }
 
-    /**
-     * 移除玩家拥有的此类型仆从。
-     */
     public void remove(@NotNull Player player, @NotNull ItemStack itemStack) {
         removeConsumer.accept(this, player, itemStack);
     }

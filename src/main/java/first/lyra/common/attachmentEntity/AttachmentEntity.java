@@ -1,6 +1,6 @@
 package first.lyra.common.attachmentEntity;
 
-import first.lyra.common.attachment.InvincibleData;
+import first.lyra.common.attachment.ImmunityData;
 import first.lyra.common.attachment.TargetCache;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.utils.LyraStreamCodecs;
@@ -14,17 +14,22 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
+import software.bernie.geckolib.core.animatable.GeoAnimatable;
+import software.bernie.geckolib.core.animatable.instance.AnimatableInstanceCache;
+import software.bernie.geckolib.core.animation.AnimatableManager;
+import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-public abstract class AttachmentEntity {
+public abstract class AttachmentEntity implements GeoAnimatable {
 
     protected final Holder<AttachmentEntityType<?>> type;
     protected final ArrayList<PathNode> historyNodes = new ArrayList<>();
     protected final AttachmentEntityGoalSelector goalSelector = new AttachmentEntityGoalSelector();
     protected final SyncFieldDispatcher syncFields = SyncFieldDispatcher.create(this::registerSyncFields);
+    protected final AnimatableInstanceCache animationCache = GeckoLibUtil.createInstanceCache(this);
     protected UUID uuid = UUID.randomUUID();
     protected Player owner = null;
     protected PlannedPath currentPlannedPath = null;
@@ -54,6 +59,20 @@ public abstract class AttachmentEntity {
     public void registerGoals(AttachmentEntityGoalSelector goalSelector) {
     }
 
+    @Override
+    public void registerControllers(AnimatableManager.ControllerRegistrar controllers) {
+    }
+
+    @Override
+    public AnimatableInstanceCache getAnimatableInstanceCache() {
+        return animationCache;
+    }
+
+    @Override
+    public double getTick(Object object) {
+        return tickCount;
+    }
+
     @NotNull
     public DamageSource getDamageSource() {
         return new AttachmentEntityDamageSource(getLevel().damageSources().generic().typeHolder(), null, null, getPos(), this);
@@ -63,12 +82,13 @@ public abstract class AttachmentEntity {
         return owner.getData(LyraAttachmentRegister.TargetCache);
     }
 
-    public void attack(LivingEntity target, float damageAmount, int invincibleTime) {
-        InvincibleData.attack(target)
-                .damageSource(getDamageSource())
-                .damageAmount(damageAmount)
-                .invincibleTime(invincibleTime)
-                .apply();
+    public boolean attack(LivingEntity target, float amount, int tick) {
+        ImmunityData data = ImmunityData.get(target);
+        if (!data.isActive(getUuid()) && data.attack(getDamageSource(), amount)) {
+            data.record(getUuid(), tick);
+            return true;
+        }
+        return false;
     }
 
     public void copyAttributes(AttachmentEntity other) {
@@ -113,10 +133,10 @@ public abstract class AttachmentEntity {
         if (!level.isClientSide()) {
             tickCount++;
             if (this instanceof IBlockCollision<?> blockCollision) {
-                blockCollision.blockCollision(this);
+                blockCollision.blockCollision();
             }
             if (this instanceof IEntityCollision<?> iEntityCollision) {
-                iEntityCollision.entityCollision(this);
+                iEntityCollision.entityCollision();
             }
         }
         historyNodes.add(0, currentPathNode);
@@ -195,16 +215,10 @@ public abstract class AttachmentEntity {
         this.currentPathNode = currentPathNode;
     }
 
-    /**
-     * tick前进行的存在性检查，返回false会跳过tick并在tick末移除
-     */
     public boolean isAlive() {
         return true;
     }
 
-    /**
-     * @return 当前位置
-     */
     public Vec3 getPos() {
         return currentPathNode.pos();
     }
@@ -213,53 +227,30 @@ public abstract class AttachmentEntity {
         currentPathNode = new PathNode(pos, getYaw(), getPitch(), getRoll());
     }
 
-    /**
-     * @return 当前偏航角（度）
-     */
     public float getYaw() {
         return currentPathNode.yaw();
     }
 
-    /**
-     * @return 当前俯仰角（度）
-     */
     public float getPitch() {
         return currentPathNode.pitch();
     }
 
-    /**
-     * @return 当前翻滚角（度）
-     */
     public float getRoll() {
         return currentPathNode.roll();
     }
 
-    /**
-     * @return 实体 UUID
-     */
     public UUID getUuid() {
         return uuid;
     }
 
-    /**
-     * 设置 UUID，用于从网络数据恢复。
-     *
-     * @param uuid UUID值
-     */
     public void setUuid(UUID uuid) {
         this.uuid = uuid;
     }
 
-    /**
-     * @return 虚拟实体所在世界
-     */
     public Level getLevel() {
         return owner.level();
     }
 
-    /**
-     * @return 当前维度的随机源
-     */
     public RandomSource getRandom() {
         return getLevel().getRandom();
     }
@@ -288,9 +279,6 @@ public abstract class AttachmentEntity {
         this.owner = owner;
     }
 
-    /**
-     * 计算贝塞尔曲线上的点（De Casteljau算法，支持任意数量控制点）
-     */
     public Vec3 calculateBezierPoint(float delta, Vec3... P) {
         if (P.length == 0) {
             return Vec3.ZERO;
@@ -311,9 +299,6 @@ public abstract class AttachmentEntity {
         return Vec3.directionFromRotation(getPitch(), getYaw()).normalize();
     }
 
-    /**
-     * 获取当前速度向量
-     */
     public Vec3 getCurrentVelocity() {
         Vec3 currentPos = getPos();
         ArrayList<PathNode> history = getHistoryNodes();
@@ -326,9 +311,6 @@ public abstract class AttachmentEntity {
         return Vec3.directionFromRotation(getPitch(), getYaw()).normalize();
     }
 
-    /**
-     * 获取当前法线向量（基于旋转）
-     */
     public Vec3 getCurrentNormal() {
         Quaternionf q = new Quaternionf()
                 .rotateY((float) Math.toRadians(-getYaw()))
@@ -343,7 +325,6 @@ public abstract class AttachmentEntity {
         normal = normal.normalize();
         float yaw = (float) Math.toDegrees(Math.atan2(-direction.x, direction.z));
         float pitch = (float) Math.toDegrees(Math.asin(-direction.y));
-        // 已偏转yaw/pitch后，局部Y轴（无roll时法向量）的世界方向
         float pr = (float) Math.toRadians(pitch);
         float yr = (float) Math.toRadians(yaw);
         float cp = (float) Math.cos(pr);
@@ -351,10 +332,8 @@ public abstract class AttachmentEntity {
         float cy = (float) Math.cos(yr);
         float sy = (float) Math.sin(yr);
         Vec3 localY = new Vec3(-sy * sp, cp, cy * sp);
-        // 投影到垂直于direction的平面
         Vec3 projLocalY = localY.subtract(direction.scale(localY.dot(direction))).normalize();
         Vec3 projNormal = normal.subtract(direction.scale(normal.dot(direction))).normalize();
-        // 不翻转projNormal：atan2自然处理正负，避免dot≈0时翻转振荡
         double d = projLocalY.dot(projNormal);
         Vec3 c = projLocalY.cross(projNormal);
         float roll = (float) Math.toDegrees(Math.atan2(c.dot(direction), d));

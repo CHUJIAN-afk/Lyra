@@ -1,7 +1,6 @@
 package first.lyra.common.particle.genericParticle;
 
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.mojang.logging.LogUtils;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.ParticleRenderType;
@@ -14,21 +13,8 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import org.slf4j.Logger;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
-/**
- * 通用粒子 - 自定义渲染中心色块和边缘色块。
- * <p>
- * 颜色为 RGB（不含透明度），透明度由粒子进度自动控制。
- * 缩放通过 {@link #getProgress} 计算渲染进度，无冗余中间变量。
- * </p>
- */
 public class GenericParticle extends TextureSheetParticle {
-
-    private static final Logger LOGGER = LogUtils.getLogger();
-    private static final AtomicBoolean FIRST_RENDER_LOGGED = new AtomicBoolean();
 
     private final SpriteSet spriteSet;
     private final float baseScale;
@@ -47,10 +33,8 @@ public class GenericParticle extends TextureSheetParticle {
         this.quadSize = options.scale();
         this.baseScale = this.quadSize;
         this.lifetime = options.lifetime();
-        // 颜色（RGB直接存储）
         this.centerColor = options.centerColor();
         this.edgeColor = options.edgeColor();
-        // 旋转
         this.spinSpeed = options.spinSpeed();
         this.roll = this.random.nextFloat() * Mth.TWO_PI;
         this.oRoll = this.roll;
@@ -77,9 +61,6 @@ public class GenericParticle extends TextureSheetParticle {
 
     @Override
     public void render(@NotNull VertexConsumer buffer, @NotNull Camera camera, float partialTick) {
-        if (FIRST_RENDER_LOGGED.compareAndSet(false, true)) {
-            LOGGER.info("[Lyra] GenericParticle 渲染自检: sprite={}, baseScale={}, lifetime={}", this.sprite.contents().name(), this.baseScale, this.lifetime);
-        }
         Vec3 cameraPos = camera.getPosition();
         float x = (float) (Mth.lerp(partialTick, this.xo, this.x) - cameraPos.x);
         float y = (float) (Mth.lerp(partialTick, this.yo, this.y) - cameraPos.y);
@@ -92,12 +73,10 @@ public class GenericParticle extends TextureSheetParticle {
 
         float progress = getProgress(partialTick);
         float scale = this.baseScale * (1.0F - (progress * progress));
-        // RGB → ARGB：透明度由进度控制（1=全不透明，0=全透明）
         int alpha = 255;
         int centerARGB = (alpha << 24) | centerColor;
         int edgeARGB = (alpha << 24) | edgeColor;
 
-        // 纹理坐标（完整贴图范围）
         float u0 = this.sprite.getU0();
         float u1 = this.sprite.getU1();
         float v0 = this.sprite.getV0();
@@ -106,19 +85,12 @@ public class GenericParticle extends TextureSheetParticle {
         int light = getLightColor(partialTick);
         int overlay = OverlayTexture.NO_OVERLAY;
 
-        // 贴图布局：6×3 像素，左右拼接两个 3×3
-        //   左侧 3×3：仅中心 (1,1) 有色 → 中心色块
-        //   右侧 3×3：上下左右 (1,0)(0,1)(2,1)(1,2) 有色 → 边缘色块
-        // 两次 quad 即可完成十字形渲染，顶点数从 20 降至 8
-
         float uHalf = (u0 + u1) / 2.0F;
         float uStep = (u1 - u0) / 6.0F;
         float vStep = (v1 - v0) / 3.0F;
 
-        // 中心色块：UV 映射到左侧 3×3 的中心像素 (1,1)→(2,2)
-        renderQuad(buffer, x, y, z, quaternion, -scale, -scale, scale, scale, u0 + uStep, u0 + uStep * 2, v0 + vStep, v0 + vStep * 2, centerARGB, light, overlay);
-        // 边缘色块：UV 映射到右侧 3×3 整体，中心像素透明自然形成十字
-        renderQuad(buffer, x, y, z, quaternion, -scale * 3, -scale * 3, scale * 3, scale * 3, uHalf, u1, v0, v1, edgeARGB, light, overlay);
+        renderQuad(buffer, x, y, z, quaternion, -scale, -scale, scale, scale, u0 + uStep, u0 + uStep * 2, v0 + vStep, v0 + vStep * 2, centerARGB, light);
+        renderQuad(buffer, x, y, z, quaternion, -scale * 3, -scale * 3, scale * 3, scale * 3, uHalf, u1, v0, v1, edgeARGB, light);
     }
 
     @Override
@@ -126,24 +98,19 @@ public class GenericParticle extends TextureSheetParticle {
         return ParticleRenderType.PARTICLE_SHEET_TRANSLUCENT;
     }
 
-    private void renderQuad(VertexConsumer buffer, float cx, float cy, float cz, Quaternionf quaternion, float minX, float minY, float maxX, float maxY, float u0, float u1, float v0, float v1, int color, int light, int overlay) {
+    private void renderQuad(VertexConsumer buffer, float cx, float cy, float cz, Quaternionf quaternion, float minX, float minY, float maxX, float maxY, float u0, float u1, float v0, float v1, int color, int light) {
         Vector3f v = new Vector3f();
-        // 顶点顺序与 UV 配对必须和原版 SingleQuadParticle 一致：(-,-) → (-,+) → (+,+) → (+,-)。
-        // 顺序反过来是反向缠绕，粒子渲染管线没有关闭背面剔除，整片会被剔除掉（表现为粒子完全看不见）。
         v.set(minX, minY, 0.0F).rotate(quaternion);
-        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u1, v1, overlay, light);
+        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u1, v1, light);
         v.set(minX, maxY, 0.0F).rotate(quaternion);
-        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u1, v0, overlay, light);
+        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u1, v0, light);
         v.set(maxX, maxY, 0.0F).rotate(quaternion);
-        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u0, v0, overlay, light);
+        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u0, v0, light);
         v.set(maxX, minY, 0.0F).rotate(quaternion);
-        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u0, v1, overlay, light);
+        addVertex(buffer, cx + v.x, cy + v.y, cz + v.z, color, u0, v1, light);
     }
 
-    private static void addVertex(VertexConsumer buffer, float x, float y, float z, int color, float u, float v, int overlay, int light) {
-        // 1.20.1 的 DefaultVertexFormat.PARTICLE 元素顺序是 Position -> UV0 -> Color -> UV2
-        // （不是常见的 Position -> Color -> UV0 -> UV2），且没有 overlay/normal 元素。
-        // 顺序写错或多写元素，都会在 endVertex 抛 "Not filled all elements of the vertex"。
+    private static void addVertex(VertexConsumer buffer, float x, float y, float z, int color, float u, float v, int light) {
         buffer.vertex(x, y, z)
                 .uv(u, v)
                 .color(color)

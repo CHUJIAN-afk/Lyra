@@ -3,6 +3,7 @@ package first.lyra.register;
 import first.lyra.Lyra;
 import first.lyra.common.dataComponent.LyraRarity;
 import first.lyra.common.dataComponent.MinionWeapon;
+import net.minecraftforge.eventbus.api.IEventBus;
 import org.mesdag.portlib.component.PortDataComponentType;
 import org.mesdag.portlib.registries.PortDataComponentRegistration;
 import org.mesdag.portlib.registries.PortRegisterHandler;
@@ -18,5 +19,6 @@ public class LyraDataComponentRegister {
     public static final PortRegistryEntry<PortDataComponentType<?>, PortDataComponentType<LyraRarity>> RARITY =
             Register.builder("rarity", builder -> builder.persistent(LyraRarity.CODEC).networkSynchronized(LyraRarity.STREAM_CODEC));
 
-    public static void register() {}
+    public static void register(IEventBus eventBus) {
+    }
 }
