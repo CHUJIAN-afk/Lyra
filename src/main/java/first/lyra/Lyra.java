@@ -10,6 +10,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.mesdag.portlib.network.PortNetworkHandler;
+import org.mesdag.portlib.registries.PortRegisterHandler;
 import org.mesdag.portlib.wrapper.PortEnvironment;
 
 @Mod(Lyra.MODID)
@@ -26,10 +27,10 @@ public class Lyra {
     public Lyra(FMLJavaModLoadingContext context) {
         IEventBus eventBus = context.getModEventBus();
         Registries.register(eventBus);
-        LyraAttachmentRegister.register(eventBus);
-        LyraAttributeRegister.register(eventBus);
-        LyraDataComponentRegister.register(eventBus);
-        LyraParticleRegister.register(eventBus);
+        LyraAttachmentRegister.register();
+        LyraAttributeRegister.register();
+        LyraDataComponentRegister.register();
+        LyraParticleRegister.register();
         LyraNetworkPacketRegister.register();
         Event.init();
         if (PortEnvironment.isPhysicalClient()) {

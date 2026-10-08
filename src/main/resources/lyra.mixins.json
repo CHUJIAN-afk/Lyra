@@ -4,15 +4,13 @@
   "package": "first.lyra.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "ClientLevelAccessor",
     "CombatRulesMixin",
     "CreativeModeTabMixin",
     "DamageSourceMixin",
     "ExperienceOrbAccessor",
     "ItemMixin",
     "LevelRendererAccessor",
-    "LivingEntityMixin",
-    "PlayerMixin"
+    "LivingEntityMixin"
   ],
   "client": [
     "CreativeModeInventoryScreenMixin",

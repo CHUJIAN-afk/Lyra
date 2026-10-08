@@ -3,7 +3,6 @@ package first.lyra.register;
 import first.lyra.Lyra;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.RangedAttribute;
-import net.minecraftforge.eventbus.api.IEventBus;
 import org.mesdag.portlib.registries.PortAttributeRegistration;
 import org.mesdag.portlib.registries.PortRegisterHandler;
 import org.mesdag.portlib.registries.PortRegistryEntry;
@@ -24,6 +23,6 @@ public class LyraAttributeRegister {
         return Register.register(name, () -> new RangedAttribute(Lyra.rl(name).toString(), defaultValue, min, max), maker -> maker.setSyncable(true));
     }
 
-    public static void register(IEventBus eventBus) {
+    public static void register() {
     }
 }

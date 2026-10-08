@@ -48,11 +48,6 @@ public abstract class LivingEntityMixin {
     @Shadow
     public abstract int getExperienceReward();
 
-    @Shadow
-    @Final
-    public int invulnerableDuration;
-
-    @SuppressWarnings("DataFlowIssue")
     @WrapWithCondition(
             method = "dropAllDeathLoot",
             at = @At(

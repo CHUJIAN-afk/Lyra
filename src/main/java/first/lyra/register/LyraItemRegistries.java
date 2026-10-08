@@ -100,6 +100,13 @@ public class LyraItemRegistries {
     }
 
     public void register(IEventBus eventBus) {
+        register(eventBus, null);
+    }
+
+    public void register(IEventBus eventBus, Runnable runnable) {
+        if (runnable != null) {
+            runnable.run();
+        }
         eventBus.addListener((GatherDataEvent event) -> {
             boolean client = event.includeClient();
             boolean server = event.includeServer();

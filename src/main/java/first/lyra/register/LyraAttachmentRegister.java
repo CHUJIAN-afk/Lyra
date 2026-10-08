@@ -2,7 +2,6 @@ package first.lyra.register;
 
 import first.lyra.Lyra;
 import first.lyra.common.attachment.*;
-import net.minecraftforge.eventbus.api.IEventBus;
 import org.mesdag.portlib.attachment.PortAttachmentType;
 import org.mesdag.portlib.registries.PortAttachmentRegistration;
 import org.mesdag.portlib.registries.PortRegisterHandler;
@@ -38,7 +37,6 @@ public class LyraAttachmentRegister {
     public static final PortRegistryEntry<PortAttachmentType<?>, PortAttachmentType<DamageInfoData>> DamageInfoData =
             Register.registerSimple("damage_info_data", () -> PortAttachmentType.builder(DamageInfoData::new));
 
-    public static void register(IEventBus eventBus) {
-        PortRegisterHandler.init(eventBus);
+    public static void register() {
     }
 }
