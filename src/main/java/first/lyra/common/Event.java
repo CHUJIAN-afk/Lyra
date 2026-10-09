@@ -38,7 +38,7 @@ import java.util.stream.Stream;
 public class Event {
 
     public static void init() {
-        PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortModifyDefaultComponentsEvent.class, Event::onModifyDefaultComponents);
+        //PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortModifyDefaultComponentsEvent.class, Event::onModifyDefaultComponents);
         PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortLootTableLoadEvent.class, Event::onLootTableLoad);
         PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortEntityAttributeModificationEvent.class, Event::onEntityAttributeModification);
         PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortEntityTickEvent.Post.class, Event::onEntityTickPost);
