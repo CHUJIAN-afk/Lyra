@@ -7,12 +7,10 @@
     "ClientLevelAccessor",
     "CombatRulesMixin",
     "CreativeModeTabMixin",
-    "DamageSourceMixin",
     "ExperienceOrbAccessor",
     "ItemMixin",
     "LevelRendererAccessor",
-    "LivingEntityMixin",
-    "PlayerMixin"
+    "LivingEntityMixin"
   ],
   "client": [
     "CreativeModeInventoryScreenMixin",

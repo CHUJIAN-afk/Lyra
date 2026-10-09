@@ -5,7 +5,6 @@ import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
 import first.lyra.client.dynamicLight.DynamicLightDispatcher;
 import first.lyra.client.render.AttachmentEntityRenderDispatcher;
-import first.lyra.common.damageInfo.DamageInfoRenderDispatcher;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -55,7 +54,6 @@ public class LevelRendererMixin {
         MultiBufferSource.BufferSource bufferSource = renderBuffers.bufferSource();
         float partialTick = deltaTracker.getGameTimeDeltaPartialTick(true);
         AttachmentEntityRenderDispatcher.render(level, camera, poseStack, bufferSource, partialTick);
-        DamageInfoRenderDispatcher.render(level, camera, bufferSource, partialTick);
     }
 
     @Inject(method = "compileSections", at = @At(value = "HEAD"))

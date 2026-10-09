@@ -105,7 +105,6 @@ public class Event {
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onLevelTickPost(LevelTickEvent.Post event) {
         ParticlesData.tick(event);
-        DamageInfoData.tick(event);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)

@@ -38,9 +38,6 @@ public class LyraAttachmentRegister {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<ParticlesData>> BatchedParticles =
             Register.register("batched_particles", () -> AttachmentType.builder(ParticlesData::new).build());
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<DamageInfoData>> DamageInfoData =
-            Register.register("damage_info_data", () -> AttachmentType.builder(DamageInfoData::new).build());
-
     public static void register(IEventBus eventbus) {
         Register.register(eventbus);
     }
