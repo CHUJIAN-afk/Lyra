@@ -107,7 +107,6 @@ public class Event {
 
     public static void onLevelTickPost(PortLevelTickEvent.Post event) {
         ParticlesData.tick(event);
-        DamageInfoData.tick(event);
     }
 
     public static void onLivingDamagePre(PortLivingDamageEvent.Pre event) {

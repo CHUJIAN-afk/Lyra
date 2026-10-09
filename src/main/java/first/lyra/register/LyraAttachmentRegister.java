@@ -34,9 +34,6 @@ public class LyraAttachmentRegister {
     public static final PortRegistryEntry<PortAttachmentType<?>, PortAttachmentType<ParticlesData>> BatchedParticles =
             Register.registerSimple("batched_particles", () -> PortAttachmentType.builder(ParticlesData::new));
 
-    public static final PortRegistryEntry<PortAttachmentType<?>, PortAttachmentType<DamageInfoData>> DamageInfoData =
-            Register.registerSimple("damage_info_data", () -> PortAttachmentType.builder(DamageInfoData::new));
-
     public static void register() {
     }
 }

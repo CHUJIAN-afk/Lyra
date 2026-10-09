@@ -3,8 +3,6 @@ package first.lyra.client;
 import first.lyra.client.dynamicLight.DynamicLightDispatcher;
 import first.lyra.client.render.AttachmentEntityRenderDispatcher;
 import first.lyra.client.tooltip.TooltipHandler;
-import first.lyra.common.damageInfo.DamageInfoRenderDispatcher;
-import first.lyra.common.damageInfo.DamageInfoStyleManager;
 import first.lyra.common.particle.genericParticle.GenericParticleProvider;
 import first.lyra.mixin.LevelRendererAccessor;
 import first.lyra.register.LyraParticleRegister;
@@ -17,7 +15,6 @@ import net.minecraft.world.item.ItemStack;
 import org.mesdag.portlib.client.PortDeltaTicker;
 import org.mesdag.portlib.event.PortEventHandler;
 import org.mesdag.portlib.event.PortEventPriority;
-import org.mesdag.portlib.event.client.PortRegisterClientReloadListenersEvent;
 import org.mesdag.portlib.event.client.PortRegisterParticleProvidersEvent;
 import org.mesdag.portlib.event.client.PortRenderLevelStageEvent;
 import org.mesdag.portlib.event.entity.player.PortItemTooltipEvent;
@@ -29,7 +26,6 @@ public class ClientEvent {
     public static void init() {
         PortEventHandler.addListener(PortEventPriority.LOWEST, ClientEvent::onItemTooltip);
         PortEventHandler.addListener(ClientEvent::onRenderLevel);
-        PortEventHandler.addListener(ClientEvent::onRegisterClientReloadListeners);
         PortEventHandler.addListener(ClientEvent::onRegisterParticleProviders);
     }
 
@@ -41,7 +37,6 @@ public class ClientEvent {
                 MultiBufferSource.BufferSource bufferSource = minecraft.renderBuffers().bufferSource();
                 PortDeltaTicker partialTick = event.getPartialTick();
                 AttachmentEntityRenderDispatcher.render(level, event.getCamera(), event.getPoseStack(), bufferSource, partialTick.getGameTimeDeltaPartialTick(true));
-                DamageInfoRenderDispatcher.render(level, event.getCamera(), bufferSource, partialTick.getGameTimeDeltaPartialTick(true));
             }
         } else if (event.getStage() == PortRenderLevelStageEvent.Stage.AFTER_LEVEL) {
             DynamicLightDispatcher.INSTANCE.update((LevelRendererAccessor) event.getLevelRenderer());
@@ -54,10 +49,6 @@ public class ClientEvent {
         List<Component> toolTip = event.getToolTip();
         toolTip.addAll(TooltipHandler.getMinionWeaponItemTooltip(itemStack, player));
         toolTip.addAll(TooltipHandler.getCustomTooltip(itemStack, player));
-    }
-
-    public static void onRegisterClientReloadListeners(PortRegisterClientReloadListenersEvent event) {
-        event.registerReloadListener(DamageInfoStyleManager.INSTANCE);
     }
 
     public static void onRegisterParticleProviders(PortRegisterParticleProvidersEvent event) {

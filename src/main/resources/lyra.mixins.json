@@ -6,7 +6,6 @@
   "mixins": [
     "CombatRulesMixin",
     "CreativeModeTabMixin",
-    "DamageSourceMixin",
     "ExperienceOrbAccessor",
     "ItemMixin",
     "LevelRendererAccessor",
