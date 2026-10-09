@@ -11,6 +11,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -25,7 +26,7 @@ import java.util.UUID;
 
 public abstract class AttachmentEntity implements GeoAnimatable {
 
-    protected final Holder<AttachmentEntityType<?>> type;
+    protected final RegistryObject<? extends AttachmentEntityType<?>> type;
     protected final ArrayList<PathNode> historyNodes = new ArrayList<>();
     protected final AttachmentEntityGoalSelector goalSelector = new AttachmentEntityGoalSelector();
     protected final SyncFieldDispatcher syncFields = SyncFieldDispatcher.create(this::registerSyncFields);
@@ -50,7 +51,7 @@ public abstract class AttachmentEntity implements GeoAnimatable {
         fields.field(LyraStreamCodecs.PATH_NODE, this::getCurrentPathNode, this::setCurrentPathNode);
     }
 
-    public AttachmentEntity(Holder<AttachmentEntityType<?>> type) {
+    public AttachmentEntity(RegistryObject<? extends AttachmentEntityType<?>> type) {
         this.type = type;
         init(new PathNode(Vec3.ZERO, 0, 0, 0));
         registerGoals(goalSelector);
@@ -341,6 +342,6 @@ public abstract class AttachmentEntity implements GeoAnimatable {
     }
 
     public AttachmentEntityType<?> getType() {
-        return type.value();
+        return type.get();
     }
 }

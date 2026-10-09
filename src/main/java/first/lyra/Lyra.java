@@ -32,6 +32,7 @@ public class Lyra {
         LyraDataComponentRegister.register();
         LyraParticleRegister.register();
         LyraNetworkPacketRegister.register();
+        LyraRegistries.init();
         Event.init();
         if (PortEnvironment.isPhysicalClient()) {
             ClientEvent.init();

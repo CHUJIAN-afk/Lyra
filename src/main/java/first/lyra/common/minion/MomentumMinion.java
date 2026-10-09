@@ -7,6 +7,7 @@ import first.lyra.common.attachmentEntity.PlannedPath;
 import net.minecraft.core.Holder;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -21,7 +22,7 @@ public abstract class MomentumMinion extends Minion implements IMomentumAttachme
     private float drag = 0.92F;
     private float gravity = -0.08F;
 
-    public MomentumMinion(Holder<AttachmentEntityType<?>> type) {
+    public MomentumMinion(RegistryObject<? extends AttachmentEntityType<?>> type) {
         super(type);
     }
 

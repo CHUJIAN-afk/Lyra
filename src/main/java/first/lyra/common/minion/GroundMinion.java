@@ -10,6 +10,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -21,7 +22,7 @@ public abstract class GroundMinion extends MomentumMinion implements IBlockColli
     private boolean isWalking = false;
     private boolean onGround = false;
 
-    public GroundMinion(Holder<AttachmentEntityType<?>> type) {
+    public GroundMinion(RegistryObject<? extends AttachmentEntityType<?>> type) {
         super(type);
     }
 

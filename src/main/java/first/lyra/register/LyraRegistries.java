@@ -12,6 +12,8 @@ public class LyraRegistries {
 
     private static final ResourceKey<Registry<AttachmentEntityType<? extends AttachmentEntity>>> ATTACHMENT_ENTITY_TYPE_KEY = ResourceKey.createRegistryKey(Lyra.rl("attachment_entity_types"));
 
-    public static final PortCustomRegistration<AttachmentEntityType<? extends AttachmentEntity>> ATTACHMENT_ENTITY_TYPES =
-            PortRegisterHandler.custom(Lyra.MODID, ATTACHMENT_ENTITY_TYPE_KEY, maker -> maker.sync(true));
+    public static final PortCustomRegistration<AttachmentEntityType<? extends AttachmentEntity>> ATTACHMENT_ENTITY_TYPES = PortRegisterHandler.custom(Lyra.MODID, ATTACHMENT_ENTITY_TYPE_KEY, maker -> maker.sync(true));
+
+    public static void init() {
+    }
 }

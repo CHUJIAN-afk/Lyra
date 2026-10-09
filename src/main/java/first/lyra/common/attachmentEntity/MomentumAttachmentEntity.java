@@ -4,6 +4,7 @@ import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -15,7 +16,7 @@ public abstract class MomentumAttachmentEntity extends AttachmentEntity implemen
     private float drag = 0.92F;
     private float gravity = -0.08F;
 
-    public MomentumAttachmentEntity(Holder<AttachmentEntityType<?>> type) {
+    public MomentumAttachmentEntity(RegistryObject<? extends AttachmentEntityType<?>> type) {
         super(type);
     }
 

@@ -8,13 +8,14 @@ import first.lyra.register.LyraDamageRegister;
 import net.minecraft.core.Holder;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.registries.RegistryObject;
 import org.jetbrains.annotations.NotNull;
 
 public abstract class Projectile extends MomentumAttachmentEntity {
 
     protected int maxTickCount = 200;
 
-    public Projectile(Holder<AttachmentEntityType<?>> type) {
+    public Projectile(RegistryObject<? extends AttachmentEntityType<?>> type) {
         super(type);
     }
 

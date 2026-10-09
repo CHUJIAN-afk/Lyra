@@ -219,7 +219,7 @@ public class AttachmentEntityData {
             groups.clear();
             int typeCount = buf.readVarInt();
             for (int i = 0; i < typeCount; i++) {
-                AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.getHolder(buf.readResourceLocation()).orElseThrow().value();
+                AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.get(buf.readResourceLocation());
                 List<AttachmentEntity> list = groups.computeIfAbsent(entityType, k -> new ArrayList<>());
                 int listSize = buf.readVarInt();
                 for (int k = 0; k < listSize; k++) {
