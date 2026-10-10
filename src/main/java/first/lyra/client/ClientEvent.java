@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
 import org.mesdag.portlib.client.PortDeltaTicker;
 import org.mesdag.portlib.event.PortEventHandler;
 import org.mesdag.portlib.event.PortEventPriority;
@@ -29,16 +30,16 @@ public class ClientEvent {
         PortEventHandler.addListener(ClientEvent::onRegisterParticleProviders);
     }
 
-    public static void onRenderLevel(PortRenderLevelStageEvent event) {
-        if (event.getStage() == PortRenderLevelStageEvent.Stage.AFTER_ENTITIES) {
+    public static void onRenderLevel(RenderLevelStageEvent event) {
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
             Minecraft minecraft = Minecraft.getInstance();
             ClientLevel level = minecraft.level;
             if (level != null) {
                 MultiBufferSource.BufferSource bufferSource = minecraft.renderBuffers().bufferSource();
-                PortDeltaTicker partialTick = event.getPartialTick();
-                AttachmentEntityRenderDispatcher.render(level, event.getCamera(), event.getPoseStack(), bufferSource, partialTick.getGameTimeDeltaPartialTick(true));
+                float partialTick = event.getPartialTick();
+                AttachmentEntityRenderDispatcher.render(level, event.getCamera(), event.getPoseStack(), bufferSource, partialTick);
             }
-        } else if (event.getStage() == PortRenderLevelStageEvent.Stage.AFTER_LEVEL) {
+        } else if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL) {
             DynamicLightDispatcher.INSTANCE.update((LevelRendererAccessor) event.getLevelRenderer());
         }
     }

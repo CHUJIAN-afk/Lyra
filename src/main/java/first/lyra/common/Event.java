@@ -39,14 +39,14 @@ public class Event {
 
     public static void init() {
         //PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortModifyDefaultComponentsEvent.class, Event::onModifyDefaultComponents);
-        PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortLootTableLoadEvent.class, Event::onLootTableLoad);
-        PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortEntityAttributeModificationEvent.class, Event::onEntityAttributeModification);
-        PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortEntityTickEvent.Post.class, Event::onEntityTickPost);
-        PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortPlayerTickEvent.Post.class, Event::onPlayerTickPost);
-        PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortLevelTickEvent.Post.class, Event::onLevelTickPost);
-        PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortLivingDamageEvent.Pre.class, Event::onLivingDamagePre);
-        PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortLivingDamageEvent.Post.class, Event::onLivingDamagePost);
-        PortEventHandler.addListener(PortEventPriority.LOWEST, false, PortLivingDeathEvent.class, Event::onLivingDeathPost);
+        PortEventHandler.addListener(Event::onLootTableLoad);
+        PortEventHandler.addListener(Event::onEntityAttributeModification);
+        PortEventHandler.addListener(Event::onEntityTickPost);
+        PortEventHandler.addListener(Event::onPlayerTickPost);
+        PortEventHandler.addListener(Event::onLevelTickPost);
+        PortEventHandler.addListener(Event::onLivingDamagePre);
+        PortEventHandler.addListener(Event::onLivingDamagePost);
+        PortEventHandler.addListener(Event::onLivingDeathPost);
     }
 
     public static void onModifyDefaultComponents(PortModifyDefaultComponentsEvent event) {
