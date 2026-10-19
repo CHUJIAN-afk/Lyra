@@ -1,17 +1,12 @@
 package first.lyra.mixin;
 
-import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.vertex.PoseStack;
-import first.lyra.client.dynamicLight.DynamicLightDispatcher;
 import first.lyra.client.render.AttachmentEntityRenderDispatcher;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.*;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.BlockAndTintGetter;
-import net.minecraft.world.level.block.state.BlockState;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -33,14 +28,6 @@ public class LevelRendererMixin {
     @Final
     private RenderBuffers renderBuffers;
 
-    @ModifyReturnValue(
-            method = "getLightColor(Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/core/BlockPos;)I",
-            at = @At("RETURN")
-    )
-    private static int getLightColor(int original, BlockAndTintGetter level, BlockState state, BlockPos pos) {
-        return DynamicLightDispatcher.INSTANCE.getDynamicLight(level, state, pos, original);
-    }
-
     @Inject(
             method = "renderLevel",
             at = @At(
@@ -56,8 +43,4 @@ public class LevelRendererMixin {
         AttachmentEntityRenderDispatcher.render(level, camera, poseStack, bufferSource, partialTick);
     }
 
-    @Inject(method = "compileSections", at = @At(value = "HEAD"))
-    private void renderLevel(Camera camera, CallbackInfo ci) {
-        DynamicLightDispatcher.INSTANCE.update((LevelRendererAccessor) this);
-    }
 }

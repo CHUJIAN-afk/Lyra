@@ -112,6 +112,7 @@ repositories {
 }
 
 dependencies {
+    api 'com.light:light:1.0.0'
     compileOnly("mezz.jei:jei-${minecraft_version}-neoforge-api:19.25.0.323")
     api "curse.maven:geckolib-388172:8893490"
 }

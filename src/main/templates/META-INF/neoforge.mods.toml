@@ -72,6 +72,13 @@ versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"
 
+[[dependencies."${mod_id}"]]
+modId = "light"
+type = "required"
+versionRange = "[1.0.0,)"
+ordering = "AFTER"
+side = "CLIENT"
+
 # GeckoLib：Lyra 的动画/渲染 API 直接依赖其类型，属必需前置
 [[dependencies."${mod_id}"]]
 modId = "geckolib"

@@ -9,17 +9,12 @@
     "CreativeModeTabMixin",
     "ExperienceOrbAccessor",
     "ItemMixin",
-    "LevelRendererAccessor",
     "LivingEntityMixin"
   ],
   "client": [
     "CreativeModeInventoryScreenMixin",
-    "EntityRendererMixin",
     "LevelRendererMixin",
-    "WalkAnimationStateAccessor",
-    "sodium.SodiumAoFaceDataMixin",
-    "sodium.SodiumFlatLightPipelineMixin",
-    "sodium.SodiumLightDataAccessMixin"
+    "WalkAnimationStateAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

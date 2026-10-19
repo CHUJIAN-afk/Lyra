@@ -1,6 +1,6 @@
 package first.lyra.api;
 
-import first.lyra.client.dynamicLight.DynamicLightDispatcher;
+import com.light.api.DynamicLightAPI;
 import first.lyra.utils.ParticleHelper;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -17,10 +17,10 @@ public interface LyraAPI {
     }
 
     static void light(Vec3 pos, int level) {
-        DynamicLightDispatcher.INSTANCE.addLightSource(pos, level);
+        DynamicLightAPI.light(pos, level);
     }
 
     static void light(Vec3 pos, float strength) {
-        DynamicLightDispatcher.INSTANCE.addLightSource(pos, strength);
+        DynamicLightAPI.light(pos, strength);
     }
 }

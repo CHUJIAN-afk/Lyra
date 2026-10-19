@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import first.lyra.client.config.ClientConfig;
-import first.lyra.client.dynamicLight.DynamicLightDispatcher;
+import com.light.api.DynamicLightAPI;
 import first.lyra.common.attachmentEntity.*;
 import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.client.Camera;
@@ -60,7 +60,7 @@ public class AttachmentEntityRenderDispatcher {
         int sky = level.getBrightness(LightLayer.SKY, blockPos);
         int block = Math.max(level.getBrightness(LightLayer.BLOCK, blockPos), level.getBlockState(blockPos).getLightEmission(level, blockPos));
         int packed = LightTexture.pack(block, sky);
-        return DynamicLightDispatcher.INSTANCE.getDynamicLight(pos, packed);
+        return DynamicLightAPI.sampleLight(pos, packed);
     }
 
     private static void debugRender(PoseStack poseStack, AttachmentEntity entity, boolean showHitboxes, PathNode renderNode, VertexConsumer debugConsumer) {
