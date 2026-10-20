@@ -13,7 +13,7 @@
   ],
   "client": [
     "CreativeModeInventoryScreenMixin",
-    "LevelRendererMixin",
+    "PhotonLightRendererMixin",
     "WalkAnimationStateAccessor"
   ],
   "injectors": {

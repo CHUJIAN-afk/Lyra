@@ -73,9 +73,9 @@ ordering = "NONE"
 side = "BOTH"
 
 [[dependencies."${mod_id}"]]
-modId = "light"
+modId = "photon"
 type = "required"
-versionRange = "[1.0.0,)"
+versionRange = "[2.2.8,2.3)"
 ordering = "AFTER"
 side = "CLIENT"
 

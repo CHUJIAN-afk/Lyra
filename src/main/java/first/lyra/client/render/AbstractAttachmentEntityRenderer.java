@@ -60,7 +60,10 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
         poseStack.mulPose(rotation);
         poseStack.scale(model.scaleX, model.scaleY, model.scaleZ);
         poseStack.translate(model.translateX, model.translateY, model.translateZ);
-        renderModel(poseStack, bufferSource);
+        Color modelColor = context.color;
+        context.color(Color.ofARGB(1f, modelColor.getRedFloat(), modelColor.getGreenFloat(), modelColor.getBlueFloat()));
+        WholeModelTransparency.render(poseStack, bufferSource, modelColor.getAlphaFloat(), context.packedLight, source -> renderModel(poseStack, source));
+        context.color(modelColor);
         render(poseStack, bufferSource);
         poseStack.popPose();
     }

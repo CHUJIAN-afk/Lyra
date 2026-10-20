@@ -59,7 +59,8 @@ public class ColorBufferSource implements MultiBufferSource {
             if (this.alpha < 1.0f) {
                 a = (int) (a * this.alpha);
             }
-            return inner.setColor(r, g, b, a);
+            inner.setColor(r, g, b, a);
+            return this;
         }
 
         @Override
