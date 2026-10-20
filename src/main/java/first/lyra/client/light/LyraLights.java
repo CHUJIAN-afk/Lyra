@@ -103,7 +103,7 @@ public final class LyraLights {
         }
     }
 
-    private static DynamicLight next() {
+    public static DynamicLight next() {
         ClientLevel current = Minecraft.getInstance().level;
         if (current != level) {
             count = 0;

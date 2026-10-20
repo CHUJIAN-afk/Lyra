@@ -12,9 +12,11 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.Tesselator;
+import com.mojang.blaze3d.vertex.VertexBuffer;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormatElement;
+import com.mojang.blaze3d.vertex.VertexSorting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
@@ -29,9 +31,9 @@ import org.lwjgl.opengl.GL30;
 import org.lwjgl.system.MemoryUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -40,11 +42,14 @@ public final class WholeModelTransparency {
 
     // 模型保留独立深度，图集装满后按距离合成并复用，不复制世界深度。
     private static final List<Model> MODELS = new ArrayList<>();
-    private static final Map<RenderType, ByteBufferBuilder> MEMORY = new IdentityHashMap<>();
-    private static final Map<RenderType, Blend> BLENDS = new IdentityHashMap<>();
+    private static final Map<RenderType, Material> MATERIALS = new IdentityHashMap<>();
+    private static final Capture CAPTURE = new Capture();
     private static final Matrix4f PROJECTION = new Matrix4f();
     private static final Matrix4f VIEW = new Matrix4f();
     private static final Matrix4f CLIP = new Matrix4f();
+    private static ByteBufferBuilder vertices;
+    private static ByteBufferBuilder indices;
+    private static long[] quadOrder = new long[0];
     private static Capture active;
     private static ShaderInstance shader;
     private static Page atlas;
@@ -72,25 +77,26 @@ public final class WholeModelTransparency {
                     width = GlStateManager.Viewport.width();
                     height = GlStateManager.Viewport.height();
                 }
-                Capture capture = new Capture();
-                active = capture;
-                draw.accept(capture);
+                active = CAPTURE;
+                draw.accept(CAPTURE);
                 active = null;
-                List<Batch> batches = new ArrayList<>();
+                List<Batch> batches = new ArrayList<>(CAPTURE.materials.size());
                 Vector3f min = new Vector3f(Float.POSITIVE_INFINITY);
                 Vector3f max = new Vector3f(Float.NEGATIVE_INFINITY);
-                capture.builders.forEach((type, builder) -> {
-                    MeshData mesh = builder.build();
+                for (Material material : CAPTURE.materials) {
+                    MeshData mesh = material.builder.build();
+                    material.builder = null;
                     if (mesh != null) {
-                        if (type.sortOnUpload()) {
-                            mesh.sortQuads(MEMORY.get(type), RenderSystem.getVertexSorting());
-                        }
-                        batches.add(new Batch(type, mesh));
+                        batches.add(new Batch(material, mesh));
                         bounds(mesh, min, max);
                     }
-                });
+                }
+                CAPTURE.materials.clear();
                 Rect rect = rectangle(min, max);
                 if (rect.width > 0 && rect.height > 0 && !batches.isEmpty()) {
+                    for (Batch batch : batches) {
+                        batch.material.batches.add(batch);
+                    }
                     var pose = poseStack.last().pose();
                     double distance = (double) pose.m30() * pose.m30() + (double) pose.m31() * pose.m31() + (double) pose.m32() * pose.m32();
                     MODELS.add(new Model(batches, rect, alpha, packedLight, distance));
@@ -122,40 +128,56 @@ public final class WholeModelTransparency {
                 view.pushMatrix().set(VIEW);
                 RenderSystem.applyModelViewMatrix();
                 RenderSystem.setProjectionMatrix(PROJECTION, sorting);
-                if (atlas == null || atlas.target.width != Math.max(1024, width) || atlas.target.height != Math.max(1024, height)) {
-                    if (atlas != null) {
-                        atlas.target.destroyBuffers();
-                    }
-                    atlas = new Page(Math.max(1024, width), Math.max(1024, height));
+                prepareAtlas();
+                if (vertices == null) {
+                    vertices = new ByteBufferBuilder(65536);
+                    indices = new ByteBufferBuilder(16384);
                 }
+                for (Material material : MATERIALS.values()) {
+                    if (!material.batches.isEmpty()) {
+                        material.upload();
+                    }
+                }
+                shader.setSampler("ModelColor", atlas.target.getColorTextureId());
+                shader.setSampler("ModelDepth", atlas.target.getDepthTextureId());
+                shader.safeGetUniform("ScreenSize").set((float) width, (float) height);
+                shader.safeGetUniform("InverseProjection").set(new Matrix4f(PROJECTION).invert());
+                shader.safeGetUniform("FogColor").set(RenderSystem.getShaderFogColor());
+                shader.safeGetUniform("FogStart").set(RenderSystem.getShaderFogStart());
+                shader.safeGetUniform("FogEnd").set(RenderSystem.getShaderFogEnd());
+                shader.safeGetUniform("FogShape").set(RenderSystem.getShaderFogShape().ordinal());
                 atlas.clear();
                 MODELS.sort(Comparator.comparingDouble(Model::distance).reversed());
                 BufferBuilder quads = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
+                Material current = null;
                 for (Model model : MODELS) {
                     if (!atlas.fits(model.rect)) {
+                        if (current != null) {
+                            current.end();
+                            current = null;
+                        }
                         composite(quads);
                         atlas.clear();
                         quads = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.PARTICLE);
                     }
                     Slot slot = atlas.reserve(model.rect);
                     for (Batch batch : model.batches) {
-                        // CULL 不主动开启剔除，先恢复被合成阶段关闭的默认状态。
-                        RenderSystem.enableCull();
-                        batch.type.setupRenderState();
-                        atlas.target.bindWrite(false);
+                        if (current != batch.material) {
+                            if (current != null) {
+                                current.end();
+                            }
+                            current = batch.material;
+                            current.begin();
+                        }
                         RenderSystem.viewport(slot.x - model.rect.x, slot.y - model.rect.y, width, height);
                         RenderSystem.enableScissor(slot.x, slot.y, model.rect.width, model.rect.height);
-                        RenderSystem.colorMask(true, true, true, true);
-                        RenderSystem.enableDepthTest();
-                        RenderSystem.depthMask(true);
-                        Blend blend = BLENDS.computeIfAbsent(batch.type, type -> Blend.current());
-                        RenderSystem.enableBlend();
-                        RenderSystem.blendFuncSeparate(blend.source, blend.additive ? GL11.GL_ONE : GL11.GL_ONE_MINUS_SRC_ALPHA,
-                                blend.additive ? GL11.GL_ZERO : GL11.GL_ONE, blend.additive ? GL11.GL_ONE : GL11.GL_ONE_MINUS_SRC_ALPHA);
-                        BufferUploader.drawWithShader(batch.mesh);
-                        batch.type.clearRenderState();
+                        GlStateManager._drawElements(current.type.mode().asGLMode, batch.mesh.drawState().indexCount(),
+                                GL11.GL_UNSIGNED_INT, (long) batch.indexOffset * Integer.BYTES);
                     }
                     quad(quads, model, slot);
+                }
+                if (current != null) {
+                    current.end();
                 }
                 composite(quads);
                 RenderSystem.setProjectionMatrix(projection, sorting);
@@ -166,7 +188,44 @@ public final class WholeModelTransparency {
                 MODELS.forEach(model -> model.batches.forEach(batch -> batch.mesh.close()));
             }
             MODELS.clear();
-            MEMORY.values().forEach(ByteBufferBuilder::clear);
+            for (Material material : MATERIALS.values()) {
+                material.batches.clear();
+            }
+        }
+    }
+
+    private static void prepareAtlas() {
+        int minWidth = Math.max(1024, width);
+        int minHeight = Math.max(1024, height);
+        int atlasWidth = Math.max(minWidth, atlas == null ? 0 : atlas.target.width);
+        int atlasHeight = Math.max(minHeight, atlas == null ? 0 : atlas.target.height);
+        int limit = Math.min(4096, RenderSystem.maxSupportedTextureSize());
+        long budget = Math.max(8L * 1024 * 1024, (long) minWidth * minHeight);
+        if ((long) atlasWidth * atlasHeight > budget) {
+            atlasWidth = minWidth;
+            atlasHeight = minHeight;
+        }
+        long area = 0;
+        for (Model model : MODELS) {
+            area += (long) model.rect.width * model.rect.height;
+        }
+        area = Math.min(budget, area + area / 4);
+        while ((long) atlasWidth * atlasHeight < area) {
+            int nextWidth = (int) Math.min(Math.min((long) atlasWidth * 2, limit), budget / atlasHeight);
+            int nextHeight = (int) Math.min(Math.min((long) atlasHeight * 2, limit), budget / atlasWidth);
+            if (nextWidth > atlasWidth && (atlasWidth <= atlasHeight || nextHeight <= atlasHeight)) {
+                atlasWidth = nextWidth;
+            } else if (nextHeight > atlasHeight) {
+                atlasHeight = nextHeight;
+            } else {
+                break;
+            }
+        }
+        if (atlas == null || atlas.target.width != atlasWidth || atlas.target.height != atlasHeight) {
+            if (atlas != null) {
+                atlas.target.destroyBuffers();
+            }
+            atlas = new Page(atlasWidth, atlasHeight);
         }
     }
 
@@ -181,21 +240,14 @@ public final class WholeModelTransparency {
         RenderSystem.blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
         RenderSystem.colorMask(true, true, true, false);
         RenderSystem.setShader(() -> shader);
-        shader.setSampler("ModelColor", atlas.target.getColorTextureId());
-        shader.setSampler("ModelDepth", atlas.target.getDepthTextureId());
-        shader.safeGetUniform("ScreenSize").set((float) width, (float) height);
-        shader.safeGetUniform("InverseProjection").set(new Matrix4f(PROJECTION).invert());
-        shader.safeGetUniform("FogColor").set(RenderSystem.getShaderFogColor());
-        shader.safeGetUniform("FogStart").set(RenderSystem.getShaderFogStart());
-        shader.safeGetUniform("FogEnd").set(RenderSystem.getShaderFogEnd());
-        shader.safeGetUniform("FogShape").set(RenderSystem.getShaderFogShape().ordinal());
         BufferUploader.drawWithShader(quads.buildOrThrow());
     }
 
     private static void quad(BufferBuilder quads, Model model, Slot slot) {
         Rect rect = model.rect;
         float ambient = ambient(model.packedLight);
-        for (int corner : new int[]{0, 1, 3, 2}) {
+        for (int i = 0; i < 4; i++) {
+            int corner = i ^ (i >> 1);
             int x = (corner & 1) == 0 ? 0 : rect.width;
             int y = (corner & 2) == 0 ? 0 : rect.height;
             quads.addVertex(2f * (rect.x + x) / width - 1, 2f * (rect.y + y) / height - 1, 0)
@@ -213,13 +265,86 @@ public final class WholeModelTransparency {
     private static void bounds(MeshData mesh, Vector3f min, Vector3f max) {
         VertexFormat format = mesh.drawState().format();
         long address = MemoryUtil.memAddress(mesh.vertexBuffer()) + format.getOffset(VertexFormatElement.POSITION);
+        float minX = min.x;
+        float minY = min.y;
+        float minZ = min.z;
+        float maxX = max.x;
+        float maxY = max.y;
+        float maxZ = max.z;
         for (int i = 0; i < mesh.drawState().vertexCount(); i++) {
             float x = MemoryUtil.memGetFloat(address);
             float y = MemoryUtil.memGetFloat(address + 4);
             float z = MemoryUtil.memGetFloat(address + 8);
-            min.set(Math.min(min.x, x), Math.min(min.y, y), Math.min(min.z, z));
-            max.set(Math.max(max.x, x), Math.max(max.y, y), Math.max(max.z, z));
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            minZ = Math.min(minZ, z);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+            maxZ = Math.max(maxZ, z);
             address += format.getVertexSize();
+        }
+        min.set(minX, minY, minZ);
+        max.set(maxX, maxY, maxZ);
+    }
+
+    private static void writeIndices(MeshData mesh, boolean sorted, VertexSorting sorting, long address, int vertexOffset) {
+        var state = mesh.drawState();
+        if (state.mode() == VertexFormat.Mode.QUADS || state.mode() == VertexFormat.Mode.LINES) {
+            int count = state.vertexCount() / 4;
+            sorted &= state.mode() == VertexFormat.Mode.QUADS;
+            if (sorted) {
+                sortQuads(mesh, sorting, count);
+            }
+            for (int i = 0; i < count; i++) {
+                int vertex = vertexOffset + (sorted ? (int) quadOrder[i] : i) * 4;
+                MemoryUtil.memPutInt(address, vertex);
+                MemoryUtil.memPutInt(address + 4, vertex + 1);
+                MemoryUtil.memPutInt(address + 8, vertex + 2);
+                MemoryUtil.memPutInt(address + 12, vertex + (state.mode() == VertexFormat.Mode.QUADS ? 2 : 3));
+                MemoryUtil.memPutInt(address + 16, vertex + (state.mode() == VertexFormat.Mode.QUADS ? 3 : 2));
+                MemoryUtil.memPutInt(address + 20, vertex + (state.mode() == VertexFormat.Mode.QUADS ? 0 : 1));
+                address += 24;
+            }
+        } else {
+            for (int i = 0; i < state.indexCount(); i++) {
+                MemoryUtil.memPutInt(address, vertexOffset + i);
+                address += Integer.BYTES;
+            }
+        }
+    }
+
+    private static void sortQuads(MeshData mesh, VertexSorting sorting, int count) {
+        if (quadOrder.length < count) {
+            quadOrder = new long[Math.max(count, quadOrder.length * 2)];
+        }
+        int stride = mesh.drawState().format().getVertexSize();
+        long address = MemoryUtil.memAddress(mesh.vertexBuffer()) + mesh.drawState().format().getOffset(VertexFormatElement.POSITION);
+        boolean distanceSort = sorting == VertexSorting.DISTANCE_TO_ORIGIN || sorting == VertexSorting.ORTHOGRAPHIC_Z;
+        Vector3f[] centers = distanceSort ? null : new Vector3f[count];
+        Vector3f center = new Vector3f();
+        for (int i = 0; i < count; i++) {
+            long opposite = address + stride * 2L;
+            float x = (MemoryUtil.memGetFloat(address) + MemoryUtil.memGetFloat(opposite)) / 2f;
+            float y = (MemoryUtil.memGetFloat(address + 4) + MemoryUtil.memGetFloat(opposite + 4)) / 2f;
+            float z = (MemoryUtil.memGetFloat(address + 8) + MemoryUtil.memGetFloat(opposite + 8)) / 2f;
+            if (distanceSort) {
+                float distance = sorting == VertexSorting.ORTHOGRAPHIC_Z ? -z : center.set(x, y, z).distanceSquared(0, 0, 0);
+                int bits = Float.floatToIntBits(distance);
+                int key = ~(bits ^ ((bits >> 31) & Integer.MAX_VALUE));
+                // 距离降序，同距时保留原顺序，避免共面的反向外壳改变覆盖关系。
+                quadOrder[i] = ((long) key << 32) | (i & 0xFFFFFFFFL);
+            } else {
+                centers[i] = new Vector3f(x, y, z);
+            }
+            address += stride * 4L;
+        }
+        if (distanceSort) {
+            Arrays.sort(quadOrder, 0, count);
+        } else {
+            int[] order = sorting.sort(centers);
+            for (int i = 0; i < count; i++) {
+                quadOrder[i] = order[i];
+            }
         }
     }
 
@@ -254,9 +379,20 @@ public final class WholeModelTransparency {
             atlas.target.destroyBuffers();
             atlas = null;
         }
-        MEMORY.values().forEach(ByteBufferBuilder::close);
-        MEMORY.clear();
-        BLENDS.clear();
+        for (Material material : MATERIALS.values()) {
+            material.memory.close();
+            if (material.buffer != null) {
+                material.buffer.close();
+            }
+        }
+        MATERIALS.clear();
+        if (vertices != null) {
+            vertices.close();
+            indices.close();
+            vertices = null;
+            indices = null;
+        }
+        quadOrder = new long[0];
     }
 
     private record Rect(int x, int y, int width, int height) {
@@ -265,7 +401,16 @@ public final class WholeModelTransparency {
     private record Slot(int x, int y) {
     }
 
-    private record Batch(RenderType type, MeshData mesh) {
+    private static class Batch {
+        final Material material;
+        final MeshData mesh;
+        final VertexSorting sorting = RenderSystem.getVertexSorting();
+        int indexOffset;
+
+        Batch(Material material, MeshData mesh) {
+            this.material = material;
+            this.mesh = mesh;
+        }
     }
 
     private record Model(List<Batch> batches, Rect rect, float alpha, int packedLight, double distance) {
@@ -278,6 +423,80 @@ public final class WholeModelTransparency {
         }
     }
 
+    private static class Material {
+        final RenderType type;
+        final ByteBufferBuilder memory;
+        final List<Batch> batches = new ArrayList<>();
+        BufferBuilder builder;
+        VertexBuffer buffer;
+        ShaderInstance shader;
+        Blend blend;
+
+        Material(RenderType type) {
+            this.type = type;
+            memory = new ByteBufferBuilder(Math.max(16384, type.bufferSize()));
+        }
+
+        // 同材质整帧只上传一次，每个模型保留自己的索引范围。
+        void upload() {
+            VertexFormat format = batches.getFirst().mesh.drawState().format();
+            int vertexCount = 0;
+            int indexCount = 0;
+            for (Batch batch : batches) {
+                vertexCount += batch.mesh.drawState().vertexCount();
+                indexCount += batch.mesh.drawState().indexCount();
+            }
+            long vertexAddress = vertices.reserve(vertexCount * format.getVertexSize());
+            long indexAddress = indices.reserve(indexCount * Integer.BYTES);
+            int vertexOffset = 0;
+            int indexOffset = 0;
+            for (Batch batch : batches) {
+                var source = batch.mesh.vertexBuffer();
+                MemoryUtil.memCopy(MemoryUtil.memAddress(source), vertexAddress, source.remaining());
+                batch.indexOffset = indexOffset;
+                writeIndices(batch.mesh, type.sortOnUpload(), batch.sorting, indexAddress, vertexOffset);
+                vertexAddress += source.remaining();
+                vertexOffset += batch.mesh.drawState().vertexCount();
+                indexAddress += (long) batch.mesh.drawState().indexCount() * Integer.BYTES;
+                indexOffset += batch.mesh.drawState().indexCount();
+                batch.mesh.close();
+            }
+            if (buffer == null) {
+                buffer = new VertexBuffer(VertexBuffer.Usage.DYNAMIC);
+            }
+            buffer.bind();
+            buffer.upload(new MeshData(vertices.build(), new MeshData.DrawState(format, vertexCount, indexCount, type.mode(), VertexFormat.IndexType.INT)));
+            if (indexCount > 0) {
+                buffer.uploadIndexBuffer(indices.build());
+            }
+        }
+
+        void begin() {
+            // CULL 的默认状态不会主动开启剔除，NO_CULL 再由材质关闭。
+            RenderSystem.enableCull();
+            type.setupRenderState();
+            atlas.target.bindWrite(false);
+            RenderSystem.colorMask(true, true, true, true);
+            RenderSystem.enableDepthTest();
+            RenderSystem.depthMask(true);
+            if (blend == null) {
+                blend = Blend.current();
+            }
+            RenderSystem.enableBlend();
+            RenderSystem.blendFuncSeparate(blend.source, blend.additive ? GL11.GL_ONE : GL11.GL_ONE_MINUS_SRC_ALPHA,
+                    blend.additive ? GL11.GL_ZERO : GL11.GL_ONE, blend.additive ? GL11.GL_ONE : GL11.GL_ONE_MINUS_SRC_ALPHA);
+            buffer.bind();
+            shader = RenderSystem.getShader();
+            shader.setDefaultUniforms(type.mode(), VIEW, PROJECTION, Minecraft.getInstance().getWindow());
+            shader.apply();
+        }
+
+        void end() {
+            shader.clear();
+            type.clearRenderState();
+        }
+    }
+
     private static class Page {
         final TextureTarget target;
         int x;
@@ -286,7 +505,6 @@ public final class WholeModelTransparency {
 
         Page(int width, int height) {
             target = new TextureTarget(width, height, true, Minecraft.ON_OSX);
-            target.setClearColor(0, 0, 0, 0);
         }
 
         boolean fits(Rect rect) {
@@ -312,17 +530,24 @@ public final class WholeModelTransparency {
             RenderSystem.disableScissor();
             RenderSystem.depthMask(true);
             RenderSystem.colorMask(true, true, true, true);
-            target.clear(Minecraft.ON_OSX);
+            target.bindWrite(true);
+            RenderSystem.clearColor(0, 0, 0, 0);
+            RenderSystem.clearDepth(1);
+            RenderSystem.clear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, Minecraft.ON_OSX);
         }
     }
 
     private static class Capture implements MultiBufferSource {
-        final Map<RenderType, BufferBuilder> builders = new LinkedHashMap<>();
+        final List<Material> materials = new ArrayList<>();
 
         @Override
         public @NotNull VertexConsumer getBuffer(@NotNull RenderType type) {
-            return builders.computeIfAbsent(type, key -> new BufferBuilder(
-                    MEMORY.computeIfAbsent(key, ignored -> new ByteBufferBuilder(Math.max(16384, key.bufferSize()))), key.mode(), key.format()));
+            Material material = MATERIALS.computeIfAbsent(type, Material::new);
+            if (material.builder == null) {
+                material.builder = new BufferBuilder(material.memory, type.mode(), type.format());
+                materials.add(material);
+            }
+            return material.builder;
         }
     }
 
