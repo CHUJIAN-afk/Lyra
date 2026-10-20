@@ -70,13 +70,7 @@ public final class WholeModelTransparency {
             } else if (alpha >= 1) {
                 draw.accept(original);
             } else {
-                if (MODELS.isEmpty()) {
-                    PROJECTION.set(RenderSystem.getProjectionMatrix());
-                    VIEW.set(RenderSystem.getModelViewMatrix());
-                    CLIP.set(PROJECTION).mul(VIEW);
-                    width = GlStateManager.Viewport.width();
-                    height = GlStateManager.Viewport.height();
-                }
+                prepareFrame();
                 active = CAPTURE;
                 draw.accept(CAPTURE);
                 active = null;
@@ -92,17 +86,52 @@ public final class WholeModelTransparency {
                     }
                 }
                 CAPTURE.materials.clear();
-                Rect rect = rectangle(min, max);
-                if (rect.width > 0 && rect.height > 0 && !batches.isEmpty()) {
-                    for (Batch batch : batches) {
-                        batch.material.batches.add(batch);
-                    }
-                    var pose = poseStack.last().pose();
-                    double distance = (double) pose.m30() * pose.m30() + (double) pose.m31() * pose.m31() + (double) pose.m32() * pose.m32();
-                    MODELS.add(new Model(batches, rect, alpha, packedLight, distance));
-                } else {
-                    batches.forEach(batch -> batch.mesh.close());
+                enqueue(poseStack, batches, min, max, alpha, -1, packedLight);
+            }
+        }
+    }
+
+    static void renderAfterimage(PoseStack poseStack, List<AfterimageManager.Mesh> meshes, float alpha, int tint, int packedLight) {
+        if (alpha > 0) {
+            prepareFrame();
+            List<Batch> batches = new ArrayList<>(meshes.size());
+            Vector3f min = new Vector3f(Float.POSITIVE_INFINITY);
+            Vector3f max = new Vector3f(Float.NEGATIVE_INFINITY);
+            for (AfterimageManager.Mesh saved : meshes) {
+                Material material = MATERIALS.computeIfAbsent(saved.type(), Material::new);
+                long address = material.memory.reserve(saved.vertices().length);
+                MemoryUtil.memByteBuffer(address, saved.vertices().length).put(saved.vertices());
+                MeshData mesh = new MeshData(material.memory.build(), saved.state());
+                AfterimageManager.transform(mesh, poseStack.last().pose(), poseStack.last().normal());
+                batches.add(new Batch(material, mesh));
+                bounds(mesh, min, max);
+            }
+            enqueue(poseStack, batches, min, max, alpha, tint, packedLight);
+        }
+    }
+
+    private static void prepareFrame() {
+        if (MODELS.isEmpty()) {
+            PROJECTION.set(RenderSystem.getProjectionMatrix());
+            VIEW.set(RenderSystem.getModelViewMatrix());
+            CLIP.set(PROJECTION).mul(VIEW);
+            width = GlStateManager.Viewport.width();
+            height = GlStateManager.Viewport.height();
+        }
+    }
+
+    private static void enqueue(PoseStack poseStack, List<Batch> batches, Vector3f min, Vector3f max, float alpha, int tint, int packedLight) {
+        if (!batches.isEmpty()) {
+            Rect rect = rectangle(min, max);
+            if (rect.width > 0 && rect.height > 0) {
+                for (Batch batch : batches) {
+                    batch.material.batches.add(batch);
                 }
+                var pose = poseStack.last().pose();
+                double distance = (double) pose.m30() * pose.m30() + (double) pose.m31() * pose.m31() + (double) pose.m32() * pose.m32();
+                MODELS.add(new Model(batches, rect, alpha, tint, packedLight, distance));
+            } else {
+                batches.forEach(batch -> batch.mesh.close());
             }
         }
     }
@@ -251,7 +280,7 @@ public final class WholeModelTransparency {
             int x = (corner & 1) == 0 ? 0 : rect.width;
             int y = (corner & 2) == 0 ? 0 : rect.height;
             quads.addVertex(2f * (rect.x + x) / width - 1, 2f * (rect.y + y) / height - 1, 0)
-                    .setUv(model.alpha, ambient).setColor(-1).setUv2(slot.x + x, slot.y + y);
+                    .setUv(model.alpha, ambient).setColor(model.tint).setUv2(slot.x + x, slot.y + y);
         }
     }
 
@@ -413,7 +442,7 @@ public final class WholeModelTransparency {
         }
     }
 
-    private record Model(List<Batch> batches, Rect rect, float alpha, int packedLight, double distance) {
+    private record Model(List<Batch> batches, Rect rect, float alpha, int tint, int packedLight, double distance) {
     }
 
     private record Blend(boolean additive, int source) {

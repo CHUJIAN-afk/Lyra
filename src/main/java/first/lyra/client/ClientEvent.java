@@ -3,6 +3,8 @@ package first.lyra.client;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import first.lyra.Lyra;
 import first.lyra.client.light.LyraLights;
+import first.lyra.client.light.FlowingLaserData;
+import first.lyra.client.render.AfterimageManager;
 import first.lyra.client.render.AttachmentEntityRenderDispatcher;
 import first.lyra.client.render.WholeModelTransparency;
 import first.lyra.client.tooltip.TooltipHandler;
@@ -38,6 +40,8 @@ public class ClientEvent {
 
     @SubscribeEvent
     public static void shaders(RegisterShadersEvent event) throws IOException {
+        FlowingLaserData.close();
+        AfterimageManager.close();
         WholeModelTransparency.close();
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("model_transparency"), DefaultVertexFormat.PARTICLE), WholeModelTransparency::setShader);
     }
@@ -48,7 +52,9 @@ public class ClientEvent {
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.level != null) {
                 MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
-                AttachmentEntityRenderDispatcher.render(minecraft.level, event.getCamera(), event.getPoseStack(), buffers, event.getPartialTick().getGameTimeDeltaPartialTick(false));
+                float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
+                AfterimageManager.render(minecraft.level, event.getCamera(), event.getPoseStack(), partialTick);
+                AttachmentEntityRenderDispatcher.render(minecraft.level, event.getCamera(), event.getPoseStack(), buffers, partialTick);
                 buffers.endBatch();
             }
         }
@@ -58,6 +64,8 @@ public class ClientEvent {
     public static void unload(LevelEvent.Unload event) {
         if (event.getLevel().isClientSide()) {
             LyraLights.clear();
+            FlowingLaserData.close();
+            AfterimageManager.close();
             WholeModelTransparency.close();
         }
     }

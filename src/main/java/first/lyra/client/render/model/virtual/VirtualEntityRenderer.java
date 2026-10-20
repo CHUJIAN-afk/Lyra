@@ -1,8 +1,8 @@
 package first.lyra.client.render.model.virtual;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import first.lyra.client.render.AfterimageManager;
 import first.lyra.client.render.ColorBufferSource;
-import first.lyra.client.render.WholeModelTransparency;
 import first.lyra.mixin.WalkAnimationStateAccessor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -99,7 +99,7 @@ public final class VirtualEntityRenderer {
         }
         VirtualEntityPose resolvedPose = pose;
         float opacity = pose.alpha() * (pose.color() == -1 ? 1f : ((pose.color() >>> 24) & 255) / 255f);
-        WholeModelTransparency.render(poseStack, bufferSource, opacity, pose.packedLight(), source -> {
+        AfterimageManager.renderModel(poseStack, bufferSource, opacity, pose.packedLight(), source -> {
             MultiBufferSource tinted = resolvedPose.color() == -1 ? source : new ColorBufferSource(source).setColor(resolvedPose.color() | 0xFF000000);
             renderer.render(ghost, resolvedPose.bodyYawDegrees(), partialTick, poseStack, tinted, resolvedPose.packedLight());
         });

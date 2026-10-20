@@ -13,6 +13,9 @@
   ],
   "client": [
     "CreativeModeInventoryScreenMixin",
+    "FlowingLaserLightMixin",
+    "FlowingLaserPreprocessorMixin",
+    "FlowingLaserShaderMixin",
     "PhotonLightRendererMixin",
     "WalkAnimationStateAccessor"
   ],

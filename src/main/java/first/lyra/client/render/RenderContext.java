@@ -6,7 +6,7 @@ import first.lyra.common.attachmentEntity.PathNode;
 import software.bernie.geckolib.util.Color;
 
 /**
- * 渲染上下文：包裹实体、视觉节点与当帧参数，以及拖尾/模型子上下文，链式构建。
+ * 渲染上下文：实体、视觉节点与当帧参数，以及拖尾、模型和残影子上下文。
  * <p>
  * 渲染器在 {@code createContext} 里配置本帧所需内容，后续渲染方法统一从 {@code context} 取值，
  * 颜色（含透明度）只在这里写入一次。
@@ -21,6 +21,7 @@ public class RenderContext<T extends AttachmentEntity> {
     public int packedLight;
     public Color color = Color.WHITE;
     public TrailContext<T> trail;
+    public AfterimageContext afterimage;
     public ModelContext model = new ModelContext();
 
     public RenderContext(T entity, PathNode visualNode, float partialTick, int packedLight) {
@@ -47,6 +48,11 @@ public class RenderContext<T extends AttachmentEntity> {
 
     public RenderContext<T> model(ModelContext model) {
         this.model = model;
+        return this;
+    }
+
+    public RenderContext<T> afterimage(AfterimageContext afterimage) {
+        this.afterimage = afterimage;
         return this;
     }
 

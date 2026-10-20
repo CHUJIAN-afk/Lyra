@@ -13,6 +13,7 @@ uniform float FogEnd;
 uniform int FogShape;
 in vec2 atlasPosition;
 flat in vec2 modelParams;
+flat in vec3 modelTint;
 out vec4 fragColor;
 
 vec3 viewPosition(ivec2 screenPixel, float depth) {
@@ -79,6 +80,7 @@ void main() {
     if (PhotonEnabled != 0) {
         color.rgb = illuminate(color.rgb, pixel, screenPixel, depth);
     }
+    color.rgb *= modelTint;
     gl_FragDepth = max(0.0, depth - 1e-7);
     fragColor = vec4(color.rgb, color.a * modelParams.x);
 }

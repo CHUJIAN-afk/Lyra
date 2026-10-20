@@ -47,6 +47,7 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
 
     /** 施加视觉节点朝向与模型偏移，随后依次渲染模型本体与附加内容 */
     protected void modelModify(PoseStack poseStack, MultiBufferSource bufferSource) {
+        RenderContext<?> previous = AfterimageManager.setContext(context);
         PathNode visualNode = context.visualNode;
         ModelContext model = context.model;
         Quaternionf rotation = new Quaternionf()
@@ -62,10 +63,11 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
         poseStack.translate(model.translateX, model.translateY, model.translateZ);
         Color modelColor = context.color;
         context.color(Color.ofARGB(1f, modelColor.getRedFloat(), modelColor.getGreenFloat(), modelColor.getBlueFloat()));
-        WholeModelTransparency.render(poseStack, bufferSource, modelColor.getAlphaFloat(), context.packedLight, source -> renderModel(poseStack, source));
+        AfterimageManager.renderModel(poseStack, bufferSource, modelColor.getAlphaFloat(), context.packedLight, source -> renderModel(poseStack, source));
         context.color(modelColor);
         render(poseStack, bufferSource);
         poseStack.popPose();
+        AfterimageManager.setContext(previous);
     }
 
     /** 模型本体渲染（geo 渲染器在此提交模型），默认不渲染 */

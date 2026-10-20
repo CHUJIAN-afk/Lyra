@@ -2,9 +2,9 @@ package first.lyra.client.render.model.json;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import first.lyra.client.render.AfterimageManager;
 import first.lyra.client.render.ColorBufferSource;
 import first.lyra.client.render.LyraRenderTypes;
-import first.lyra.client.render.WholeModelTransparency;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.texture.OverlayTexture;
@@ -36,7 +36,7 @@ public final class JsonModelRenderer {
         ModelManager modelManager = Minecraft.getInstance().getModelManager();
         BakedModel model = modelManager.getModel(modelLocation);
         if (model != modelManager.getMissingModel()) {
-            WholeModelTransparency.render(poseStack, bufferSource, ((color >>> 24) & 255) / 255f, packedLight, source -> {
+            AfterimageManager.renderModel(poseStack, bufferSource, ((color >>> 24) & 255) / 255f, packedLight, source -> {
                 ColorBufferSource tinted = new ColorBufferSource(source).setColor(color | 0xFF000000);
                 VertexConsumer consumer = tinted.getBuffer(LyraRenderTypes.getModel());
                 Minecraft.getInstance().getItemRenderer().renderModelLists(model, ItemStack.EMPTY, packedLight, OverlayTexture.NO_OVERLAY, poseStack, consumer);
