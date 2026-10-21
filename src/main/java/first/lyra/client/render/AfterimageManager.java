@@ -98,9 +98,12 @@ public final class AfterimageManager {
                 if (age >= image.lifetime) {
                     images.remove();
                 } else {
-                    float alpha = image.alpha * (float) (1 - age / image.lifetime);
+                    float progress = (float) (age / image.lifetime);
+                    float alpha = image.alpha * (1f - progress);
+                    float scale = 0.97f - 0.02f * progress;
                     poseStack.pushPose();
                     poseStack.translate(image.position.x - cameraPosition.x, image.position.y - cameraPosition.y, image.position.z - cameraPosition.z);
+                    poseStack.scale(scale, scale, scale);
                     WholeModelTransparency.renderAfterimage(poseStack, image.meshes, alpha, image.color, image.packedLight);
                     poseStack.popPose();
                 }
