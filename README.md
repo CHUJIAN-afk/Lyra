@@ -86,6 +86,16 @@ return super.createContext(entity, visualNode, partialTick, packedLight)
 
 只捕获 `renderModel` 和 `LyraModelRenderer` 的模型提交，不重放轨迹、附加渲染、粒子或光源。残影复用整体透明度管线，自己重叠的模型块只应用一次透明度。上下文写入后再修改颜色、透明度或寿命，只影响之后生成的残影。切换世界和重载资源时清空。
 
+## 镜头抖动
+
+```java
+LyraAPI.shakeCamera(level, position, 24f, 0.6f);
+```
+
+仅服务端调用有效，广播给同维度作用范围内的玩家。`position` 为震源世界坐标，`range` 为大于 0 的作用半径，单位为格；`strength` 为 0～1。客户端收到后，按玩家到震源的距离线性衰减，震源处为完整强度，半径边缘为 0。
+
+连续震动累加强度，上限为 1；每个客户端世界 tick 保留 85%，低于 0.001 时归零，帧间插值平滑衰减。只影响第一人称镜头，最大俯仰振幅 3°、翻滚振幅 5°，不改变玩家朝向。第三人称仍正常衰减，游戏暂停时停止计时，切换世界时清空。
+
 ## 构建
 
 ```powershell

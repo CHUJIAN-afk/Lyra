@@ -2,10 +2,13 @@ package first.lyra.api;
 
 import first.lyra.client.light.LyraLights;
 import first.lyra.client.render.rendererHelper.FlowingLaserRendererHelper;
+import first.lyra.common.network.CameraShakePayload;
 import first.lyra.utils.ParticleHelper;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public interface LyraAPI {
 
@@ -19,6 +22,13 @@ public interface LyraAPI {
 
     static FlowingLaserRendererHelper flowingLaser() {
         return FlowingLaserRendererHelper.builder();
+    }
+
+    /** 仅服务端广播；range 为正数，单位为格；strength 为 0～1。 */
+    static void shakeCamera(Level level, Vec3 pos, float range, float strength) {
+        if (level instanceof ServerLevel serverLevel) {
+            PacketDistributor.sendToPlayersNear(serverLevel, null, pos.x, pos.y, pos.z, range, new CameraShakePayload(pos, range, strength));
+        }
     }
 
     static void light(Vec3 pos, int level) {
