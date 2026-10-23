@@ -86,6 +86,34 @@ return super.createContext(entity, visualNode, partialTick, packedLight)
 
 只捕获 `renderModel` 和 `LyraModelRenderer` 的模型提交，不重放轨迹、附加渲染、粒子或光源。残影复用整体透明度管线，自己重叠的模型块只应用一次透明度。上下文写入后再修改颜色、透明度或寿命，只影响之后生成的残影。切换世界和重载资源时清空。
 
+## 路径关键帧
+
+`PathNode` 继续作为逻辑关键帧，位置、碰撞、历史节点和 `PlannedPath.run` 回调沿用原有逐 tick 推进。可在服务端为逻辑区间添加 `RenderKeyframe`，客户端仅在渲染时使用，不增加逻辑 tick 或触发回调。
+
+曲线路径可直接采样：
+
+```java
+PlannedPath path = PlannedPath.sample("arc", 10, 4, t ->
+        new PathNode(entity.calculateBezierPoint(t, start, control, end), 0f, 0f, 0f));
+entity.setPath(path);
+```
+
+`10` 为逻辑区间数量，`4` 为每个区间的渲染分段数；两者必须为正数。采样函数接收整条路径的 0～1 进度，在服务端计算真实位置和朝向，每个区间额外采样 3 个中间点。起始节点保留旧路径的消费时序，设定后在第一次推进时消费一次；后续每 tick 消费一个逻辑节点。
+
+已有逻辑节点也可手动补充渲染关键帧：
+
+```java
+PlannedPath path = new PlannedPath(nodes)
+        .render(1, List.of(new RenderKeyframe(0.5f, midpoint)));
+entity.setPath(path);
+```
+
+`render` 的下标指目标逻辑节点；上例在 `nodes[0]` 到 `nodes[1]` 之间插入中点。帧按 `partialTick` 严格递增排列，时间取值大于 0、小于 1；两个端点由系统补齐。`setPlannedPath` 同样支持渲染关键帧，且保留从当前位置开始推进的原有用法。
+
+两类关键帧均随服务端实体同步分发，渲染区间带有完整端点，客户端按时间分段插值位置，朝向复用 `PathNode.lerp` 的四元数插值。一个客户端 tick 收到多个更新时使用最后一个区间；没有新更新时停留在逻辑终点，避免重复播放旧区间。模型、光源和残影通过现有 `getRenderNode` 自动使用渲染关键帧。
+
+旧 `PathNode`、`PlannedPath` 构造器、`setPath`、`setPlannedPath` 和回调接口继续可用；没有渲染关键帧时仍使用原有插值。`setPath(PlannedPath)` 现在也会设置待推进路径，与列表重载保持一致。
+
 ## 镜头抖动
 
 ```java

@@ -268,8 +268,9 @@ public class AttachmentEntityData {
                 for (AttachmentEntity entity : list) {
                     buf.writeUUID(entity.getUuid());
                     entity.getSyncFieldDispatcher().encode(buf, entity.getLevel(), initialSync);
-                    buf.writeBoolean(entity.isClientInit());
-                    if (!entity.isClientInit()) {
+                    boolean clientInit = !initialSync && entity.isClientInit();
+                    buf.writeBoolean(clientInit);
+                    if (!clientInit) {
                         entity.setClientInit(true);
                         LyraStreamCodecs.PATH_NODE.encode(buf, entity.getHistoryNodes().getFirst());
                     }
