@@ -28,12 +28,20 @@ public class AttachmentEntityRenderDispatcher {
     private static final Map<AttachmentEntityType<?>, IAttachmentEntityRenderer<?>> renderers = new HashMap<>();
 
     public static void render(ClientLevel level, Camera camera, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick) {
+        render(level, camera.getPosition(), poseStack, bufferSource, partialTick, true);
+    }
+
+    public static void renderShadows(ClientLevel level, PoseStack poseStack, MultiBufferSource bufferSource, float partialTick, double cameraX, double cameraY, double cameraZ) {
+        render(level, new Vec3(cameraX, cameraY, cameraZ), poseStack, new ShadowBufferSource(bufferSource, 1f), partialTick, false);
+    }
+
+    private static void render(ClientLevel level, Vec3 cameraPos, PoseStack poseStack, MultiBufferSource bufferSource,
+                               float partialTick, boolean debug) {
         List<AbstractClientPlayer> players = level.players();
         for (AbstractClientPlayer player : players) {
             List<AttachmentEntity> entities = player.getData(LyraAttachmentRegister.EntityData).getRenderCache();
-            Vec3 cameraPos = camera.getPosition();
             int playerLight = getLightCoords(level, player.getLightProbePosition(partialTick));
-            boolean showHitboxes = Minecraft.getInstance().getEntityRenderDispatcher().shouldRenderHitBoxes();
+            boolean showHitboxes = debug && Minecraft.getInstance().getEntityRenderDispatcher().shouldRenderHitBoxes();
             VertexConsumer debugConsumer = showHitboxes ? bufferSource.getBuffer(RenderType.lines()) : null;
             for (AttachmentEntity entity : entities) {
                 poseStack.pushPose();
@@ -46,7 +54,7 @@ public class AttachmentEntityRenderDispatcher {
                     int lightCoords = Math.max(playerLight, getLightCoords(level, pos));
                     renderer.render(entity, poseStack, bufferSource, partialTick, lightCoords, renderNode);
                 }
-                if (ClientConfig.DebugMode.isTrue()) {
+                if (debug && ClientConfig.DebugMode.isTrue()) {
                     debugRender(poseStack, entity, showHitboxes, renderNode, debugConsumer);
                 }
                 poseStack.popPose();

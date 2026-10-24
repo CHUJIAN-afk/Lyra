@@ -1,5 +1,6 @@
 package first.lyra.client.render;
 
+import com.lowdragmc.photon.client.compat.iris.IrisCompat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import first.lyra.client.config.ClientConfig;
@@ -38,7 +39,7 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
         float alpha = getAlpha();
         context.color(Color.ofARGB(alpha * context.color.getAlphaFloat(), context.color.getRedFloat(), context.color.getGreenFloat(), context.color.getBlueFloat()));
         poseStack.pushPose();
-        if (context.hasTrail()) {
+        if (!IrisCompat.isShadowPass() && context.hasTrail()) {
             context.trail.render(poseStack, bufferSource, context);
         }
         modelModify(poseStack, bufferSource);
@@ -63,15 +64,26 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
         poseStack.translate(model.translateX, model.translateY, model.translateZ);
         Color modelColor = context.color;
         context.color(Color.ofARGB(1f, modelColor.getRedFloat(), modelColor.getGreenFloat(), modelColor.getBlueFloat()));
-        AfterimageManager.renderModel(poseStack, bufferSource, modelColor.getAlphaFloat(), context.packedLight, source -> renderModel(poseStack, source));
-        context.color(modelColor);
-        render(poseStack, bufferSource);
+        if (IrisCompat.isShadowPass()) {
+            AfterimageManager.renderModel(poseStack, bufferSource, modelColor.getAlphaFloat(), context.packedLight, source -> renderShadowModel(poseStack, source));
+            context.color(modelColor);
+        } else {
+            AfterimageManager.renderModel(poseStack, bufferSource, modelColor.getAlphaFloat(), context.packedLight, source -> renderModel(poseStack, source));
+            context.color(modelColor);
+            render(poseStack, bufferSource);
+        }
         poseStack.popPose();
         AfterimageManager.setContext(previous);
     }
 
     /** 模型本体渲染（geo 渲染器在此提交模型），默认不渲染 */
     protected void renderModel(PoseStack poseStack, MultiBufferSource bufferSource) {
+    }
+
+    /** 阴影模型入口；自绘着色器等附加效果可在子类中排除。 */
+    protected void renderShadowModel(PoseStack poseStack, MultiBufferSource bufferSource) {
+        renderModel(poseStack, bufferSource);
+        render(poseStack, bufferSource);
     }
 
     /** 附加渲染，默认不渲染 */
@@ -86,7 +98,7 @@ public abstract class AbstractAttachmentEntityRenderer<T extends AttachmentEntit
     protected float getAlphaModify() {
         Minecraft minecraft = Minecraft.getInstance();
         Player player = minecraft.player;
-        if (player == null || !minecraft.options.getCameraType().isFirstPerson()) {
+        if (IrisCompat.isShadowPass() || player == null || !minecraft.options.getCameraType().isFirstPerson()) {
             return 1.0F;
         }
         Vec3 entityPos = context.visualNode.pos();

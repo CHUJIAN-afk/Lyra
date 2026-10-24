@@ -1,5 +1,6 @@
 package first.lyra.client.render;
 
+import com.lowdragmc.photon.client.compat.iris.IrisCompat;
 import com.lowdragmc.photon.client.light.DynamicLightRenderer;
 import com.lowdragmc.photon.core.mixins.accessor.LightTextureAccessor;
 import com.mojang.blaze3d.pipeline.TextureTarget;
@@ -65,7 +66,9 @@ public final class WholeModelTransparency {
 
     public static void render(PoseStack poseStack, MultiBufferSource original, float alpha, int packedLight, Consumer<MultiBufferSource> draw) {
         if (alpha > 0) {
-            if (active != null) {
+            if (IrisCompat.isShadowPass()) {
+                draw.accept(new ShadowBufferSource(original, alpha));
+            } else if (active != null) {
                 draw.accept(new ColorBufferSource(active).setAlpha(alpha));
             } else if (alpha >= 1) {
                 draw.accept(original);

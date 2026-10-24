@@ -16,6 +16,7 @@
     "FlowingLaserLightMixin",
     "FlowingLaserPreprocessorMixin",
     "FlowingLaserShaderMixin",
+    "IrisShadowRendererMixin",
     "PhotonLightRendererMixin",
     "WalkAnimationStateAccessor"
   ],

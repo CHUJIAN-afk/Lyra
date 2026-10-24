@@ -1,5 +1,6 @@
 package first.lyra.client;
 
+import com.lowdragmc.photon.client.compat.iris.IrisCompat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import first.lyra.Lyra;
 import first.lyra.client.light.LyraLights;
@@ -53,7 +54,7 @@ public class ClientEvent {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void renderAttachments(RenderLevelStageEvent event) {
-        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_ENTITIES) {
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_ENTITIES && !IrisCompat.isShadowPass()) {
             Minecraft minecraft = Minecraft.getInstance();
             if (minecraft.level != null) {
                 MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();

@@ -4,6 +4,7 @@ import com.lowdragmc.photon.client.light.DynamicLight;
 import com.lowdragmc.photon.client.light.LightProvider;
 import com.lowdragmc.photon.client.light.LightSink;
 import com.lowdragmc.photon.client.light.PhotonLights;
+import com.lowdragmc.photon.client.compat.iris.IrisCompat;
 import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import first.lyra.register.LyraAttachmentRegister;
@@ -19,6 +20,7 @@ public final class LyraLights {
 
     private static final Map<AttachmentEntityType<?>, Emitter<AttachmentEntity>> EMITTERS = new IdentityHashMap<>();
     private static final ArrayList<DynamicLight> LIGHTS = new ArrayList<>();
+    private static final DynamicLight IGNORED_LIGHT = new DynamicLight();
     private static final LightProvider PROVIDER = LyraLights::submit;
     private static ClientLevel level;
     private static int count;
@@ -104,6 +106,9 @@ public final class LyraLights {
     }
 
     public static DynamicLight next() {
+        if (IrisCompat.isShadowPass()) {
+            return IGNORED_LIGHT.reset();
+        }
         ClientLevel current = Minecraft.getInstance().level;
         if (current != level) {
             count = 0;

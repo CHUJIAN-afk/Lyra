@@ -70,6 +70,14 @@ WholeModelTransparency.render(poseStack, buffers, opacity, packedLight, source -
 });
 ```
 
+## Iris 模型阴影
+
+Iris 为可选联动，未安装时跳过阴影 Mixin。安装 Iris 1.8 及以上并启用支持实体阴影的光影包后，Lyra 会在 Iris 的实体阴影通道中提交虚拟实体模型，使用该通道的视图、相机坐标和缓冲，不依赖玩家画面是否看得到模型。
+
+阴影使用模型正常透明度，跳过第一人称近距离淡出；完全透明的模型不投影。Geo、JSON、`LyraModelRenderer.virtualEntity` 及原版物品模型复用现有渲染代码，JSON 的物品图集材质在阴影通道转为直接写入阴影缓冲的实体材质，半透明模型不进入屏幕透明度图集。半透明阴影的混合与颜色由光影包决定。
+
+阴影通道跳过上下文拖尾和残影，过滤拖尾材质及非模型顶点格式，不续期即时动态光。默认 `renderShadowModel` 会调用已有的 `renderModel` 与 `render`，兼容模型仍放在 `render` 中的旧渲染器；若 `render` 中含自绘着色器、粒子等附加操作，可覆写 `renderShadowModel(PoseStack, MultiBufferSource)`，仅提交需要投影的模型。
+
 ## 模型残影
 
 在附件实体渲染器的 `createContext` 中设置可选的残影上下文：
