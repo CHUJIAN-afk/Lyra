@@ -2,6 +2,7 @@ package first.lyra.register;
 
 import first.lyra.Lyra;
 import first.lyra.common.attachment.*;
+import first.lyra.common.entity.EntitySyncData;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;
@@ -17,6 +18,11 @@ public class LyraAttachmentRegister {
                     .sync(new AttachmentEntityData.SyncHandler())
                     .build()
             );
+
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<EntitySyncData>> SyncData =
+            Register.register("entity_sync_data", () -> AttachmentType.builder(EntitySyncData::new)
+                    .sync(new EntitySyncData.SyncHandler())
+                    .build());
 
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<SummonMarkTracker>> SummonMarkData =
             Register.register("summon_mark_tracker", () -> AttachmentType.builder(SummonMarkTracker::new)

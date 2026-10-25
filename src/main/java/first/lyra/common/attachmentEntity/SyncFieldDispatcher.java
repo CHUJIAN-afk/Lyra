@@ -1,8 +1,12 @@
 package first.lyra.common.attachmentEntity;
 
+import io.netty.buffer.Unpooled;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.level.Level;
+import net.neoforged.neoforge.network.connection.ConnectionType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +16,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 /**
- * 字段同步注册器。
+ * 字段同步与存档注册器。
  * <p>
  * 子类在 {@code AttachmentEntity#registerSyncFields} 中按声明顺序注册字段：
  * </p>
@@ -61,9 +65,12 @@ public final class SyncFieldDispatcher {
                 return false;
             }
 
-            byte[] currentValue = new byte[buf.writerIndex() - start];
-            buf.getBytes(start, currentValue);
-            previousValue = currentValue;
+            // 新追踪者的全量快照不改变已有客户端的增量基线。
+            if (!initialSync) {
+                byte[] currentValue = new byte[buf.writerIndex() - start];
+                buf.getBytes(start, currentValue);
+                previousValue = currentValue;
+            }
             return true;
         }
 
@@ -104,19 +111,59 @@ public final class SyncFieldDispatcher {
         entries.add(new FieldSyncEntry((buf, level) -> codec.encode(buf, getter.apply(level)), (buf, level) -> setter.accept(codec.decode(buf))));
     }
 
+    public CompoundTag saveNBT(Level level) {
+        CompoundTag tag = new CompoundTag();
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), level.registryAccess(), ConnectionType.NEOFORGE);
+        try {
+            for (int i = 0; i < entries.size(); i++) {
+                buf.clear();
+                entries.get(i).encode(buf, level, true);
+                byte[] bytes = new byte[buf.readableBytes()];
+                buf.readBytes(bytes);
+                tag.putByteArray(Integer.toString(i), bytes);
+            }
+        } finally {
+            buf.release();
+        }
+        return tag;
+    }
+
+    public void loadNBT(CompoundTag tag, Level level) {
+        RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), level.registryAccess(), ConnectionType.NEOFORGE);
+        try {
+            for (int i = 0; i < entries.size(); i++) {
+                String key = Integer.toString(i);
+                if (tag.contains(key, Tag.TAG_BYTE_ARRAY)) {
+                    buf.clear();
+                    buf.writeBytes(tag.getByteArray(key));
+                    entries.get(i).decode(buf, level);
+                }
+            }
+        } finally {
+            buf.release();
+        }
+    }
+
     public void encode(RegistryFriendlyByteBuf buf, Level level, boolean initialSync) {
+        encodeChanges(buf, level, initialSync);
+    }
+
+    public boolean encodeChanges(RegistryFriendlyByteBuf buf, Level level, boolean initialSync) {
         // 位图标记本 tick 实际需要写入的字段，字段值仍保持各自 codec 的完整编码。
         int maskStart = buf.writerIndex();
         int maskSize = (entries.size() + 7) >>> 3;
         for (int i = 0; i < maskSize; i++) {
             buf.writeByte(0);
         }
+        boolean changed = false;
         for (int i = 0; i < entries.size(); i++) {
             if (entries.get(i).encode(buf, level, initialSync)) {
+                changed = true;
                 int maskIndex = maskStart + (i >>> 3);
                 buf.setByte(maskIndex, buf.getByte(maskIndex) | (1 << (i & 7)));
             }
         }
+        return changed;
     }
 
     public void decode(RegistryFriendlyByteBuf buf, Level level) {

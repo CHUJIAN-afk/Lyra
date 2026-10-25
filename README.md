@@ -96,6 +96,8 @@ return super.createContext(entity, visualNode, partialTick, packedLight)
 
 ## 路径关键帧
 
+普通实体可实现 `IPathEntity` 接入同一套路径关键帧与字段同步，或仅实现 `ISyncEntity` 注册同步字段。在实体 NBT 方法中委托 `saveSyncFields` / `loadSyncFields`，已注册字段自动保存和恢复。完整实体、客户端翻滚变换和继承接法见 [普通实体接入示例](docs/entity-path-sync.md)。
+
 `PathNode` 继续作为逻辑关键帧，位置、碰撞、历史节点和 `PlannedPath.run` 回调沿用原有逐 tick 推进。可在服务端为逻辑区间添加 `RenderKeyframe`，客户端仅在渲染时使用，不增加逻辑 tick 或触发回调。
 
 曲线路径可直接采样：
