@@ -1,4 +1,4 @@
-package first.lyra.mixin;
+package first.lyra.mixin.photon;
 
 import com.lowdragmc.photon.client.light.DynamicLight;
 import com.lowdragmc.photon.client.light.DynamicLightRenderer;
@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.nio.FloatBuffer;
 
-@Mixin(value = DynamicLightRenderer.class, remap = false)
+@Mixin(DynamicLightRenderer.class)
 public final class PhotonLightRendererMixin {
 
     @Shadow @Final private static FloatBuffer DATA;

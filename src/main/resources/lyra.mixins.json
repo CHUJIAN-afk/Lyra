@@ -16,9 +16,8 @@
     "FlowingLaserLightMixin",
     "FlowingLaserPreprocessorMixin",
     "FlowingLaserShaderMixin",
-    "IrisShadowRendererMixin",
-    "PhotonLightRendererMixin",
-    "WalkAnimationStateAccessor"
+    "iris.IrisShadowRendererMixin",
+    "photon.PhotonLightRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1
