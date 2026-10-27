@@ -15,8 +15,7 @@ public class LyraDamageRegister {
     public static final ResourceKey<DamageType> Summon = ResourceKey.create(Registries.DAMAGE_TYPE, Lyra.rl("summon"));
 
     public static void init() {
-        Lyra.REGISTRATE.get().getDataGenInitializer().add(Registries.DAMAGE_TYPE,
-                provider -> provider.register(Summon, new DamageType("minion", DamageScaling.NEVER, 0.0F)));
+        Lyra.REGISTRATE.get().getDataGenInitializer().add(Registries.DAMAGE_TYPE, provider -> provider.register(Summon, new DamageType("minion", DamageScaling.NEVER, 0.0F)));
     }
 
     public static Holder<DamageType> getDamageTypeHolder(ResourceKey<DamageType> resourceKey, Level level) {

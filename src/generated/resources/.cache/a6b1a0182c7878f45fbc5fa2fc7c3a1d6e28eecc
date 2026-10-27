@@ -1,4 +1,2 @@
-// 1.21.1	2026-10-27T09:59:07.0764025	Registrate Provider for lyra [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
-28cece93cf48dbd469f05d57e93965fce4da1198 assets/lyra/lang/en_ud.json
-834ce80e0af7a56c8fa3f541ba58b87c6435ca84 assets/lyra/lang/en_us.json
+// 1.21.1	2026-10-27T21:52:30.8917601	Registrate Provider for lyra [Registries, Data Maps, Recipes, Advancements, Loot Tables, Tags (blocks), Tags (enchantments), Tags (items), Tags (fluids), Tags (entity_types), generic_server_provider, Blockstates, Item models, Lang (en_us/en_ud), generic_client_provider]
 48928348ca1792b11c14fa3c7a4b5dd5c161251c data/lyra/damage_type/summon.json

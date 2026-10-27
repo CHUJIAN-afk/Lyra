@@ -1,5 +1,6 @@
 package first.lyra;
 
+import com.tterrag.registrate.Registrate;
 import com.tterrag.registrate.util.nullness.NonNullSupplier;
 import first.lyra.client.config.ClientConfig;
 import first.lyra.register.*;
@@ -15,7 +16,7 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 public class Lyra {
 
     public static final String MODID = "lyra";
-    public static final NonNullSupplier<LyraRegistrate> REGISTRATE = NonNullSupplier.lazy(() -> LyraRegistrate.create(MODID));
+    public static final NonNullSupplier<Registrate> REGISTRATE = NonNullSupplier.lazy(() -> Registrate.create(MODID));
 
     public static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(MODID, path.toLowerCase());
@@ -29,7 +30,7 @@ public class Lyra {
         LyraParticleRegister.init();
         LyraRegistries.init();
         LyraDamageRegister.init();
-        LyraLanguageRegister.init();
+        new LyraLanguageProvider(MODID).init();
         if (dist.isClient()) {
             container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.Spec);
             container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
