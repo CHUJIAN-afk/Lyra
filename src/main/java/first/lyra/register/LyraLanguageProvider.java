@@ -1,5 +1,7 @@
 package first.lyra.register;
 
+import first.lyra.provider.LyraAbstractLanguageProvider;
+
 public class LyraLanguageProvider extends LyraAbstractLanguageProvider {
 
     public LyraLanguageProvider(String modid) {

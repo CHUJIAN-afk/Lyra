@@ -3,6 +3,7 @@ package first.lyra;
 import com.tterrag.registrate.Registrate;
 import com.tterrag.registrate.util.nullness.NonNullSupplier;
 import first.lyra.client.config.ClientConfig;
+import first.lyra.register.LyraLanguageProvider;
 import first.lyra.register.*;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;

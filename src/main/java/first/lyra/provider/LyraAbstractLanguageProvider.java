@@ -1,4 +1,4 @@
-package first.lyra.register;
+package first.lyra.provider;
 
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.PackOutput;
