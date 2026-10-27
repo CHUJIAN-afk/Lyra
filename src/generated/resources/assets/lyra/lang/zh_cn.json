@@ -1,4 +1,11 @@
 {
+  "attribute.lyra.health_regen": "生命再生",
+  "attribute.lyra.minion_max_count": "仆从栏",
+  "attribute.lyra.sentry_max_count": "哨兵栏",
+  "attribute.lyra.summon_armor_pierce": "召唤护甲穿透",
+  "attribute.lyra.summon_damage": "召唤伤害",
+  "attribute.lyra.summon_knockback": "召唤击退",
+  "attribute.lyra.summon_search_range": "召唤索敌范围",
   "death.attack.lyra.summon": "%1$s 被 %2$s 撕碎",
   "death.attack.lyra.summon.player": "%1$s 在与 %2$s 战斗时被召唤物撕碎",
   "item.lyra.tooltip.armor_pierce": "护甲穿透",
@@ -15,12 +22,5 @@
   "lyra.configuration.debug_mode.tooltip": "启用虚拟实体调试描边",
   "lyra.configuration.section.lyra.client.toml": "客户端",
   "lyra.configuration.section.lyra.client.toml.title": "客户端配置",
-  "lyra.configuration.title": "Lyra 配置",
-  "lyra:health_regen": "生命再生",
-  "lyra:minion_max_count": "仆从栏",
-  "lyra:sentry_max_count": "哨兵栏",
-  "lyra:summon_armor_pierce": "召唤护甲穿透",
-  "lyra:summon_damage": "召唤伤害",
-  "lyra:summon_knockback": "召唤击退",
-  "lyra:summon_search_range": "召唤索敌范围"
+  "lyra.configuration.title": "Lyra 配置"
 }

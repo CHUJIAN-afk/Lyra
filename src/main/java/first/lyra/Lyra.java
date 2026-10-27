@@ -1,10 +1,10 @@
 package first.lyra;
 
+import com.tterrag.registrate.util.nullness.NonNullSupplier;
 import first.lyra.client.config.ClientConfig;
 import first.lyra.register.*;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
@@ -15,19 +15,21 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 public class Lyra {
 
     public static final String MODID = "lyra";
-    public static final LyraItemRegistries Registries = LyraItemRegistries.create(MODID).languageInit(new LyraLanguageRegister());
+    public static final NonNullSupplier<LyraRegistrate> REGISTRATE = NonNullSupplier.lazy(() -> LyraRegistrate.create(MODID));
 
     public static ResourceLocation rl(String path) {
         return ResourceLocation.fromNamespaceAndPath(MODID, path.toLowerCase());
     }
 
-    public Lyra(IEventBus eventBus, Dist dist, ModContainer container) {
-        Registries.register(eventBus, null);
-        // Event / ClientEvent 通过 @EventBusSubscriber 注解自动注册，无需手动挂总线
-        LyraAttachmentRegister.register(eventBus);
-        LyraAttributeRegister.register(eventBus);
-        LyraDataComponentRegister.register(eventBus);
-        LyraParticleRegister.register(eventBus);
+    public Lyra(Dist dist, ModContainer container) {
+        // 触发注册类的类加载，保证所有条目在 RegisterEvent 之前完成登记
+        LyraAttachmentRegister.init();
+        LyraAttributeRegister.init();
+        LyraDataComponentRegister.init();
+        LyraParticleRegister.init();
+        LyraRegistries.init();
+        LyraDamageRegister.init();
+        LyraLanguageRegister.init();
         if (dist.isClient()) {
             container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.Spec);
             container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);

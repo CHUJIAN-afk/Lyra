@@ -10,7 +10,6 @@ import first.lyra.common.attachmentEntity.AttachmentEntityType;
 import first.lyra.register.LyraAttachmentRegister;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -65,44 +64,6 @@ public final class LyraLights {
         }
         count = 0;
         level = current;
-    }
-
-    public static void point(Vec3 position, int rgb, float intensity, float range) {
-        if (intensity > 0 && range > 0 && PhotonLights.isEnabled()) {
-            next().at(position.x, position.y, position.z)
-                    .color((rgb >> 16 & 255) / 255f, (rgb >> 8 & 255) / 255f, (rgb & 255) / 255f)
-                    .intensity(intensity).range(range).shadows(false);
-        }
-    }
-
-    /** intensity 为每格线长的强度，端点半权重，最多 256 个点。spacing 由调用方保证大于 0。 */
-    public static void line(LightSink sink, Vec3 start, Vec3 end, DynamicLight template, double spacing) {
-        if (template.intensity > 0 && template.range > 0) {
-            double length = start.distanceTo(end);
-            if (length == 0) {
-                sink.next().set(template).point().at(start.x, start.y, start.z);
-            } else {
-                int segments = Math.clamp((int) Math.ceil(length / spacing), 1, 255);
-                double step = length / segments;
-                for (int i = 0; i <= segments; i++) {
-                    double t = (double) i / segments;
-                    float intensity = (float) (template.intensity * step * (i == 0 || i == segments ? 0.5 : 1));
-                    sink.next().set(template).point().intensity(intensity).at(
-                            start.x + (end.x - start.x) * t,
-                            start.y + (end.y - start.y) * t,
-                            start.z + (end.z - start.z) * t);
-                }
-            }
-        }
-    }
-
-    public static void line(Vec3 start, Vec3 end, int rgb, float intensity, float range, double spacing) {
-        if (PhotonLights.isEnabled()) {
-            DynamicLight template = new DynamicLight()
-                    .color((rgb >> 16 & 255) / 255f, (rgb >> 8 & 255) / 255f, (rgb & 255) / 255f)
-                    .intensity(intensity).range(range).shadows(false);
-            line(LyraLights::next, start, end, template, spacing);
-        }
     }
 
     public static DynamicLight next() {

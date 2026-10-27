@@ -5,6 +5,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.damagesource.DamageScaling;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.level.Level;
@@ -12,6 +13,11 @@ import net.minecraft.world.level.Level;
 public class LyraDamageRegister {
 
     public static final ResourceKey<DamageType> Summon = ResourceKey.create(Registries.DAMAGE_TYPE, Lyra.rl("summon"));
+
+    public static void init() {
+        Lyra.REGISTRATE.get().getDataGenInitializer().add(Registries.DAMAGE_TYPE,
+                provider -> provider.register(Summon, new DamageType("minion", DamageScaling.NEVER, 0.0F)));
+    }
 
     public static Holder<DamageType> getDamageTypeHolder(ResourceKey<DamageType> resourceKey, Level level) {
         Registry<DamageType> damageTypes = level.registryAccess().registry(Registries.DAMAGE_TYPE).orElse(null);

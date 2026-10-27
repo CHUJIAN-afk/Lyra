@@ -13,11 +13,7 @@
   ],
   "client": [
     "CreativeModeInventoryScreenMixin",
-    "FlowingLaserLightMixin",
-    "FlowingLaserPreprocessorMixin",
-    "FlowingLaserShaderMixin",
-    "iris.IrisShadowRendererMixin",
-    "photon.PhotonLightRendererMixin"
+    "iris.IrisShadowRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

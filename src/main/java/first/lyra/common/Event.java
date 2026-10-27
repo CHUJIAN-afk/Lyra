@@ -9,8 +9,6 @@ import first.lyra.common.summonMark.SummonMarkInstance;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
 import first.lyra.register.LyraDataComponentRegister;
-import first.lyra.register.LyraItemRegistries;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
@@ -18,13 +16,10 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.storage.loot.LootPool;
-import net.minecraft.world.level.storage.loot.LootTable;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.LootTableLoadEvent;
 import net.neoforged.neoforge.event.ModifyDefaultComponentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeModificationEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
@@ -34,8 +29,6 @@ import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 @EventBusSubscriber(modid = Lyra.MODID)
@@ -50,21 +43,6 @@ public class Event {
                 MinionWeaponModifyEvent modifyEvent = new MinionWeaponModifyEvent(item, weapon);
                 NeoForge.EVENT_BUS.post(modifyEvent);
                 event.modify(item, builder -> builder.set(LyraDataComponentRegister.MINION_WEAPON.get(), modifyEvent.toMinionWeapon()));
-            }
-        });
-    }
-
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public static void onLootTableLoad(LootTableLoadEvent event) {
-        ResourceLocation location = event.getName();
-        LootTable table = event.getTable();
-        LyraItemRegistries.REGISTRIES.values().forEach(registries -> {
-            Map<ResourceLocation, List<Function<LootTable, LootPool>>> tableData = registries.lootTableData;
-            List<Function<LootTable, LootPool>> functions = tableData.get(location);
-            if (functions != null) {
-                for (Function<LootTable, LootPool> function : functions) {
-                    table.addPool(function.apply(table));
-                }
             }
         });
     }
@@ -87,7 +65,6 @@ public class Event {
         Entity entity = event.getEntity();
         if (!entity.level().isClientSide() && entity instanceof LivingEntity living) {
             living.getData(LyraAttachmentRegister.HealthData).tick();
-            living.getData(LyraAttachmentRegister.InvincibleData).tick();
             living.getData(LyraAttachmentRegister.ImmunityData).tick();
         }
     }

@@ -2,8 +2,8 @@ package first.lyra.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import first.lyra.common.creativeTab.CreativeTabDispatcher;
 import first.lyra.common.creativeTab.Section;
+import first.lyra.common.creativeTab.SectionCreativeModeTab;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
@@ -25,12 +25,12 @@ public class CreativeModeTabMixin {
     private void simulated$buildContents(CreativeModeTab.ItemDisplayParameters parameters, Operation<Void> original) {
         CreativeModeTab tab = (CreativeModeTab) (Object) this;
         HolderLookup.Provider holders = parameters.holders();
-        if (CreativeTabDispatcher.isManaged(tab)) {
+        if (tab instanceof SectionCreativeModeTab sectionCreativeModeTab) {
             List<ItemStack> displayItems = new LinkedList<>();
             Set<ItemStack> searchItems = new LinkedHashSet<>();
-            List<Section> sections = CreativeTabDispatcher.getSections(tab);
+            Set<Section> sections = sectionCreativeModeTab.getSections();
             for (Section section : sections) {
-                List<ItemStack> stacks = new ArrayList<>(CreativeTabDispatcher.itemsOf(holders, section));
+                List<ItemStack> stacks = new ArrayList<>(sectionCreativeModeTab.getItemStacks(holders, section));
                 for (int i = 0; i < 9; i++) {
                     stacks.addFirst(ItemStack.EMPTY);
                 }

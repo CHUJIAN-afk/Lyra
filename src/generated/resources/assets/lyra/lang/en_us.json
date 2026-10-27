@@ -1,4 +1,11 @@
 {
+  "attribute.lyra.health_regen": "Health Regen",
+  "attribute.lyra.minion_max_count": "Max Minions",
+  "attribute.lyra.sentry_max_count": "Max Sentrys",
+  "attribute.lyra.summon_armor_pierce": "Summon Armor Pierce",
+  "attribute.lyra.summon_damage": "Summon Damage",
+  "attribute.lyra.summon_knockback": "Summon Knockback",
+  "attribute.lyra.summon_search_range": "Summon Search Range",
   "death.attack.lyra.summon": "%1$s was torn apart by %2$s",
   "death.attack.lyra.summon.player": "%1$s was torn apart by a summon whilst fighting %2$s",
   "item.lyra.tooltip.armor_pierce": "Armor Pierce",
@@ -15,12 +22,5 @@
   "lyra.configuration.debug_mode.tooltip": "Enable virtual entity debug strokes",
   "lyra.configuration.section.lyra.client.toml": "Client",
   "lyra.configuration.section.lyra.client.toml.title": "Client Configuration",
-  "lyra.configuration.title": "Lyra Configuration",
-  "lyra:health_regen": "Health Regen",
-  "lyra:minion_max_count": "Max Minions",
-  "lyra:sentry_max_count": "Max Sentrys",
-  "lyra:summon_armor_pierce": "Summon Armor Pierce",
-  "lyra:summon_damage": "Summon Damage",
-  "lyra:summon_knockback": "Summon Knockback",
-  "lyra:summon_search_range": "Summon Search Range"
+  "lyra.configuration.title": "Lyra Configuration"
 }

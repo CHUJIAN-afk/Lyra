@@ -1,26 +1,29 @@
 package first.lyra.register;
 
+import com.tterrag.registrate.Registrate;
+import com.tterrag.registrate.util.entry.RegistryEntry;
 import first.lyra.Lyra;
 import first.lyra.common.dataComponent.LyraRarity;
 import first.lyra.common.dataComponent.MinionWeapon;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.Registries;
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class LyraDataComponentRegister {
 
-    private static final DeferredRegister.DataComponents Register =
-            DeferredRegister.createDataComponents(Registries.DATA_COMPONENT_TYPE, Lyra.MODID);
+    private static final Registrate REGISTER = Lyra.REGISTRATE.get();
 
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<MinionWeapon>> MINION_WEAPON =
-            Register.registerComponentType("minion_weapon", builder -> builder.persistent(MinionWeapon.CODEC).networkSynchronized(MinionWeapon.STREAM_CODEC));
+    public static final RegistryEntry<DataComponentType<?>, DataComponentType<MinionWeapon>> MINION_WEAPON =
+            REGISTER.simple("minion_weapon", Registries.DATA_COMPONENT_TYPE, () -> DataComponentType.<MinionWeapon>builder()
+                    .persistent(MinionWeapon.CODEC)
+                    .networkSynchronized(MinionWeapon.STREAM_CODEC)
+                    .build());
 
-    public static final DeferredHolder<DataComponentType<?>, DataComponentType<LyraRarity>> RARITY =
-            Register.registerComponentType("rarity", builder -> builder.persistent(LyraRarity.CODEC).networkSynchronized(LyraRarity.STREAM_CODEC));
+    public static final RegistryEntry<DataComponentType<?>, DataComponentType<LyraRarity>> RARITY =
+            REGISTER.simple("rarity", Registries.DATA_COMPONENT_TYPE, () -> DataComponentType.<LyraRarity>builder()
+                    .persistent(LyraRarity.CODEC)
+                    .networkSynchronized(LyraRarity.STREAM_CODEC)
+                    .build());
 
-    public static void register(IEventBus eventBus) {
-        Register.register(eventBus);
+    public static void init() {
     }
 }

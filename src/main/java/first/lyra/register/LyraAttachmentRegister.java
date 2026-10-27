@@ -1,51 +1,44 @@
 package first.lyra.register;
 
+import com.tterrag.registrate.Registrate;
+import com.tterrag.registrate.util.entry.RegistryEntry;
 import first.lyra.Lyra;
 import first.lyra.common.attachment.*;
 import first.lyra.common.entity.EntitySyncData;
-import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 public class LyraAttachmentRegister {
 
-    private static final DeferredRegister<AttachmentType<?>> Register = DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, Lyra.MODID);
+    private static final Registrate REGISTER = Lyra.REGISTRATE.get();
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AttachmentEntityData>> EntityData =
-            Register.register("attachment_entity_data", () -> AttachmentType.builder(AttachmentEntityData::new)
+    public static final RegistryEntry<AttachmentType<?>, AttachmentType<AttachmentEntityData>> EntityData =
+            REGISTER.simple("attachment_entity_data", NeoForgeRegistries.Keys.ATTACHMENT_TYPES, () -> AttachmentType.builder(AttachmentEntityData::new)
                     .sync(new AttachmentEntityData.SyncHandler())
-                    .build()
-            );
+                    .build());
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<EntitySyncData>> SyncData =
-            Register.register("entity_sync_data", () -> AttachmentType.builder(EntitySyncData::new)
+    public static final RegistryEntry<AttachmentType<?>, AttachmentType<EntitySyncData>> SyncData =
+            REGISTER.simple("entity_sync_data", NeoForgeRegistries.Keys.ATTACHMENT_TYPES, () -> AttachmentType.builder(EntitySyncData::new)
                     .sync(new EntitySyncData.SyncHandler())
                     .build());
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<SummonMarkTracker>> SummonMarkData =
-            Register.register("summon_mark_tracker", () -> AttachmentType.builder(SummonMarkTracker::new)
+    public static final RegistryEntry<AttachmentType<?>, AttachmentType<SummonMarkTracker>> SummonMarkData =
+            REGISTER.simple("summon_mark_tracker", NeoForgeRegistries.Keys.ATTACHMENT_TYPES, () -> AttachmentType.builder(SummonMarkTracker::new)
                     .sync(new SummonMarkTracker.SyncHandler())
                     .build());
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ImmunityData>> ImmunityData =
-            Register.register("immunity_data", () -> AttachmentType.builder(ImmunityData::new).build());
+    public static final RegistryEntry<AttachmentType<?>, AttachmentType<ImmunityData>> ImmunityData =
+            REGISTER.simple("immunity_data", NeoForgeRegistries.Keys.ATTACHMENT_TYPES, () -> AttachmentType.builder(ImmunityData::new).build());
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<InvincibleData>> InvincibleData =
-            Register.register("invincible_data", () -> AttachmentType.builder(InvincibleData::new).build());
+    public static final RegistryEntry<AttachmentType<?>, AttachmentType<HealthData>> HealthData =
+            REGISTER.simple("health_data", NeoForgeRegistries.Keys.ATTACHMENT_TYPES, () -> AttachmentType.builder(HealthData::new).build());
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<HealthData>> HealthData =
-            Register.register("health_data", () -> AttachmentType.builder(HealthData::new).build());
+    public static final RegistryEntry<AttachmentType<?>, AttachmentType<TargetCache>> TargetCache =
+            REGISTER.simple("target_cache", NeoForgeRegistries.Keys.ATTACHMENT_TYPES, () -> AttachmentType.builder(TargetCache::new).build());
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<TargetCache>> TargetCache =
-            Register.register("target_cache", () -> AttachmentType.builder(TargetCache::new).build());
+    public static final RegistryEntry<AttachmentType<?>, AttachmentType<ParticlesData>> BatchedParticles =
+            REGISTER.simple("batched_particles", NeoForgeRegistries.Keys.ATTACHMENT_TYPES, () -> AttachmentType.builder(ParticlesData::new).build());
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<ParticlesData>> BatchedParticles =
-            Register.register("batched_particles", () -> AttachmentType.builder(ParticlesData::new).build());
-
-    public static void register(IEventBus eventbus) {
-        Register.register(eventbus);
+    public static void init() {
     }
-
 }

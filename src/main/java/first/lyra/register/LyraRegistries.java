@@ -21,4 +21,7 @@ public class LyraRegistries {
     public static void createRegistry(NewRegistryEvent event) {
         event.register(ATTACHMENT_ENTITY_TYPES);
     }
+
+    public static void init() {
+    }
 }

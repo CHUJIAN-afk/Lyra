@@ -1,8 +1,8 @@
 package first.lyra.mixin;
 
 import first.lyra.client.creativeTab.AnimBanner;
-import first.lyra.common.creativeTab.CreativeTabDispatcher;
 import first.lyra.common.creativeTab.Section;
+import first.lyra.common.creativeTab.SectionCreativeModeTab;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.resources.ResourceLocation;
@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.List;
+import java.util.Set;
 
 @Mixin(CreativeModeInventoryScreen.class)
 public class CreativeModeInventoryScreenMixin {
@@ -33,14 +33,14 @@ public class CreativeModeInventoryScreenMixin {
             )
     )
     private void simulated$render(final GuiGraphics guiGraphics, final int mouseX, final int mouseY, final float partialTick, final CallbackInfo ci) {
-        if (CreativeTabDispatcher.isManaged(selectedTab)) {
+        if (selectedTab instanceof SectionCreativeModeTab sectionCreativeModeTab) {
             CreativeModeInventoryScreen screen = (CreativeModeInventoryScreen) (Object) this;
-            List<Section> sections = CreativeTabDispatcher.getSections(selectedTab);
+            Set<Section> sections = sectionCreativeModeTab.getSections();
 
             int totalRows = 0;
             for (Section section : sections) {
                 totalRows += 1;
-                totalRows += (CreativeTabDispatcher.itemsOf(section).size() + 8) / 9;
+                totalRows += (sectionCreativeModeTab.getItemStacks(null, section).size() + 8) / 9;
             }
 
             int scrollRow = Math.round(scrollOffs * Math.max(0, totalRows - 5));
@@ -50,7 +50,7 @@ public class CreativeModeInventoryScreenMixin {
             int currentRow = 0;
             for (Section section : sections) {
                 int bannerRow = currentRow;
-                int itemRows = (CreativeTabDispatcher.itemsOf(section).size() + 8) / 9;
+                int itemRows = (sectionCreativeModeTab.getItemStacks(null, section).size() + 8) / 9;
                 currentRow += 1 + itemRows;
                 ResourceLocation texture = section.texture();
                 AnimBanner animBanner = section.animBanner();
