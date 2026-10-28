@@ -15,7 +15,6 @@ import net.minecraft.world.item.ItemStack;
 import org.apache.commons.lang3.function.TriConsumer;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -31,7 +30,6 @@ public class MinionWeaponItemBuilder<T extends Minion> {
     private Holder<SoundEvent> soundEventHolder = null;
     private TriConsumer<@NotNull SummonerWeaponItem<T>, @NotNull Player, @NotNull ItemStack> summonConsumer = null;
     private TriConsumer<@NotNull SummonerWeaponItem<T>, @NotNull Player, @NotNull ItemStack> removeConsumer = null;
-    private Consumer<Item.Properties> properties = null;
 
     public MinionWeaponItemBuilder(ResourceLocation identifier, @NotNull Supplier<AttachmentEntityType<T>> typeSupplier) {
         this.typeSupplier = typeSupplier;
@@ -93,20 +91,12 @@ public class MinionWeaponItemBuilder<T extends Minion> {
         return this;
     }
 
-    public MinionWeaponItemBuilder<T> properties(Consumer<Item.Properties> properties) {
-        this.properties = properties;
-        return this;
-    }
-
     /**
-     * 构建武器物品。1.21.1: 物品 id 由 DeferredRegister 注册时指定，无需 setId。
+     * 构建武器物品，物品属性由 Registrate 的 ItemBuilder.properties 提供。
      */
-    public SummonerWeaponItem<T> build() {
-        Item.Properties proper = new Item.Properties().stacksTo(1);
-        if (properties != null) {
-            properties.accept(proper);
-        }
-        proper.component(LyraDataComponentRegister.MINION_WEAPON, new MinionWeapon(damage, knockback, armorPierce, slotType, soundEventHolder));
-        return new SummonerWeaponItem<>(proper, typeSupplier, summonConsumer, removeConsumer);
+    public SummonerWeaponItem<T> build(Item.Properties properties) {
+        properties.stacksTo(1);
+        properties.component(LyraDataComponentRegister.MINION_WEAPON, new MinionWeapon(damage, knockback, armorPierce, slotType, soundEventHolder));
+        return new SummonerWeaponItem<>(properties, typeSupplier, summonConsumer, removeConsumer);
     }
 }

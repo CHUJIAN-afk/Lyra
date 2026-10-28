@@ -32,6 +32,7 @@ public class Lyra {
         LyraRegistries.init();
         LyraDamageRegister.init();
         new LyraLanguageProvider(MODID).init();
+        new LyraLootProvider(MODID).init();
         if (dist.isClient()) {
             container.registerConfig(ModConfig.Type.CLIENT, ClientConfig.Spec);
             container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
