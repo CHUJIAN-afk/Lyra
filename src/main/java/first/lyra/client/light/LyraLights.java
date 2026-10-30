@@ -17,7 +17,6 @@ import java.util.Map;
 
 public final class LyraLights {
 
-    private static final Map<AttachmentEntityType<?>, Emitter<AttachmentEntity>> EMITTERS = new IdentityHashMap<>();
     private static final ArrayList<DynamicLight> LIGHTS = new ArrayList<>();
     private static final DynamicLight IGNORED_LIGHT = new DynamicLight();
     private static final LightProvider PROVIDER = LyraLights::submit;
@@ -27,22 +26,8 @@ public final class LyraLights {
     private LyraLights() {
     }
 
-    @FunctionalInterface
-    public interface Emitter<T extends AttachmentEntity> {
-        void submit(T entity, LightSink sink, float partialTick);
-    }
-
     public static void initialize() {
         PhotonLights.addProvider(PROVIDER);
-    }
-
-    @SuppressWarnings("unchecked")
-    public static <T extends AttachmentEntity> void register(AttachmentEntityType<T> type, Emitter<T> emitter) {
-        EMITTERS.put(type, (Emitter<AttachmentEntity>) emitter);
-    }
-
-    public static void unregister(AttachmentEntityType<?> type) {
-        EMITTERS.remove(type);
     }
 
     private static void submit(LightSink sink, float partialTick) {
@@ -51,14 +36,6 @@ public final class LyraLights {
             if (current == level) {
                 for (int i = 0; i < count; i++) {
                     sink.next().set(LIGHTS.get(i));
-                }
-            }
-            for (var player : current.players()) {
-                for (AttachmentEntity entity : player.getData(LyraAttachmentRegister.EntityData).getRenderCache()) {
-                    Emitter<AttachmentEntity> emitter = EMITTERS.get(entity.getType());
-                    if (emitter != null && !entity.isRemove()) {
-                        emitter.submit(entity, sink, partialTick);
-                    }
                 }
             }
         }
