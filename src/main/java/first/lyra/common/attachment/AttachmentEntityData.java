@@ -6,13 +6,11 @@ import first.lyra.common.attachmentEntity.PathNode;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.minion.MinionSlotType;
 import first.lyra.register.LyraAttachmentRegister;
-import first.lyra.register.LyraAttributeRegister;
 import first.lyra.register.LyraRegistries;
 import first.lyra.utils.LyraStreamCodecs;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -100,20 +98,10 @@ public class AttachmentEntityData {
                     changed = true;
                 }
                 // 检查槽位溢出
-                Map<MinionSlotType, Integer> limits = new HashMap<>();
+                Map<MinionSlotType, Integer> limits = MinionSlotType.getLimits(owner);
                 for (Minion minion : get(Minion.class)) {
                     Player owner = minion.getOwner();
-                    int limit = limits.computeIfAbsent(minion.getSlotType(), slotType -> {
-                        AttributeInstance instance = switch (slotType) {
-                            case Minion -> owner.getAttribute(LyraAttributeRegister.MinionMaxCount);
-                            case Sentry -> owner.getAttribute(LyraAttributeRegister.SentryMaxCount);
-                            case None -> null;
-                        };
-                        if (instance != null) {
-                            return (int) instance.getValue();
-                        }
-                        return 0;
-                    });
+                    int limit = limits.get(minion.getSlotType());
                     int slotCost = minion.getSlotCost();
                     if (slotCost > 0) {
                         if (limit >= slotCost) {
