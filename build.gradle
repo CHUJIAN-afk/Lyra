@@ -103,16 +103,14 @@ sourceSets.main.resources { srcDir 'src/generated/resources' }
 repositories {
     mavenLocal()
     maven { url "https://cursemaven.com" }
-    maven { url 'https://maven.firstdark.dev/snapshots' }
     maven { url 'https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/' }
     maven { url "https://maven.ithundxr.dev/snapshots" }
 }
 
 dependencies {
     compileOnly("curse.maven:irisshaders-455508:8242804")
-    api("com.lowdragmc.photon:photon-neoforge-${minecraft_version}:${photon_version}")
-    api("software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}")
-    api("com.tterrag.registrate:Registrate:${registrate_version}")
+    compileOnly("software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}")
+    api(jarJar("com.tterrag.registrate:Registrate:${registrate_version}"))
 }
 
 // This block of code expands all declared replace properties in the specified resource targets.

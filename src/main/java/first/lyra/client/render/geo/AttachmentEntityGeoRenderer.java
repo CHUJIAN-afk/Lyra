@@ -8,25 +8,26 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.model.GeoModel;
+import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.renderer.GeoObjectRenderer;
 import software.bernie.geckolib.util.Color;
 
-public class AttachmentEntityGeoRenderer<T extends AttachmentEntity> extends GeoObjectRenderer<T> {
+public class AttachmentEntityGeoRenderer<T extends AttachmentEntity> extends GeoObjectRenderer<GeoAnimatable> {
 
     private final AbstractAttachmentEntityGeoRenderer<T> abstractAttachmentEntityGeoRenderer;
 
-    public AttachmentEntityGeoRenderer(AbstractAttachmentEntityGeoRenderer<T> abstractAttachmentEntityGeoRenderer, GeoModel<T> model) {
+    public AttachmentEntityGeoRenderer(AbstractAttachmentEntityGeoRenderer<T> abstractAttachmentEntityGeoRenderer, GeoModel<GeoAnimatable> model) {
         super(model);
         this.abstractAttachmentEntityGeoRenderer = abstractAttachmentEntityGeoRenderer;
     }
 
     @Override
-    public Color getRenderColor(T animatable, float partialTick, int packedLight) {
+    public Color getRenderColor(GeoAnimatable animatable, float partialTick, int packedLight) {
         return abstractAttachmentEntityGeoRenderer.getRenderColor(animatable, partialTick, packedLight);
     }
 
     @Override
-    public void preRender(PoseStack poseStack, T animatable, BakedGeoModel model, @Nullable MultiBufferSource bufferSource, @Nullable VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, int colour) {
+    public void preRender(PoseStack poseStack, GeoAnimatable animatable, BakedGeoModel model, @Nullable MultiBufferSource bufferSource, @Nullable VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight, int packedOverlay, int colour) {
         this.objectRenderTranslations = new Matrix4f(poseStack.last().pose());
     }
 }

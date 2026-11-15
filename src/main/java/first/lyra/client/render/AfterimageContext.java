@@ -1,7 +1,5 @@
 package first.lyra.client.render;
 
-import software.bernie.geckolib.util.Color;
-
 /** 残影随生命进度从本体的 99% 缩小到 98%。 */
 public class AfterimageContext {
 

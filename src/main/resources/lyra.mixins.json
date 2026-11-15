@@ -8,16 +8,19 @@
     "CreativeModeTabMixin",
     "ExperienceOrbAccessor",
     "ItemMixin",
-    "LivingEntityMixin"
+    "LivingEntityMixin",
+    "gecko.AttachmentEntityMixin"
   ],
   "client": [
     "CreativeModeInventoryScreenMixin",
-    "iris.IrisShadowRendererMixin"
+    "iris.IrisShadowRendererMixin",
+    "LightTextureAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
   },
   "overwrites": {
     "requireAnnotations": true
-  }
+  },
+  "plugin": "first.lyra.mixin.LyraMixinPlugin"
 }

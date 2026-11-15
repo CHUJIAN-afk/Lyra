@@ -73,24 +73,16 @@ ordering = "NONE"
 side = "BOTH"
 
 [[dependencies."${mod_id}"]]
-modId = "photon"
-type = "required"
-versionRange = "[2.2.8,2.3)"
-ordering = "AFTER"
-side = "CLIENT"
-
-[[dependencies."${mod_id}"]]
 modId = "iris"
 type = "optional"
 versionRange = "[1.8,)"
 ordering = "AFTER"
 side = "CLIENT"
 
-# GeckoLib：Lyra 的动画/渲染 API 直接依赖其类型，属必需前置
 [[dependencies."${mod_id}"]]
 modId = "geckolib"
-type = "required"
-versionRange = "[4.9.3,)"
+type = "optional"
+versionRange = "[4.9.3,5)"
 ordering = "AFTER"
 side = "BOTH"
 

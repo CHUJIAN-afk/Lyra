@@ -1,58 +1,35 @@
-# Lyra 1.21.1.16 / NeoForge
+# Lyra 1.21.1.22 / NeoForge
 
-动态光照使用 Photon 2.2.8，客户端需要 Photon 完整包、LDLib2 2.2.42 和 GeckoLib。Photon 的 `-all.jar` 已包含 KilaGraph；不再需要本地 `light` 动态光 API。
+Lyra 自带动态光照和特效合成管线，不再需要 Photon、LDLib2 或 KilaGraph。Registrate 继续以 jarjar 内置。GeckoLib 仅为可选联动，使用 Geo 虚拟实体渲染器的子模组需要自行声明 GeckoLib 4.9.3 前置。
 
-## 点光与线光
+## 动态光照
 
-保留 `LyraAPI.light(Vec3, int)` 和 `LyraAPI.light(Vec3, float)`，分别接收原版 0～15 等级和归一化强度。满强度映射为 Photon intensity=8、range=7.75，衰减形状遵循 Photon。
-
-```java
-LyraAPI.light(position, 0xFF6600, 12f, 8f);
-LyraAPI.lineLight(start, end, 0x44AAFF, 8f, 6f, 1.5);
-```
-
-仅客户端渲染线程使用，即时调用需要每帧续期。RGB 为 `0xRRGGBB`，强度与范围使用 Photon 单位。
-
-线光沿整条线段分布点光，`intensity` 为每格线长的强度，`spacing` 由调用方保证大于 0。端点采用半权重，改变间距不会增加总发光量；零长度退化为点光。最多 256 个采样点，达到上限时增大间距，仍覆盖整条线。Photon 全局最多保留 1024 个可见光源。
-
-虚拟实体可在客户端初始化时按类型注册光源，不依赖模型绘制：
+在客户端渲染回调中提交当帧光源，下一帧自动过期：
 
 ```java
-LyraLights.register(MY_ENTITY_TYPE, (entity, sink, partialTick) -> {
-    Vec3 pos = entity.getRenderNode(partialTick).pos();
-    sink.next().at(pos.x, pos.y, pos.z)
-            .color(1f, 0.3f, 0.05f).intensity(10f).range(8f)
-            .shadows(false);
-});
+LyraAPI.light().point().at(pos.x, pos.y, pos.z)
+        .color(255, 100, 30).intensity(8f).range(7.75f)
+        .shadows(false);
+LyraAPI.light().spot(20f, 35f).at(pos.x, pos.y, pos.z)
+        .direction(0f, -1f, 0f).color(1f, 0.5f, 0.2f)
+        .intensity(12f).range(10f);
 ```
 
-`sink.next()` 仅当前帧有效。回调中可用 `LyraLights.line(sink, start, end, template, spacing)` 提交线光，模板为 Photon 的 `DynamicLight`。实体不再提交时光源自然过期；切换世界清空即时提交。
+`color(int, int, int)` 使用 0～255，`color(float, float, float)` 使用线性强度；位置、范围和光源半径以方块为单位，聚光角度以度为单位。光源在 `AFTER_SKY` 清空，在 `AFTER_LEVEL` 收集并照明；请在这两个阶段之间提交，不要缓存 `light()` 返回的池化对象。切换世界与重载资源会释放 GPU 资源。
 
-## 流动激光
+光源按距离和强度排序，默认最多 128 个可见光源，每个 64 像素分块保留最多 32 个。表面光照从场景深度重建位置和法线，`volumetric` 控制沿视线积分的体积散射强度；`shadows(true)` 使用屏幕深度遮挡，无法还原屏幕外遮挡物。Iris 阴影通道不会续期光源。
 
-`FlowingLaserRendererHelper.builder()` 或 `LyraAPI.flowingLaser()` 为独立入口，现有 `LaserRendererHelper`、Photon 点光和普通聚光灯保持原有行为：
+## HDR 与 bloom
 
-```java
-FlowingLaserRendererHelper.builder()
-        .inner(0xFFFFFF, 0.6f)
-        .edge(0xFF3355, 1f)
-        .from(start)
-        .direction(direction)
-        .length(32f)
-        .spread(8f, 6f)
-        .radius(0.02f, 4f, 0.1f)
-        .flowSpeed(12f)
-        .light(new DynamicLight().intensity(32f).volumetric(1f).shadows(true))
-        .render(partialTick);
-```
+自定义特效可以使用 `HdrTarget.resize(target, width, height, useDepth)` 复用 RGBA16F 目标，绘制完成后调用 `EffectPipeline.bloom(target)` 获取原图与辉光的合成结果。透明度保留原图 alpha，辉光不会增加遮挡。`EffectPipeline.composite(result)` 按预乘透明度绘入主目标；`drawFullscreenQuad()` 为自定义合成着色器提供全屏四边形。
 
-起点是世界坐标，方向自动归一化。长度和三段半径使用方块单位；内部、边缘色使用 `0xRRGGBB`，对应半径是三段半径的截面比例，满足 `0 < 内部半径 < 边缘半径`。上例中最大内部半径约 2.4 格，外缘 4 格。初始半径在前半程过渡到过程半径，后半程过渡到终点半径；`spread` 两个系数必须大于 0，值越大越快扩张、越晚收束，值为 1 时线性变化。`flowSpeed` 单位为格/秒，正数向终点流动，0 静止，负数反向。
+客户端配置提供 `dynamic_lights`、`max_lights`、`bloom`、`bloom_with_shaders`、`bloom_strength`。开启光影包时默认关闭额外 bloom，避免重复辉光。
 
-默认内部白色/0.6，边缘红色/1，长度 16，半径 0→2→0，扩散与收缩系数均为 6，流速 8。`.light(...)` 继承 Photon 的强度、总色调、阴影、光源半径和体积散射设置，默认强度 32、体积散射 1。位置、朝向、范围和锥角由激光轮廓计算，不取模板的这些字段。
+## GeckoLib 可选接入
 
-流动纹理由随机错开的梭形脉冲组成，两端收尖，中部较宽，长短、位置和强弱各不相同；外部色构成脉冲主体，内部色勾出亮脊。纹理随流速向前移动并平滑随机抖动，流速为 0 时一并静止。体积积分保留前后遮挡和双色明暗，避免光束厚度增加后把内部纹理累加成一片白色。
+`AttachmentEntity` 不引用 GeckoLib。安装 GeckoLib 后，条件 Mixin 为其注入 `GeoAnimatable`、实例动画缓存与 tick 实现。没有 GeckoLib 时不会加载这个 Mixin。
 
-推荐在 `LyraLights.register` 的光源回调中调用 `.submit(sink, partialTick)`，与 Photon 当前帧的光照采集同步；在普通渲染回调中调用 `.render(partialTick)` 则和即时点光一样每帧续期。每束激光占用 Photon 的一个光源，复用分簇、屏幕/体素阴影、深度遮挡及体积光合成。表面照明与体积光读取同一份轮廓、颜色和流动参数。可见光束受 Photon 的体积光开关、密度和光影兼容设置控制，关掉体积光仍保留表面照明。此扩展针对 Photon 2.2.8；没有修改依赖 JAR。
+Geo 渲染器继续继承 `AbstractAttachmentEntityGeoRenderer<T>`。子实体可以声明 `registerControllers(AnimatableManager.ControllerRegistrar)`；由于接口在运行时注入，此方法不加 `@Override`，创建控制器时使用 `new AnimationController<>((GeoAnimatable) this, ...)`。没有动画的实体不必声明此方法。通用渲染颜色改用 `first.lyra.client.render.Color`，只在 Geo 渲染器边界转换为 GeckoLib 的颜色。
 
 ## 整体透明度
 
@@ -60,7 +37,7 @@ FlowingLaserRendererHelper.builder()
 
 同材质的模型整帧合并上传顶点和索引，连续绘制时只设置一次材质与着色器，每个模型按自己的索引范围绘制。面排序使用复用的基本类型数组，同距时保持原顺序。图集按模型占用面积扩容并跨帧复用，常规分辨率下颜色与深度纹理预算约 64 MiB；更高分辨率至少保留一屏大小。切换世界或重载资源时释放。
 
-模型在世界透明层和 Photon 世界照明后合成，使用硬件深度测试接受遮挡，不写世界深度。颜色、深度、Photon 数据使用批量合成路径；没有光源的分簇跳过法线与光照计算。完全不透明的模型保留普通路径，完全透明的模型跳过。
+模型在世界透明层和 Lyra 世界照明后合成，使用硬件深度测试接受遮挡，不写世界深度。颜色、深度、Lyra 光源数据使用批量合成路径；没有光源时跳过光照计算。完全不透明的模型保留普通路径，完全透明的模型跳过。
 
 Geo、JSON 与虚拟实体渲染器已接入；自定义模型可使用相同作用域：
 
@@ -141,4 +118,4 @@ $env:JAVA_HOME = 'C:\Users\l1518\.jdks\jbr-21.0.11'
 .\gradlew.bat compileJava processResources
 ```
 
-本次优化仅做编译验证，效果与帧率由手动测试确认。任务结束后清理测试类、截图、日志、临时世界与临时运行配置。
+构建产物位于 `build/libs`，可通过 `publishToMavenLocal` 供本地子模组使用。

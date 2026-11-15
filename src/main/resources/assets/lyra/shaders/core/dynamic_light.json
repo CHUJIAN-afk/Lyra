@@ -1,0 +1,22 @@
+{
+  "vertex": "lyra:dynamic_light",
+  "fragment": "lyra:dynamic_light",
+  "attributes": ["Position"],
+  "samplers": [
+    {"name": "SceneColor"},
+    {"name": "SceneDepth"},
+    {"name": "LyraLightData"},
+    {"name": "LyraLightTiles"},
+    {"name": "LyraSceneDepth"}
+  ],
+  "uniforms": [
+    {"name": "LyraShadowSteps", "type": "int", "count": 1, "values": [8]},
+    {"name": "LyraVolumeSteps", "type": "int", "count": 1, "values": [6]},
+    {"name": "ScreenSize", "type": "float", "count": 2, "values": [1, 1]},
+    {"name": "InverseProjection", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]},
+    {"name": "FogStart", "type": "float", "count": 1, "values": [1000]},
+    {"name": "FogEnd", "type": "float", "count": 1, "values": [1001]},
+    {"name": "LyraTileCount", "type": "int", "count": 2, "values": [1, 1]},
+    {"name": "LyraProjection", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]}
+  ]
+}

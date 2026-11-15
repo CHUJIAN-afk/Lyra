@@ -1,0 +1,15 @@
+{
+  "vertex": "lyra:bloom_composite",
+  "fragment": "lyra:bloom_composite",
+  "attributes": ["Position"],
+  "samplers": [
+    {"name": "Source"},
+    {"name": "Bloom0"},
+    {"name": "Bloom1"},
+    {"name": "Bloom2"},
+    {"name": "Bloom3"}
+  ],
+  "uniforms": [
+    {"name": "Strength", "type": "float", "count": 1, "values": [0.3]}
+  ]
+}

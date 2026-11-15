@@ -1,6 +1,5 @@
 package first.lyra.client.render;
 
-import com.lowdragmc.photon.client.compat.iris.IrisCompat;
 import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.MeshData;

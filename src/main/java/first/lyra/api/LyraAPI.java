@@ -1,6 +1,6 @@
 package first.lyra.api;
 
-import com.lowdragmc.photon.client.light.DynamicLight;
+import first.lyra.client.light.DynamicLight;
 import first.lyra.client.light.LyraLights;
 import first.lyra.client.render.AfterimageContext;
 import first.lyra.client.render.model.LyraModelRenderer;
@@ -36,7 +36,7 @@ public interface LyraAPI {
         return ParticleHelper.create(level);
     }
 
-    /** 直接返回 Photon 光对象，由调用方自行配置 point()/spot()。 */
+    /** 当帧光源，由调用方配置 point()/spot()。 */
     static DynamicLight light() {
         return LyraLights.next();
     }

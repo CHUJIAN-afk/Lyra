@@ -9,6 +9,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.cache.object.BakedGeoModel;
 import software.bernie.geckolib.model.GeoModel;
+import software.bernie.geckolib.animatable.GeoAnimatable;
 import software.bernie.geckolib.renderer.GeoRenderer;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 import software.bernie.geckolib.util.Color;
@@ -24,7 +25,7 @@ import java.util.function.Function;
  * </p>
  */
 @SuppressWarnings("UnstableApiUsage")
-public abstract class AbstractAttachmentEntityGeoRenderer<T extends AttachmentEntity> extends AbstractAttachmentEntityRenderer<T> implements GeoRenderer<T> {
+public abstract class AbstractAttachmentEntityGeoRenderer<T extends AttachmentEntity> extends AbstractAttachmentEntityRenderer<T> implements GeoRenderer<GeoAnimatable> {
 
     protected final AttachmentEntityGeoModel<T> model;
     protected final AttachmentEntityGeoRenderer<T> renderer;
@@ -45,33 +46,37 @@ public abstract class AbstractAttachmentEntityGeoRenderer<T extends AttachmentEn
         model.resolve(context);
         ResourceLocation textureLocation = getTextureLocation(entity);
         if (textureLocation != null) {
-            RenderType renderType = getRenderType(entity, textureLocation, bufferSource, partialTick);
-            renderer.render(poseStack, entity, bufferSource, renderType, renderType != null ? bufferSource.getBuffer(renderType) : null, context.packedLight, partialTick);
+            RenderType renderType = getRenderType((GeoAnimatable) entity, textureLocation, bufferSource, partialTick);
+            renderer.render(poseStack, (GeoAnimatable) entity, bufferSource, renderType, renderType != null ? bufferSource.getBuffer(renderType) : null, context.packedLight, partialTick);
         }
     }
 
-    @Override
-    public Color getRenderColor(T animatable, float partialTick, int packedLight) {
-        return context.color;
+    public ResourceLocation getTextureLocation(T entity) {
+        return model.getTextureResource((GeoAnimatable) entity);
     }
 
     @Override
-    public RenderType getRenderType(T animatable, ResourceLocation texture, MultiBufferSource bufferSource, float partialTick) {
+    public Color getRenderColor(GeoAnimatable animatable, float partialTick, int packedLight) {
+        return new Color(context.color.getColor());
+    }
+
+    @Override
+    public RenderType getRenderType(GeoAnimatable animatable, ResourceLocation texture, MultiBufferSource bufferSource, float partialTick) {
         return RenderType.entityTranslucentCull(texture);
     }
 
     @Override
-    public GeoModel<T> getGeoModel() {
+    public GeoModel<GeoAnimatable> getGeoModel() {
         return renderer.getGeoModel();
     }
 
     @Override
-    public T getAnimatable() {
+    public GeoAnimatable getAnimatable() {
         return renderer.getAnimatable();
     }
 
     @Override
-    public List<GeoRenderLayer<T>> getRenderLayers() {
+    public List<GeoRenderLayer<GeoAnimatable>> getRenderLayers() {
         return renderer.getRenderLayers();
     }
 
@@ -91,7 +96,7 @@ public abstract class AbstractAttachmentEntityGeoRenderer<T extends AttachmentEn
     }
 
     @Override
-    public void updateAnimatedTextureFrame(T animatable) {
+    public void updateAnimatedTextureFrame(GeoAnimatable animatable) {
         renderer.updateAnimatedTextureFrame(animatable);
     }
 }

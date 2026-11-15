@@ -5,6 +5,7 @@ import first.lyra.common.attachmentEntity.AttachmentEntity;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.resources.ResourceLocation;
 import software.bernie.geckolib.model.GeoModel;
+import software.bernie.geckolib.animatable.GeoAnimatable;
 
 import java.util.function.Function;
 
@@ -17,7 +18,7 @@ import java.util.function.Function;
  * {@code textures/entity/summon/hornet_baby.png}.
  * </p>
  */
-public class AttachmentEntityGeoModel<T extends AttachmentEntity> extends GeoModel<T> {
+public class AttachmentEntityGeoModel<T extends AttachmentEntity> extends GeoModel<GeoAnimatable> {
 
     private final Function<RenderContext<T>, ResourceLocation> basePathResolver;
     private ResourceLocation cachedPath;
@@ -44,22 +45,22 @@ public class AttachmentEntityGeoModel<T extends AttachmentEntity> extends GeoMod
     }
 
     @Override
-    public RenderType getRenderType(T animatable, ResourceLocation texture) {
+    public RenderType getRenderType(GeoAnimatable animatable, ResourceLocation texture) {
         return RenderType.entityTranslucentCull(texture);
     }
 
     @Override
-    public ResourceLocation getModelResource(T animatable) {
+    public ResourceLocation getModelResource(GeoAnimatable animatable) {
         return model;
     }
 
     @Override
-    public ResourceLocation getTextureResource(T animatable) {
+    public ResourceLocation getTextureResource(GeoAnimatable animatable) {
         return texture;
     }
 
     @Override
-    public ResourceLocation getAnimationResource(T animatable) {
+    public ResourceLocation getAnimationResource(GeoAnimatable animatable) {
         return animation;
     }
 }

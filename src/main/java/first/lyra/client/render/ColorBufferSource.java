@@ -7,7 +7,6 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.util.FastColor;
 import org.jetbrains.annotations.NotNull;
 
-
 public class ColorBufferSource implements MultiBufferSource {
 
     private final MultiBufferSource inner;

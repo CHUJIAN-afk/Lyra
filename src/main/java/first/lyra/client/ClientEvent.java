@@ -1,6 +1,6 @@
 package first.lyra.client;
 
-import com.lowdragmc.photon.client.compat.iris.IrisCompat;
+import first.lyra.client.render.IrisCompat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import first.lyra.Lyra;
 import first.lyra.client.light.LyraLights;
@@ -8,6 +8,7 @@ import first.lyra.client.render.AfterimageManager;
 import first.lyra.client.render.AttachmentEntityRenderDispatcher;
 import first.lyra.client.render.CameraShake;
 import first.lyra.client.render.WholeModelTransparency;
+import first.lyra.client.render.EffectPipeline;
 import first.lyra.client.tooltip.LyraTooltipHandler;
 import first.lyra.common.particle.genericParticle.GenericParticleProvider;
 import first.lyra.register.LyraParticleRegister;
@@ -18,7 +19,6 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -33,15 +33,33 @@ import java.io.IOException;
 public class ClientEvent {
 
     @SubscribeEvent
-    public static void setup(FMLClientSetupEvent event) {
-        LyraLights.initialize();
-    }
-
-    @SubscribeEvent
     public static void shaders(RegisterShadersEvent event) throws IOException {
         AfterimageManager.close();
         WholeModelTransparency.close();
+        LyraLights.clear();
+        EffectPipeline.close();
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("model_transparency"), DefaultVertexFormat.PARTICLE), WholeModelTransparency::setShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("dynamic_light"), DefaultVertexFormat.POSITION), LyraLights::setShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("bloom_blur"), DefaultVertexFormat.POSITION), EffectPipeline::setBlurShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("bloom_composite"), DefaultVertexFormat.POSITION), EffectPipeline::setCompositeShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("effect_texture"), DefaultVertexFormat.POSITION_TEX_COLOR), EffectPipeline::setTextureShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("effect_composite"), DefaultVertexFormat.POSITION), EffectPipeline::setResolveShader);
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void beginFrame(RenderLevelStageEvent event) {
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_SKY && !IrisCompat.isShadowPass()) {
+            LyraLights.beginFrame();
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void finishFrame(RenderLevelStageEvent event) {
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL && !IrisCompat.isShadowPass()) {
+            LyraLights.render(event.getCamera(), event.getModelViewMatrix(), event.getProjectionMatrix());
+            WholeModelTransparency.prepareLighting();
+            WholeModelTransparency.finishFrame();
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -70,10 +88,13 @@ public class ClientEvent {
 
     @SubscribeEvent
     public static void unload(LevelEvent.Unload event) {
-        CameraShake.clear();
-        LyraLights.clear();
-        AfterimageManager.close();
-        WholeModelTransparency.close();
+        if (event.getLevel().isClientSide()) {
+            CameraShake.clear();
+            LyraLights.clear();
+            AfterimageManager.close();
+            WholeModelTransparency.close();
+            EffectPipeline.close();
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)

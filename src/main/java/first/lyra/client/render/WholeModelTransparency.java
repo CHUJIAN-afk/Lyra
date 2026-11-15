@@ -1,8 +1,7 @@
 package first.lyra.client.render;
 
-import com.lowdragmc.photon.client.compat.iris.IrisCompat;
-import com.lowdragmc.photon.client.light.DynamicLightRenderer;
-import com.lowdragmc.photon.core.mixins.accessor.LightTextureAccessor;
+import first.lyra.client.light.LyraLights;
+import first.lyra.mixin.LightTextureAccessor;
 import com.mojang.blaze3d.pipeline.TextureTarget;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -141,9 +140,9 @@ public final class WholeModelTransparency {
 
     public static void prepareLighting() {
         if (!MODELS.isEmpty()) {
-            shader.safeGetUniform("PhotonEnabled").set(DynamicLightRenderer.hasLights() ? 1 : 0);
-            if (DynamicLightRenderer.hasLights()) {
-                DynamicLightRenderer.bindLights(shader);
+            shader.safeGetUniform("LyraEnabled").set(LyraLights.hasLights() ? 1 : 0);
+            if (LyraLights.hasLights()) {
+                LyraLights.bindLights(shader);
             }
         }
     }

@@ -3,7 +3,6 @@ package first.lyra.client.render;
 import first.lyra.client.render.trail.TrailContext;
 import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.attachmentEntity.PathNode;
-import software.bernie.geckolib.util.Color;
 
 /**
  * 渲染上下文：实体、视觉节点与当帧参数，以及拖尾、模型和残影子上下文。

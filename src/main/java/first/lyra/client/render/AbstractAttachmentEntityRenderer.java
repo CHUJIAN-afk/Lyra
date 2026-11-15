@@ -1,6 +1,5 @@
 package first.lyra.client.render;
 
-import com.lowdragmc.photon.client.compat.iris.IrisCompat;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import first.lyra.client.config.ClientConfig;
@@ -11,7 +10,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
-import software.bernie.geckolib.util.Color;
 
 /**
  * 附件实体渲染器基类。

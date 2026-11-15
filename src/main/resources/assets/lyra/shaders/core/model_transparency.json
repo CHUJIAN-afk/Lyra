@@ -3,21 +3,23 @@
   "fragment": "lyra:model_transparency",
   "attributes": ["Position", "UV0", "Color", "UV2"],
   "samplers": [
-    {"name": "ModelColor"}, {"name": "ModelDepth"},
-    {"name": "PhotonLightData"}, {"name": "PhotonClusterGrid"},
-    {"name": "PhotonClusterIndices"}, {"name": "PhotonVisibilityAtlas"}
+    {"name": "ModelColor"},
+    {"name": "ModelDepth"},
+    {"name": "LyraLightData"},
+    {"name": "LyraLightTiles"},
+    {"name": "LyraSceneDepth"}
   ],
   "uniforms": [
+    {"name": "LyraShadowSteps", "type": "int", "count": 1, "values": [8]},
     {"name": "ScreenSize", "type": "float", "count": 2, "values": [1, 1]},
     {"name": "InverseProjection", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]},
-    {"name": "PhotonEnabled", "type": "int", "count": 1, "values": [0]},
     {"name": "FogColor", "type": "float", "count": 4, "values": [0, 0, 0, 0]},
     {"name": "FogStart", "type": "float", "count": 1, "values": [1000]},
     {"name": "FogEnd", "type": "float", "count": 1, "values": [1001]},
     {"name": "FogShape", "type": "int", "count": 1, "values": [0]},
-    {"name": "PhotonClusterInfo", "type": "int", "count": 4, "values": [64, 1, 1, 16]},
-    {"name": "PhotonClusterView", "type": "float", "count": 4, "values": [0.5, 1, 0, 0]},
-    {"name": "PhotonVisibilityInfo", "type": "int", "count": 4, "values": [128, 8, 0, 0]},
-    {"name": "PhotonViewInverse", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]}
+    {"name": "LyraEnabled", "type": "int", "count": 1, "values": [0]},
+    {"name": "LyraTileCount", "type": "int", "count": 2, "values": [1, 1]},
+    {"name": "LyraProjection", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]},
+    {"name": "LyraViewInverse", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]}
   ]
 }
