@@ -13,8 +13,10 @@ public class ClientConfig {
     public static final ModConfigSpec.BooleanValue DynamicLights = Builder.define("dynamic_lights", true);
     public static final ModConfigSpec.IntValue MaxLights = Builder.defineInRange("max_lights", 128, 1, 512);
     public static final ModConfigSpec.BooleanValue Bloom = Builder.define("bloom", true);
-    public static final ModConfigSpec.BooleanValue BloomWithShaders = Builder.define("bloom_with_shaders", false);
-    public static final ModConfigSpec.DoubleValue BloomStrength = Builder.defineInRange("bloom_strength", 0.3, 0.0, 2.0);
+    public static final ModConfigSpec.BooleanValue BloomWithShaders = Builder.define("bloom_with_shaders", true);
+    public static final ModConfigSpec.IntValue BloomLevels = Builder.defineInRange("bloom_levels", 5, 2, 10);
+    public static final ModConfigSpec.DoubleValue BloomThreshold = Builder.defineInRange("bloom_threshold", 1.001, 0.0, 10.0);
+    public static final ModConfigSpec.DoubleValue BloomStrength = Builder.defineInRange("bloom_strength", 0.7, 0.0, 2.0);
 
     public static final ModConfigSpec Spec = Builder.build();
 }

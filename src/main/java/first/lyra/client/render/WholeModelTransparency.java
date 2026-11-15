@@ -152,7 +152,7 @@ public final class WholeModelTransparency {
             Minecraft minecraft = Minecraft.getInstance();
             var main = minecraft.getMainRenderTarget();
             if (width == main.width && height == main.height) {
-                State state = new State();
+                RenderState state = new RenderState();
                 Matrix4f projection = new Matrix4f(RenderSystem.getProjectionMatrix());
                 var sorting = RenderSystem.getVertexSorting();
                 var view = RenderSystem.getModelViewStack();
@@ -582,26 +582,4 @@ public final class WholeModelTransparency {
         }
     }
 
-    private static class State {
-        final int framebuffer = GlStateManager.getBoundFramebuffer();
-        final int x = GlStateManager.Viewport.x();
-        final int y = GlStateManager.Viewport.y();
-        final int width = GlStateManager.Viewport.width();
-        final int height = GlStateManager.Viewport.height();
-        final ShaderInstance shader = RenderSystem.getShader();
-
-        void restore() {
-            GlStateManager._glBindFramebuffer(GL30.GL_FRAMEBUFFER, framebuffer);
-            RenderSystem.viewport(x, y, width, height);
-            RenderSystem.disableScissor();
-            RenderSystem.enableDepthTest();
-            RenderSystem.depthFunc(GL11.GL_LEQUAL);
-            RenderSystem.depthMask(true);
-            RenderSystem.enableCull();
-            RenderSystem.disableBlend();
-            RenderSystem.defaultBlendFunc();
-            RenderSystem.colorMask(true, true, true, true);
-            RenderSystem.setShader(() -> shader);
-        }
-    }
 }

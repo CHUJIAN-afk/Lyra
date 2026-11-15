@@ -1,0 +1,7 @@
+{
+  "vertex": "lyra:effect_composite",
+  "fragment": "lyra:bloom_upsample",
+  "attributes": ["Position"],
+  "samplers": [{"name": "Source"}],
+  "uniforms": []
+}

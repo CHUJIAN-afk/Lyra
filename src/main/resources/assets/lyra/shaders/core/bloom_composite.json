@@ -4,12 +4,10 @@
   "attributes": ["Position"],
   "samplers": [
     {"name": "Source"},
-    {"name": "Bloom0"},
-    {"name": "Bloom1"},
-    {"name": "Bloom2"},
-    {"name": "Bloom3"}
+    {"name": "Bloom"}
   ],
   "uniforms": [
-    {"name": "Strength", "type": "float", "count": 1, "values": [0.3]}
+    {"name": "Strength", "type": "float", "count": 1, "values": [0.7]},
+    {"name": "Threshold", "type": "float", "count": 1, "values": [1.001]}
   ]
 }

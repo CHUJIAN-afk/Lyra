@@ -1,15 +1,13 @@
 #version 150
+#moj_import <lyra:bloom.glsl>
 uniform sampler2D Source;
-uniform sampler2D Bloom0;
-uniform sampler2D Bloom1;
-uniform sampler2D Bloom2;
-uniform sampler2D Bloom3;
+uniform sampler2D Bloom;
 uniform float Strength;
+uniform float Threshold;
 in vec2 texCoord;
 out vec4 fragColor;
 void main() {
     vec4 source = texture(Source, texCoord);
-    vec3 glow = texture(Bloom0, texCoord).rgb * 0.4 + texture(Bloom1, texCoord).rgb * 0.3
-        + texture(Bloom2, texCoord).rgb * 0.2 + texture(Bloom3, texCoord).rgb * 0.1;
-    fragColor = vec4(source.rgb + glow * Strength, source.a);
+    vec3 glow = texture(Bloom, texCoord).rgb;
+    fragColor = vec4(source.rgb + (glow - lyra_highlight(source.rgb, Threshold)) * Strength, source.a);
 }

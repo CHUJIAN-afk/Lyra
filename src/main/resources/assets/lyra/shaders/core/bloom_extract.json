@@ -1,0 +1,9 @@
+{
+  "vertex": "lyra:effect_composite",
+  "fragment": "lyra:bloom_extract",
+  "attributes": ["Position"],
+  "samplers": [{"name": "Source"}],
+  "uniforms": [
+    {"name": "Threshold", "type": "float", "count": 1, "values": [1.001]}
+  ]
+}

@@ -1,4 +1,4 @@
-# Lyra 1.21.1.22 / NeoForge
+# Lyra 1.21.1.23 / NeoForge
 
 Lyra 自带动态光照和特效合成管线，不再需要 Photon、LDLib2 或 KilaGraph。Registrate 继续以 jarjar 内置。GeckoLib 仅为可选联动，使用 Geo 虚拟实体渲染器的子模组需要自行声明 GeckoLib 4.9.3 前置。
 
@@ -21,9 +21,9 @@ LyraAPI.light().spot(20f, 35f).at(pos.x, pos.y, pos.z)
 
 ## HDR 与 bloom
 
-自定义特效可以使用 `HdrTarget.resize(target, width, height, useDepth)` 复用 RGBA16F 目标，绘制完成后调用 `EffectPipeline.bloom(target)` 获取原图与辉光的合成结果。透明度保留原图 alpha，辉光不会增加遮挡。`EffectPipeline.composite(result)` 按预乘透明度绘入主目标；`drawFullscreenQuad()` 为自定义合成着色器提供全屏四边形。
+自定义特效可以使用 `HdrTarget.resize(target, width, height, useDepth)` 复用 RGBA16F 目标，颜色纹理使用线性过滤，创建或缩放后恢复调用方的帧缓冲、视口与绘制状态。绘制完成后调用 `EffectPipeline.bloom(target)` 获取原图与辉光的合成结果；该方法采用亮度软阈值提取、多级降采样和逐级上采样，结束后恢复调用方状态。透明度保留原图 alpha，辉光不会增加遮挡。`EffectPipeline.composite(result)` 按预乘透明度绘入主目标；`drawFullscreenQuad()` 为自定义合成着色器提供全屏四边形。
 
-客户端配置提供 `dynamic_lights`、`max_lights`、`bloom`、`bloom_with_shaders`、`bloom_strength`。开启光影包时默认关闭额外 bloom，避免重复辉光。
+客户端配置提供 `dynamic_lights`、`max_lights`、`bloom`、`bloom_with_shaders`、`bloom_levels`、`bloom_threshold`、`bloom_strength`。Bloom 默认使用 5 级降采样，阈值为 1.001、强度为 0.7，开启光影包时仍可生效；已有配置保留用户设置。
 
 ## GeckoLib 可选接入
 

@@ -7,6 +7,7 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import first.lyra.client.config.ClientConfig;
 import first.lyra.client.render.EffectPipeline;
 import first.lyra.client.render.IrisCompat;
+import first.lyra.client.render.RenderState;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShaderInstance;
@@ -91,6 +92,7 @@ public final class LyraLights {
                 visible.subList(ClientConfig.MaxLights.get(), visible.size()).clear();
             }
             if (!visible.isEmpty()) {
+                RenderState state = new RenderState();
                 upload(origin, view, projection, main.width, main.height);
                 if (scene == null) {
                     scene = new TextureTarget(main.width, main.height, true, Minecraft.ON_OSX);
@@ -105,7 +107,8 @@ public final class LyraLights {
                 GlStateManager._glBlitFrameBuffer(0, 0, main.width, main.height, 0, 0, main.width, main.height,
                         GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT, GL11.GL_NEAREST);
                 main.bindWrite(true);
-                ShaderInstance previous = RenderSystem.getShader();
+                RenderSystem.disableScissor();
+                RenderSystem.colorMask(true, true, true, true);
                 RenderSystem.disableDepthTest();
                 RenderSystem.depthMask(false);
                 RenderSystem.disableBlend();
@@ -120,10 +123,7 @@ public final class LyraLights {
                 shader.apply();
                 EffectPipeline.drawFullscreenQuad();
                 shader.clear();
-                RenderSystem.enableCull();
-                RenderSystem.enableDepthTest();
-                RenderSystem.depthMask(true);
-                RenderSystem.setShader(() -> previous);
+                state.restore();
             }
         }
     }

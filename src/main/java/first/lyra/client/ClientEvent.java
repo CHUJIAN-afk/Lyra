@@ -40,7 +40,9 @@ public class ClientEvent {
         EffectPipeline.close();
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("model_transparency"), DefaultVertexFormat.PARTICLE), WholeModelTransparency::setShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("dynamic_light"), DefaultVertexFormat.POSITION), LyraLights::setShader);
-        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("bloom_blur"), DefaultVertexFormat.POSITION), EffectPipeline::setBlurShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("bloom_extract"), DefaultVertexFormat.POSITION), EffectPipeline::setExtractShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("bloom_downsample"), DefaultVertexFormat.POSITION), EffectPipeline::setDownsampleShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("bloom_upsample"), DefaultVertexFormat.POSITION), EffectPipeline::setUpsampleShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("bloom_composite"), DefaultVertexFormat.POSITION), EffectPipeline::setCompositeShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("effect_texture"), DefaultVertexFormat.POSITION_TEX_COLOR), EffectPipeline::setTextureShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("effect_composite"), DefaultVertexFormat.POSITION), EffectPipeline::setResolveShader);
