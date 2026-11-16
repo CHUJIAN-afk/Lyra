@@ -42,22 +42,27 @@ public final class EffectPipeline {
 
     public static void composite(RenderTarget source) {
         var main = Minecraft.getInstance().getMainRenderTarget();
-        RenderState state = new RenderState();
+        composite(source, main, false);
         main.bindWrite(true);
+    }
+
+    public static void composite(RenderTarget source, RenderTarget target, boolean accumulateAlpha) {
+        RenderState state = new RenderState();
+        target.bindWrite(true);
         RenderSystem.disableScissor();
         RenderSystem.disableDepthTest();
         RenderSystem.depthMask(false);
         RenderSystem.disableCull();
         RenderSystem.enableBlend();
         RenderSystem.blendEquation(GL14.GL_FUNC_ADD);
-        RenderSystem.blendFuncSeparate(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ZERO, GL11.GL_ONE);
-        RenderSystem.colorMask(true, true, true, false);
+        RenderSystem.blendFuncSeparate(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA,
+                accumulateAlpha ? GL11.GL_ONE : GL11.GL_ZERO, accumulateAlpha ? GL11.GL_ONE_MINUS_SRC_ALPHA : GL11.GL_ONE);
+        RenderSystem.colorMask(true, true, true, accumulateAlpha);
         resolveShader.setSampler("Source", source.getColorTextureId());
         resolveShader.apply();
         drawFullscreenQuad();
         resolveShader.clear();
         state.restore();
-        main.bindWrite(true);
     }
 
     public static void setExtractShader(ShaderInstance shader) {
