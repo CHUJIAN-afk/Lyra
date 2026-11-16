@@ -10,15 +10,12 @@ import first.lyra.client.render.rendererHelper.LightningRendererHelper;
 import first.lyra.client.render.rendererHelper.SphereRendererHelper;
 import first.lyra.client.tooltip.LyraTooltipHandler;
 import first.lyra.client.tooltip.TooltipProvider;
-import first.lyra.common.creativeTab.Section;
-import first.lyra.common.creativeTab.SectionCreativeModeTab;
 import first.lyra.common.network.CameraShakePayload;
 import first.lyra.utils.ParticleHelper;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -50,11 +47,6 @@ public interface LyraAPI {
 
     static void tooltip(TooltipProvider provider) {
         LyraTooltipHandler.register(provider);
-    }
-
-    static CreativeModeTab.Builder creativeTab(Section... sections) {
-        return SectionCreativeModeTab.builder()
-                .withTabFactory(builder -> new SectionCreativeModeTab(builder, sections));
     }
 
     static LaserRendererHelper laser() {

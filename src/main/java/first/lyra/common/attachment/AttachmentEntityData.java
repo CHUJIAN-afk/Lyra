@@ -8,7 +8,6 @@ import first.lyra.common.minion.MinionSlotType;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraRegistries;
 import first.lyra.utils.LyraStreamCodecs;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
@@ -29,10 +28,12 @@ public class AttachmentEntityData {
     private final Map<AttachmentEntityType<?>, List<AttachmentEntity>> groups = new HashMap<>();
     private final Map<UUID, AttachmentEntity> uuidToEntity = new HashMap<>();
     private final List<AttachmentEntity> renderCache = new ArrayList<>();
+    private final Map<MinionSlotType, Integer> slotLimits = new EnumMap<>(MinionSlotType.class);
     private final AtomicReference<List<byte[]>> pendingPayloads = new AtomicReference<>(List.of());
     private final Player owner;
     private Level level = null;
     private boolean changed = false;
+    private boolean slotCostChanged = false;
 
     public AttachmentEntityData(IAttachmentHolder owner) {
         if (owner instanceof Player player) {
@@ -91,23 +92,36 @@ public class AttachmentEntityData {
                             if (!attachmentEntity.getCurrentPathNode().pos().equals(Vec3.ZERO)) {
                                 attachmentEntity.setOwner(owner);
                                 entities.add(attachmentEntity);
+                                uuidToEntity.put(attachmentEntity.getUuid(), attachmentEntity);
+                                if (attachmentEntity instanceof Minion) {
+                                    slotCostChanged = true;
+                                }
                             }
                         }
                     }
                     pendingAdd.clear();
                     changed = true;
                 }
-                // 检查槽位溢出
-                Map<MinionSlotType, Integer> limits = MinionSlotType.getLimits(owner);
-                for (Minion minion : get(Minion.class)) {
-                    Player owner = minion.getOwner();
-                    int limit = limits.get(minion.getSlotType());
-                    int slotCost = minion.getSlotCost();
-                    if (slotCost > 0) {
-                        if (limit >= slotCost) {
-                            limits.put(minion.getSlotType(), limit - slotCost);
-                        } else {
-                            minion.setRemove();
+                boolean checkSlots = slotCostChanged;
+                for (MinionSlotType type : MinionSlotType.values()) {
+                    int limit = type.getLimit(owner);
+                    Integer previous = slotLimits.put(type, limit);
+                    if (previous != null && limit < previous) {
+                        checkSlots = true;
+                    }
+                }
+                if (checkSlots) {
+                    slotCostChanged = false;
+                    Map<MinionSlotType, Integer> limits = new EnumMap<>(slotLimits);
+                    for (Minion minion : get(Minion.class)) {
+                        int limit = limits.get(minion.getSlotType());
+                        int slotCost = minion.getSlotCost();
+                        if (slotCost > 0) {
+                            if (limit >= slotCost) {
+                                limits.put(minion.getSlotType(), limit - slotCost);
+                            } else {
+                                minion.setRemove();
+                            }
                         }
                     }
                 }
@@ -119,6 +133,7 @@ public class AttachmentEntityData {
                                 entity.setRemove();
                             }
                             if (entity.isRemove()) {
+                                uuidToEntity.remove(entity.getUuid());
                                 entity.onRemove();
                                 changed = true;
                                 return true;
@@ -166,6 +181,12 @@ public class AttachmentEntityData {
         pendingAdd.computeIfAbsent(entity.getType(), key -> new ArrayList<>()).add(entity);
     }
 
+    public void markSlotCostChanged(Minion minion) {
+        if (uuidToEntity.get(minion.getUuid()) == minion && !minion.isRemove()) {
+            slotCostChanged = true;
+        }
+    }
+
     @SuppressWarnings("unchecked")
     public <T extends AttachmentEntity> List<T> get(AttachmentEntityType<T> attachmentEntityType) {
         List<T> result = new ArrayList<>();
@@ -209,35 +230,37 @@ public class AttachmentEntityData {
         List<byte[]> snapshot = pendingPayloads.getAndSet(List.of());
         for (byte[] payload : snapshot) {
             RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(payload), level.registryAccess(), ConnectionType.NEOFORGE);
-            // 保留现有实体的缓存引用
-            Map<UUID, AttachmentEntity> existing = new HashMap<>();
-            groups.values().forEach(list -> list.forEach(entity -> existing.put(entity.getUuid(), entity)));
-            // 清空分组
-            groups.clear();
-            // 读取 AttachmentEntityType → 实体列表
-            int typeCount = buf.readVarInt();
-            for (int i = 0; i < typeCount; i++) {
-                AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.getHolder(buf.readInt()).orElseThrow().value();
-                List<AttachmentEntity> list = groups.computeIfAbsent(entityType, k -> new ArrayList<>());
-                int listSize = buf.readVarInt();
-                for (int k = 0; k < listSize; k++) {
-                    UUID uuid = buf.readUUID();
-                    AttachmentEntity entity = existing.get(uuid);
-                    if (entity == null) {
-                        entity = entityType.factory().get();
-                        entity.setUuid(uuid);
+            try {
+                // 保留现有实体的缓存引用
+                Map<UUID, AttachmentEntity> existing = new HashMap<>();
+                groups.values().forEach(list -> list.forEach(entity -> existing.put(entity.getUuid(), entity)));
+                groups.clear();
+                int typeCount = buf.readVarInt();
+                for (int i = 0; i < typeCount; i++) {
+                    AttachmentEntityType<?> entityType = LyraRegistries.ATTACHMENT_ENTITY_TYPES.getHolder(buf.readInt()).orElseThrow().value();
+                    List<AttachmentEntity> list = groups.computeIfAbsent(entityType, k -> new ArrayList<>());
+                    int listSize = buf.readVarInt();
+                    for (int k = 0; k < listSize; k++) {
+                        UUID uuid = buf.readUUID();
+                        AttachmentEntity entity = existing.get(uuid);
+                        if (entity == null) {
+                            entity = entityType.factory().get();
+                            entity.setUuid(uuid);
+                        }
+                        entity.setOwner(owner);
+                        entity.getSyncFieldDispatcher().decode(buf, level);
+                        if (!buf.readBoolean()) {
+                            PathNode pathNode = LyraStreamCodecs.PATH_NODE.decode(buf);
+                            ArrayList<PathNode> historyNodes = entity.getHistoryNodes();
+                            historyNodes.clear();
+                            historyNodes.add(pathNode);
+                            historyNodes.add(pathNode);
+                        }
+                        list.add(entity);
                     }
-                    entity.setOwner(owner);
-                    entity.getSyncFieldDispatcher().decode(buf, level);
-                    if (!buf.readBoolean()) {
-                        PathNode pathNode = LyraStreamCodecs.PATH_NODE.decode(buf);
-                        ArrayList<PathNode> historyNodes = entity.getHistoryNodes();
-                        historyNodes.clear();
-                        historyNodes.add(pathNode);
-                        historyNodes.add(pathNode);
-                    }
-                    list.add(entity);
                 }
+            } finally {
+                buf.release();
             }
         }
     }
@@ -247,7 +270,10 @@ public class AttachmentEntityData {
 
         @Override
         public void write(RegistryFriendlyByteBuf buf, AttachmentEntityData data, boolean initialSync) {
-            // 写入 AttachmentEntityType → 实体列表的结构
+            // NeoForge 初始同步会将多个附件写入同一缓冲区，必须限定本附件的载荷边界。
+            int lengthIndex = buf.writerIndex();
+            buf.writeInt(0);
+            int start = buf.writerIndex();
             buf.writeVarInt(data.groups.size());
             for (Map.Entry<AttachmentEntityType<?>, List<AttachmentEntity>> entityEntry : data.groups.entrySet()) {
                 buf.writeInt(LyraRegistries.ATTACHMENT_ENTITY_TYPES.getId(entityEntry.getKey()));
@@ -259,19 +285,21 @@ public class AttachmentEntityData {
                     boolean clientInit = !initialSync && entity.isClientInit();
                     buf.writeBoolean(clientInit);
                     if (!clientInit) {
-                        entity.setClientInit(true);
+                        if (!initialSync) {
+                            entity.setClientInit(true);
+                        }
                         LyraStreamCodecs.PATH_NODE.encode(buf, entity.getHistoryNodes().getFirst());
                     }
                 }
             }
+            buf.setInt(lengthIndex, buf.writerIndex() - start);
         }
 
         @Override
         public AttachmentEntityData read(@NotNull IAttachmentHolder holder, @NotNull RegistryFriendlyByteBuf buf, @Nullable AttachmentEntityData oldData) {
             AttachmentEntityData data = oldData != null ? oldData : new AttachmentEntityData(holder);
-            ByteBuf copy = buf.copy();
-            byte[] payload = new byte[copy.readableBytes()];
-            copy.readBytes(payload);
+            byte[] payload = new byte[buf.readInt()];
+            buf.readBytes(payload);
             if (payload.length == 0) {
                 return data;
             }

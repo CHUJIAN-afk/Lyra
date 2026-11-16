@@ -1,38 +1,42 @@
 package first.lyra.common.minion;
 
 import first.lyra.register.LyraAttributeRegister;
+import net.minecraft.core.Holder;
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.player.Player;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 public enum MinionSlotType {
-    Minion(player -> {
-        AttributeInstance attribute = player.getAttribute(LyraAttributeRegister.MinionMaxCount);
+    Minion(LyraAttributeRegister.MinionMaxCount, attribute -> {
         if (attribute != null) {
             return (int) attribute.getValue();
         }
         return 0;
     }),
-    Sentry(player -> {
-        AttributeInstance attribute = player.getAttribute(LyraAttributeRegister.SentryMaxCount);
+    Sentry(LyraAttributeRegister.SentryMaxCount,attribute -> {
         if (attribute != null) {
             return (int) attribute.getValue();
         }
         return 0;
     }),
-    None(player -> 1000);
+    None(null, attribute -> 1000);
 
-    private final Function<Player, Integer> function;
+    private final Holder<Attribute> holder;
+    private final Function<@Nullable AttributeInstance, Integer> function;
 
-    MinionSlotType(Function<Player, Integer> function) {
+    MinionSlotType(@Nullable Holder<Attribute> supplier, Function<@Nullable AttributeInstance, Integer> function) {
+        this.holder = supplier;
         this.function = function;
     }
 
     public int getLimit(Player player) {
-        return function.apply(player);
+        return function.apply(holder != null ? player.getAttribute(holder) : null);
     }
 
     public static Map<MinionSlotType, Integer> getLimits(Player player) {

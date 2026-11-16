@@ -5,14 +5,12 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "CombatRulesMixin",
-    "CreativeModeTabMixin",
     "ExperienceOrbAccessor",
     "ItemMixin",
     "LivingEntityMixin",
     "gecko.AttachmentEntityMixin"
   ],
   "client": [
-    "CreativeModeInventoryScreenMixin",
     "iris.IrisShadowRendererMixin",
     "LightTextureAccessor"
   ],

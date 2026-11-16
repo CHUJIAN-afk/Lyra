@@ -78,7 +78,12 @@ public abstract class Minion extends AttachmentEntity {
     }
 
     public void setSlotCost(int slotCost) {
-        this.slotCost = slotCost;
+        if (this.slotCost != slotCost) {
+            this.slotCost = slotCost;
+            if (owner != null && !owner.level().isClientSide()) {
+                owner.getData(LyraAttachmentRegister.EntityData).markSlotCostChanged(this);
+            }
+        }
     }
 
     public int getSameSize() {
@@ -136,7 +141,12 @@ public abstract class Minion extends AttachmentEntity {
     }
 
     public void setSlotType(MinionSlotType slotType) {
-        this.slotType = slotType;
+        if (this.slotType != slotType) {
+            this.slotType = slotType;
+            if (owner != null && !owner.level().isClientSide()) {
+                owner.getData(LyraAttachmentRegister.EntityData).markSlotCostChanged(this);
+            }
+        }
     }
 
     public SoundSource getSoundSource() {
