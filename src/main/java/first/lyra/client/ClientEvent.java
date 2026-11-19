@@ -1,5 +1,6 @@
 package first.lyra.client;
 
+import first.lyra.api.LyraAPI;
 import first.lyra.client.render.IrisCompat;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import first.lyra.Lyra;
@@ -10,6 +11,8 @@ import first.lyra.client.render.CameraShake;
 import first.lyra.client.render.WholeModelTransparency;
 import first.lyra.client.render.EffectPipeline;
 import first.lyra.client.tooltip.LyraTooltipHandler;
+import first.lyra.client.tooltip.TooltipProvider;
+import first.lyra.common.item.SummonerWeaponItem;
 import first.lyra.common.particle.genericParticle.GenericParticleProvider;
 import first.lyra.register.LyraParticleRegister;
 import net.minecraft.client.Minecraft;
@@ -19,6 +22,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
@@ -28,6 +32,7 @@ import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
 import java.io.IOException;
+import java.util.List;
 
 @EventBusSubscriber(modid = Lyra.MODID, value = Dist.CLIENT)
 public class ClientEvent {
@@ -97,6 +102,16 @@ public class ClientEvent {
             WholeModelTransparency.close();
             EffectPipeline.close();
         }
+    }
+
+    @SubscribeEvent
+    public static void onItemTooltip(FMLClientSetupEvent event) {
+        LyraAPI.tooltip(new TooltipProvider(-1, (itemStack, player) -> {
+            if (itemStack.getItem() instanceof SummonerWeaponItem<?> summonerWeaponItem && player != null) {
+                return summonerWeaponItem.getTooltips(itemStack, player);
+            }
+            return List.of();
+        }));
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)

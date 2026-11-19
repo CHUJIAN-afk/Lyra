@@ -39,9 +39,11 @@ public final class CameraShake {
             float pitch = 0f;
             float roll = 0f;
             for (Shake shake : SHAKES) {
-                float value = Mth.lerp(partialTick, shake.previous, shake.strength);
-                pitch += (float) Math.sin(time * 2.1 + shake.phase) * value * 3f;
-                roll += (float) Math.sin(time * 1.7 + 1.2 + shake.phase) * value * 5f;
+                if (shake != null) {
+                    float value = Mth.lerp(partialTick, shake.previous, shake.strength);
+                    pitch += (float) Math.sin(time * 2.1 + shake.phase) * value * 3f;
+                    roll += (float) Math.sin(time * 1.7 + 1.2 + shake.phase) * value * 5f;
+                }
             }
             event.setPitch(event.getPitch() + pitch);
             event.setRoll(event.getRoll() + roll);
