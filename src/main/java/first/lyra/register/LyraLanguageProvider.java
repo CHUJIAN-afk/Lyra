@@ -38,5 +38,19 @@ public class LyraLanguageProvider extends LyraAbstractLanguageProvider {
         lang("lyra.configuration.alpha_modify.tooltip", "启用 Lyra 近距离透明度修正，近距离透明化避免遮挡视线", "Enable Lyra proximity alpha modification, making summons transparent at close range to avoid blocking view");
         lang("lyra.configuration.debug_mode", "调试模式", "Debug Mode");
         lang("lyra.configuration.debug_mode.tooltip", "启用虚拟实体调试描边", "Enable virtual entity debug strokes");
+        lang("lyra.configuration.dynamic_lights", "动态光源", "Dynamic Lights");
+        lang("lyra.configuration.dynamic_lights.tooltip", "启用 Lyra 动态光源渲染", "Enable Lyra dynamic lighting rendering");
+        lang("lyra.configuration.max_lights", "最大光源数量", "Max Lights");
+        lang("lyra.configuration.max_lights.tooltip", "单帧最多渲染的动态光源数量，按距离和强度优先保留", "Maximum number of dynamic lights rendered per frame, prioritized by distance and intensity");
+        lang("lyra.configuration.bloom", "泛光效果", "Bloom");
+        lang("lyra.configuration.bloom.tooltip", "启用 Lyra 特效的泛光后处理效果", "Enable bloom post-processing for Lyra effects");
+        lang("lyra.configuration.bloom_with_shaders", "光影下启用泛光", "Bloom With Shaders");
+        lang("lyra.configuration.bloom_with_shaders.tooltip", "使用光影包时仍启用 Lyra 泛光效果", "Keep Lyra bloom enabled while using a shader pack");
+        lang("lyra.configuration.bloom_levels", "泛光层级", "Bloom Levels");
+        lang("lyra.configuration.bloom_levels.tooltip", "泛光模糊的采样层级数，数值越大扩散范围越广但开销越高", "Number of bloom blur pyramid levels; higher values widen the glow at higher performance cost");
+        lang("lyra.configuration.bloom_threshold", "泛光阈值", "Bloom Threshold");
+        lang("lyra.configuration.bloom_threshold.tooltip", "触发泛光的亮度阈值，仅亮度高于该值的像素会产生泛光", "Brightness threshold above which pixels contribute to the bloom effect");
+        lang("lyra.configuration.bloom_strength", "泛光强度", "Bloom Strength");
+        lang("lyra.configuration.bloom_strength.tooltip", "泛光叠加到画面中的强度倍率", "Intensity multiplier for compositing the bloom effect");
     }
 }
