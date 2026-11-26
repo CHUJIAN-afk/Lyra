@@ -48,11 +48,16 @@ public abstract class MomentumMinion extends Minion implements IMomentumAttachme
     }
 
     public void tickPhysics() {
-        if (physics) {
+        if (physics && !isExecutingPath()) {
             velocity = velocity.add(0, gravity, 0).scale(drag);
             Vec3 newPos = getPos().add(velocity);
             setPath(new PlannedPath("physics", Collections.singletonList(new PathNode(newPos, getYaw(), getPitch(), getRoll()))));
         }
+    }
+
+    @Override
+    public boolean isExecutingPath() {
+        return super.isExecutingPath() && !"physics".equals(this.currentPlannedPath.getIdentifier());
     }
 
     public boolean isPhysics() {

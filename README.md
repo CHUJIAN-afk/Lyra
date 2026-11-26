@@ -1,4 +1,4 @@
-# Lyra 1.21.1.32 / NeoForge
+# Lyra 1.21.1.33 / NeoForge
 
 Lyra 自带动态光照和特效合成管线，不再需要 Photon、LDLib2 或 KilaGraph。Registrate 继续以 jarjar 内置。GeckoLib 仅为可选联动，使用 Geo 虚拟实体渲染器的子模组需要自行声明 GeckoLib 4.9.3 前置。
 
@@ -31,9 +31,26 @@ LyraAPI.light().spot(20f, 35f).at(pos.x, pos.y, pos.z)
 
 ## GeckoLib 可选接入
 
-`AttachmentEntity` 不引用 GeckoLib。安装 GeckoLib 后，条件 Mixin 为其注入 `GeoAnimatable`、实例动画缓存与 tick 实现。没有 GeckoLib 时不会加载这个 Mixin。
+Lyra 的常规依赖保持 GeckoLib 可选。安装 GeckoLib 后，条件 Mixin 为 `AttachmentEntity` 注入 `GeoAnimatable`、实例动画缓存与 tick 实现。
 
-Geo 渲染器继续继承 `AbstractAttachmentEntityGeoRenderer<T>`。子实体可以声明 `registerControllers(AnimatableManager.ControllerRegistrar)`；由于接口在运行时注入，此方法不加 `@Override`，创建控制器时使用 `new AnimationController<>((GeoAnimatable) this, ...)`。没有动画的实体不必声明此方法。通用渲染颜色改用 `first.lyra.client.render.Color`，只在 Geo 渲染器边界转换为 GeckoLib 的颜色。
+使用 Geo 虚拟实体渲染器的子模组可以设置 Gradle 变体属性 `first.lyra.gecko-api`。Gradle 编译时会使用已注入接口的 Lyra API，运行时仍使用普通 Lyra 模组 JAR。子模组自行添加 GeckoLib 依赖，并在 `neoforge.mods.toml` 中声明 GeckoLib 为必需前置。
+
+```groovy
+configurations.configureEach {
+    if (canBeResolved && attributes.getAttribute(Usage.USAGE_ATTRIBUTE)?.name == Usage.JAVA_API) {
+        attributes.attribute(Attribute.of('first.lyra.gecko-api', Boolean), true)
+    }
+}
+
+dependencies {
+    implementation "software.bernie.geckolib:geckolib-neoforge-${minecraft_version}:${geckolib_version}"
+    implementation "first:Lyra:${lyra_version}"
+}
+```
+
+Geo 渲染器继续继承 `AbstractAttachmentEntityGeoRenderer<T>`。子实体可以用 `@Override` 覆写 `registerControllers`，并直接把 `this` 传给 `AnimationController`。没有动画的实体可以继承默认实现。通用渲染颜色使用 `first.lyra.client.render.Color`，在 Geo 渲染器边界转换为 GeckoLib 的颜色。
+
+该编译变体依赖 Gradle 模块元数据。可以运行 `publishToMavenLocal` 后使用 `mavenLocal()`，也可以解压 GitHub Release 的 Maven ZIP，将解压目录添加为 Gradle 的 Maven 仓库。
 
 ## 整体透明度
 

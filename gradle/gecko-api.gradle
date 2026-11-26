@@ -1,0 +1,97 @@
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Opcodes
+import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.MethodNode
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.ow2.asm:asm-tree:9.8'
+    }
+}
+
+@CacheableTask
+abstract class InjectGeckoApi extends DefaultTask {
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getAttachmentClass()
+
+    @InputFile
+    @PathSensitive(PathSensitivity.NONE)
+    abstract RegularFileProperty getMixinClass()
+
+    @OutputDirectory
+    abstract DirectoryProperty getOutputDirectory()
+
+    @TaskAction
+    void inject() {
+        def attachment = new ClassNode()
+        new ClassReader(attachmentClass.get().asFile.bytes).accept(attachment, 0)
+        def mixin = new ClassNode()
+        new ClassReader(mixinClass.get().asFile.bytes).accept(mixin, ClassReader.SKIP_CODE)
+
+        attachment.interfaces.addAll(mixin.interfaces)
+        if (attachment.signature != null) {
+            for (String injectedInterface : mixin.interfaces) {
+                attachment.signature += "L${injectedInterface};"
+            }
+        }
+        for (MethodNode implementation : mixin.methods) {
+            if ((implementation.access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC)) == Opcodes.ACC_PUBLIC && implementation.name != '<init>') {
+                def declaration = new MethodNode(implementation.access, implementation.name, implementation.desc,
+                        implementation.signature, implementation.exceptions as String[])
+                declaration.visitCode()
+                declaration.visitTypeInsn(Opcodes.NEW, 'java/lang/UnsupportedOperationException')
+                declaration.visitInsn(Opcodes.DUP)
+                declaration.visitLdcInsn('Lyra GeckoLib API is for compilation only')
+                declaration.visitMethodInsn(Opcodes.INVOKESPECIAL, 'java/lang/UnsupportedOperationException', '<init>', '(Ljava/lang/String;)V', false)
+                declaration.visitInsn(Opcodes.ATHROW)
+                declaration.visitMaxs(0, 0)
+                declaration.visitEnd()
+                attachment.methods.add(declaration)
+            }
+        }
+
+        def writer = new ClassWriter(ClassWriter.COMPUTE_MAXS)
+        attachment.accept(writer)
+        File output = outputDirectory.file("${attachment.name}.class").get().asFile
+        output.parentFile.mkdirs()
+        output.bytes = writer.toByteArray()
+    }
+}
+
+def attachmentPath = 'first/lyra/common/attachmentEntity/AttachmentEntity.class'
+def compiledClasses = tasks.named('compileJava', JavaCompile).flatMap { it.destinationDirectory }
+def injectGeckoApi = tasks.register('injectGeckoApi', InjectGeckoApi) {
+    attachmentClass.set(compiledClasses.map { it.file(attachmentPath) })
+    mixinClass.set(compiledClasses.map { it.file('first/lyra/mixin/gecko/AttachmentEntityMixin.class') })
+    outputDirectory.set(layout.buildDirectory.dir('gecko-api/classes'))
+}
+def geckoApiJar = tasks.register('geckoApiJar', Jar) {
+    archiveClassifier.set('gecko-api')
+    destinationDirectory.set(layout.buildDirectory.dir('gecko-api'))
+    from(sourceSets.main.output.classesDirs) {
+        exclude attachmentPath
+    }
+    from(injectGeckoApi)
+}
+tasks.named('assemble') {
+    dependsOn(geckoApiJar)
+}
+
+def apiElements = configurations.getByName('apiElements')
+def geckoApiElements = configurations.create('geckoApiElements') {
+    canBeResolved = false
+    extendsFrom(configurations.api, configurations.compileOnlyApi)
+    apiElements.attributes.keySet().each { key ->
+        attributes.attribute(key, apiElements.attributes.getAttribute(key))
+    }
+    attributes.attribute(Attribute.of('first.lyra.gecko-api', Boolean), true)
+    outgoing.artifact(geckoApiJar)
+}
+components.java.addVariantsFromConfiguration(geckoApiElements) {
+    mapToMavenScope('compile')
+}
