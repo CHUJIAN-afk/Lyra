@@ -12,6 +12,7 @@ public class DynamicLight {
     public float range = 8;
     public float innerAngle = 25;
     public float outerAngle = 40;
+    public float startRadius;
     public float sourceRadius = 0.1f;
     public float volumetric;
     public boolean castShadows;
@@ -55,7 +56,13 @@ public class DynamicLight {
     }
 
     public DynamicLight direction(float x, float y, float z) {
-        direction.set(x, y, z).normalize();
+        direction.set(x, y, z);
+        return this;
+    }
+
+    // 光锥起始圆面的半径，单位为方块。
+    public DynamicLight startRadius(float value) {
+        startRadius = value;
         return this;
     }
 
@@ -82,6 +89,7 @@ public class DynamicLight {
         range = 8;
         innerAngle = 25;
         outerAngle = 40;
+        startRadius = 0;
         sourceRadius = 0.1f;
         volumetric = 0;
         castShadows = false;

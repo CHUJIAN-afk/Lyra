@@ -1,0 +1,15 @@
+{
+  "vertex": "lyra:dynamic_light",
+  "fragment": "lyra:dynamic_light_visibility",
+  "attributes": ["Position"],
+  "samplers": [
+    {"name": "LyraLightData"},
+    {"name": "LyraVoxelPages"},
+    {"name": "LyraVoxelBlocks"}
+  ],
+  "uniforms": [
+    {"name": "LyraLightCount", "type": "int", "count": 1, "values": [0]},
+    {"name": "LyraVoxelOffset", "type": "float", "count": 3, "values": [0, 0, 0]},
+    {"name": "LyraViewInverse", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]}
+  ]
+}

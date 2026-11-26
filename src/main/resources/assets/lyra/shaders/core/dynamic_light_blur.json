@@ -1,0 +1,15 @@
+{
+  "vertex": "lyra:dynamic_light",
+  "fragment": "lyra:dynamic_light_blur",
+  "attributes": ["Position"],
+  "samplers": [
+    {"name": "LightBuffer"},
+    {"name": "SceneDepth"}
+  ],
+  "uniforms": [
+    {"name": "SkyDepth", "type": "float", "count": 1, "values": [10000]},
+    {"name": "ScreenSize", "type": "float", "count": 2, "values": [1, 1]},
+    {"name": "InverseProjection", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]},
+    {"name": "BlurDirection", "type": "float", "count": 2, "values": [1, 0]}
+  ]
+}

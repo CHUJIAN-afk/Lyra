@@ -6,6 +6,7 @@ import com.mojang.blaze3d.platform.TextureUtil;
 import com.mojang.blaze3d.systems.RenderSystem;
 import first.lyra.client.config.ClientConfig;
 import first.lyra.client.render.EffectPipeline;
+import first.lyra.client.render.HdrTarget;
 import first.lyra.client.render.IrisCompat;
 import first.lyra.client.render.RenderState;
 import net.minecraft.client.Camera;
@@ -26,6 +27,7 @@ import java.util.List;
 
 public final class LyraLights {
 
+    public static final LightOcclusion occlusion = new LightOcclusion();
     private static final List<DynamicLight> lights = new ArrayList<>();
     private static final List<DynamicLight> visible = new ArrayList<>();
     private static final DynamicLight ignored = new DynamicLight();
@@ -36,11 +38,29 @@ public final class LyraLights {
     private static int rows;
     private static TextureTarget scene;
     private static ShaderInstance shader;
-    private static final Matrix4f lightProjection = new Matrix4f();
+    private static ShaderInstance irradianceShader;
+    private static ShaderInstance volumeShader;
+    private static ShaderInstance blurShader;
+    private static HdrTarget volume;
+    private static HdrTarget blur;
+    private static HdrTarget irradiance;
     private static final Matrix4f viewInverse = new Matrix4f();
+    private static Vec3 lightOrigin = Vec3.ZERO;
 
     public static void setShader(ShaderInstance value) {
         shader = value;
+    }
+
+    public static void setVolumeShader(ShaderInstance value) {
+        volumeShader = value;
+    }
+
+    public static void setIrradianceShader(ShaderInstance value) {
+        irradianceShader = value;
+    }
+
+    public static void setBlurShader(ShaderInstance value) {
+        blurShader = value;
     }
 
     public static void beginFrame() {
@@ -66,18 +86,17 @@ public final class LyraLights {
         target.setSampler("LyraLightData", lightTexture);
         target.setSampler("LyraLightTiles", tileTexture);
         target.safeGetUniform("LyraTileCount").set(columns, rows);
-        target.setSampler("LyraSceneDepth", scene.getDepthTextureId());
-        target.safeGetUniform("LyraProjection").set(lightProjection);
         target.safeGetUniform("LyraViewInverse").set(viewInverse);
+        occlusion.bind(target, lightOrigin);
     }
 
     public static void render(Camera camera, Matrix4f view, Matrix4f projection) {
         var main = Minecraft.getInstance().getMainRenderTarget();
-        lightProjection.set(projection);
         viewInverse.set(view).invert();
         visible.clear();
         if (ClientConfig.DynamicLights.get()) {
             Vec3 origin = camera.getPosition();
+            lightOrigin = origin;
             Matrix4f clip = new Matrix4f(projection).mul(view);
             for (int i = 0; i < count; i++) {
                 DynamicLight light = lights.get(i);
@@ -113,13 +132,47 @@ public final class LyraLights {
                 RenderSystem.depthMask(false);
                 RenderSystem.disableBlend();
                 RenderSystem.disableCull();
+                occlusion.render(Minecraft.getInstance().level, origin, viewInverse, visible, lightTexture);
+                Matrix4f inverseProjection = new Matrix4f(projection).invert();
+                irradiance = HdrTarget.resize(irradiance, main.width, main.height, false);
+                volume = HdrTarget.resize(volume, main.width, main.height, false);
+                blur = HdrTarget.resize(blur, main.width, main.height, false);
+                boolean shadows = visible.stream().anyMatch(light -> light.castShadows);
+                for (int pass = 0; pass < 2; pass++) {
+                    HdrTarget target = pass == 0 ? irradiance : volume;
+                    ShaderInstance lightShader = pass == 0 ? irradianceShader : volumeShader;
+                    target.bindWrite(true);
+                    lightShader.setSampler("SceneDepth", scene.getDepthTextureId());
+                    lightShader.safeGetUniform("ScreenSize").set((float) main.width, (float) main.height);
+                    lightShader.safeGetUniform("InverseProjection").set(inverseProjection);
+                    bindLights(lightShader);
+                    lightShader.apply();
+                    EffectPipeline.drawFullscreenQuad();
+                    lightShader.clear();
+                    if (shadows || pass == 1) {
+                        for (int axis = 0; axis < 2; axis++) {
+                            (axis == 0 ? blur : target).bindWrite(true);
+                            blurShader.setSampler("LightBuffer", (axis == 0 ? target : blur).getColorTextureId());
+                            blurShader.setSampler("SceneDepth", scene.getDepthTextureId());
+                            blurShader.safeGetUniform("ScreenSize").set((float) main.width, (float) main.height);
+                            blurShader.safeGetUniform("InverseProjection").set(inverseProjection);
+                            blurShader.safeGetUniform("SkyDepth").set(pass == 0 ? -1f : 10000f);
+                            blurShader.safeGetUniform("BlurDirection").set(axis == 0 ? 1f : 0f, axis == 0 ? 0f : 1f);
+                            blurShader.apply();
+                            EffectPipeline.drawFullscreenQuad();
+                            blurShader.clear();
+                        }
+                    }
+                }
+                main.bindWrite(true);
                 shader.setSampler("SceneColor", scene.getColorTextureId());
                 shader.setSampler("SceneDepth", scene.getDepthTextureId());
+                shader.setSampler("VolumeLight", volume.getColorTextureId());
+                shader.setSampler("Irradiance", irradiance.getColorTextureId());
                 shader.safeGetUniform("ScreenSize").set((float) main.width, (float) main.height);
-                shader.safeGetUniform("InverseProjection").set(new Matrix4f(projection).invert());
+                shader.safeGetUniform("InverseProjection").set(inverseProjection);
                 shader.safeGetUniform("FogStart").set(RenderSystem.getShaderFogStart());
                 shader.safeGetUniform("FogEnd").set(RenderSystem.getShaderFogEnd());
-                bindLights(shader);
                 shader.apply();
                 EffectPipeline.drawFullscreenQuad();
                 shader.clear();
@@ -133,16 +186,25 @@ public final class LyraLights {
         columns = (width + 63) / 64;
         rows = (height + 63) / 64;
         float[] tiles = new float[columns * rows * 33 * 4];
-        FloatBuffer data = MemoryUtil.memCallocFloat(visible.size() * 16);
+        FloatBuffer data = MemoryUtil.memCallocFloat(visible.size() * 20);
         for (int i = 0; i < visible.size(); i++) {
             DynamicLight light = visible.get(i);
             Vector3f position = view.transformPosition(new Vector3f((float) (light.position.x - origin.x),
                     (float) (light.position.y - origin.y), (float) (light.position.z - origin.z)));
-            Vector3f direction = view.transformDirection(new Vector3f(light.direction)).normalize();
+            Vector3f direction = view.transformDirection(new Vector3f(light.direction));
+            boolean spotlight = light.spotlight && direction.lengthSquared() > 1e-12f;
+            if (spotlight) {
+                direction.normalize();
+            } else {
+                direction.zero();
+            }
+            float outerAngle = Math.max(0.1f, Math.min(light.outerAngle, 179));
+            float innerAngle = Math.max(0, Math.min(light.innerAngle, outerAngle - 0.05f));
             data.put(position.x).put(position.y).put(position.z).put(light.range);
-            data.put(light.color.x * light.intensity).put(light.color.y * light.intensity).put(light.color.z * light.intensity).put(light.spotlight ? 1 : 0);
-            data.put(direction.x).put(direction.y).put(direction.z).put((float) Math.cos(Math.toRadians(light.outerAngle)));
-            data.put((float) Math.cos(Math.toRadians(light.innerAngle))).put(light.castShadows ? 1 : 0).put(light.sourceRadius).put(light.volumetric);
+            data.put(light.color.x * light.intensity).put(light.color.y * light.intensity).put(light.color.z * light.intensity).put(spotlight ? 1 : 0);
+            data.put(direction.x).put(direction.y).put(direction.z).put((float) Math.cos(Math.toRadians(outerAngle)));
+            data.put((float) Math.cos(Math.toRadians(innerAngle))).put(light.castShadows ? 1 : 0).put(light.sourceRadius).put(light.volumetric);
+            data.put(Math.max(light.startRadius, 0)).put(0).put(0).put(0);
             int minX = 0;
             int minY = 0;
             int maxX = columns - 1;
@@ -187,7 +249,7 @@ public final class LyraLights {
         GlStateManager._pixelStore(GL11.GL_UNPACK_SKIP_ROWS, 0);
         GlStateManager._pixelStore(GL11.GL_UNPACK_ALIGNMENT, 4);
         GlStateManager._bindTexture(lightTexture);
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_RGBA32F, 4, visible.size(), 0, GL11.GL_RGBA, GL11.GL_FLOAT, data.flip());
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL30.GL_RGBA32F, 5, visible.size(), 0, GL11.GL_RGBA, GL11.GL_FLOAT, data.flip());
         MemoryUtil.memFree(data);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
@@ -200,6 +262,15 @@ public final class LyraLights {
 
     public static void clear() {
         beginFrame();
+        occlusion.clear();
+        if (volume != null) {
+            irradiance.destroyBuffers();
+            volume.destroyBuffers();
+            blur.destroyBuffers();
+            volume = null;
+            blur = null;
+            irradiance = null;
+        }
         if (scene != null) {
             scene.destroyBuffers();
             scene = null;

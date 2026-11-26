@@ -1,0 +1,18 @@
+{
+  "vertex": "lyra:dynamic_light",
+  "fragment": "lyra:dynamic_light_volume",
+  "attributes": ["Position"],
+  "samplers": [
+    {"name": "SceneDepth"},
+    {"name": "LyraLightData"},
+    {"name": "LyraLightTiles"},
+    {"name": "LyraVisibility"}
+  ],
+  "uniforms": [
+    {"name": "LyraVolumeSteps", "type": "int", "count": 1, "values": [4]},
+    {"name": "ScreenSize", "type": "float", "count": 2, "values": [1, 1]},
+    {"name": "InverseProjection", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]},
+    {"name": "LyraTileCount", "type": "int", "count": 2, "values": [1, 1]},
+    {"name": "LyraViewInverse", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]}
+  ]
+}

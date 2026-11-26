@@ -28,6 +28,7 @@ import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
+import net.neoforged.neoforge.event.level.ChunkEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 
@@ -45,6 +46,10 @@ public class ClientEvent {
         EffectPipeline.close();
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("model_transparency"), DefaultVertexFormat.PARTICLE), WholeModelTransparency::setShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("dynamic_light"), DefaultVertexFormat.POSITION), LyraLights::setShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("dynamic_light_irradiance"), DefaultVertexFormat.POSITION), LyraLights::setIrradianceShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("dynamic_light_visibility"), DefaultVertexFormat.POSITION), LyraLights.occlusion::setShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("dynamic_light_volume"), DefaultVertexFormat.POSITION), LyraLights::setVolumeShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("dynamic_light_blur"), DefaultVertexFormat.POSITION), LyraLights::setBlurShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("bloom_extract"), DefaultVertexFormat.POSITION), EffectPipeline::setExtractShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("bloom_downsample"), DefaultVertexFormat.POSITION), EffectPipeline::setDownsampleShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("bloom_upsample"), DefaultVertexFormat.POSITION), EffectPipeline::setUpsampleShader);
@@ -91,6 +96,22 @@ public class ClientEvent {
     @SubscribeEvent
     public static void cameraAngles(ViewportEvent.ComputeCameraAngles event) {
         CameraShake.apply(event);
+    }
+
+    @SubscribeEvent
+    public static void loadChunk(ChunkEvent.Load event) {
+        if (event.getLevel().isClientSide()) {
+            var pos = event.getChunk().getPos();
+            LyraLights.occlusion.markColumnDirty(pos.x, pos.z);
+        }
+    }
+
+    @SubscribeEvent
+    public static void unloadChunk(ChunkEvent.Unload event) {
+        if (event.getLevel().isClientSide()) {
+            var pos = event.getChunk().getPos();
+            LyraLights.occlusion.markColumnDirty(pos.x, pos.z);
+        }
     }
 
     @SubscribeEvent

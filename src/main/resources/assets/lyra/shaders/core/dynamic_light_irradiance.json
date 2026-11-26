@@ -1,0 +1,20 @@
+{
+  "vertex": "lyra:dynamic_light",
+  "fragment": "lyra:dynamic_light_irradiance",
+  "attributes": ["Position"],
+  "samplers": [
+    {"name": "SceneDepth"},
+    {"name": "LyraLightData"},
+    {"name": "LyraLightTiles"},
+    {"name": "LyraVoxelPages"},
+    {"name": "LyraVoxelBlocks"}
+  ],
+  "uniforms": [
+    {"name": "LyraShadowSamples", "type": "int", "count": 1, "values": [1]},
+    {"name": "ScreenSize", "type": "float", "count": 2, "values": [1, 1]},
+    {"name": "InverseProjection", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]},
+    {"name": "LyraTileCount", "type": "int", "count": 2, "values": [1, 1]},
+    {"name": "LyraVoxelOffset", "type": "float", "count": 3, "values": [0, 0, 0]},
+    {"name": "LyraViewInverse", "type": "matrix4x4", "count": 16, "values": [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]}
+  ]
+}

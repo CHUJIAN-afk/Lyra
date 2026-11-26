@@ -1,4 +1,4 @@
-# Lyra 1.21.1.27 / NeoForge
+# Lyra 1.21.1.31 / NeoForge
 
 Lyra 自带动态光照和特效合成管线，不再需要 Photon、LDLib2 或 KilaGraph。Registrate 继续以 jarjar 内置。GeckoLib 仅为可选联动，使用 Geo 虚拟实体渲染器的子模组需要自行声明 GeckoLib 4.9.3 前置。
 
@@ -12,12 +12,14 @@ LyraAPI.light().point().at(pos.x, pos.y, pos.z)
         .shadows(false);
 LyraAPI.light().spot(20f, 35f).at(pos.x, pos.y, pos.z)
         .direction(0f, -1f, 0f).color(1f, 0.5f, 0.2f)
-        .intensity(12f).range(10f);
+        .intensity(12f).range(10f).startRadius(0.5f);
 ```
 
 `color(int, int, int)` 使用 0～255，`color(float, float, float)` 使用线性强度；位置、范围和光源半径以方块为单位，聚光角度以度为单位。光源在 `AFTER_SKY` 清空，在 `AFTER_LEVEL` 收集并照明；请在这两个阶段之间提交，不要缓存 `light()` 返回的池化对象。切换世界与重载资源会释放 GPU 资源。
 
-光源按距离和强度排序，默认最多 128 个可见光源，每个 64 像素分块保留最多 32 个。表面光照从场景深度重建位置和法线，`volumetric` 控制沿视线积分的体积散射强度；`shadows(true)` 使用屏幕深度遮挡，无法还原屏幕外遮挡物。Iris 阴影通道不会续期光源。
+`startRadius(float)` 设置聚光灯起始圆面的半径，单位为方块，默认 `0`。`sourceRadius(float)` 控制表面软阴影的光源采样半径。
+
+光源按距离和强度排序，默认最多 128 个可见光源，每个 64 像素分块保留最多 32 个。表面光照从场景深度重建位置和法线，`volumetric` 控制沿视线积分的体积散射强度，`shadows(true)` 使用世界方块体素计算遮挡。Iris 阴影通道不会续期光源。
 
 ## HDR 与 bloom
 
