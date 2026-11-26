@@ -1,4 +1,4 @@
-# Lyra 1.21.1.31 / NeoForge
+# Lyra 1.21.1.32 / NeoForge
 
 Lyra 自带动态光照和特效合成管线，不再需要 Photon、LDLib2 或 KilaGraph。Registrate 继续以 jarjar 内置。GeckoLib 仅为可选联动，使用 Geo 虚拟实体渲染器的子模组需要自行声明 GeckoLib 4.9.3 前置。
 

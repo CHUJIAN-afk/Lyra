@@ -8,6 +8,8 @@ import first.lyra.client.light.LyraLights;
 import first.lyra.client.render.AfterimageManager;
 import first.lyra.client.render.AttachmentEntityRenderDispatcher;
 import first.lyra.client.render.CameraShake;
+import first.lyra.client.render.LyraRenderTypes;
+import first.lyra.client.render.TrailRenderBatch;
 import first.lyra.client.render.WholeModelTransparency;
 import first.lyra.client.render.EffectPipeline;
 import first.lyra.client.tooltip.LyraTooltipHandler;
@@ -24,6 +26,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
+import net.neoforged.neoforge.client.event.RegisterRenderBuffersEvent;
 import net.neoforged.neoforge.client.event.RegisterShadersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.ViewportEvent;
@@ -39,11 +42,18 @@ import java.util.List;
 public class ClientEvent {
 
     @SubscribeEvent
+    public static void registerRenderBuffers(RegisterRenderBuffersEvent event) {
+        event.registerRenderBuffer(LyraRenderTypes.getTrail());
+    }
+
+    @SubscribeEvent
     public static void shaders(RegisterShadersEvent event) throws IOException {
         AfterimageManager.close();
         WholeModelTransparency.close();
         LyraLights.clear();
         EffectPipeline.close();
+        TrailRenderBatch.close();
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("trail_fabulous"), DefaultVertexFormat.NEW_ENTITY), TrailRenderBatch::setFabulousShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("model_transparency"), DefaultVertexFormat.PARTICLE), WholeModelTransparency::setShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("dynamic_light"), DefaultVertexFormat.POSITION), LyraLights::setShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("dynamic_light_irradiance"), DefaultVertexFormat.POSITION), LyraLights::setIrradianceShader);
@@ -70,6 +80,7 @@ public class ClientEvent {
         if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_LEVEL && !IrisCompat.isShadowPass()) {
             LyraLights.render(event.getCamera(), event.getModelViewMatrix(), event.getProjectionMatrix());
             WholeModelTransparency.prepareLighting();
+            TrailRenderBatch.draw();
             WholeModelTransparency.finishFrame();
         }
     }
@@ -82,7 +93,7 @@ public class ClientEvent {
                 MultiBufferSource.BufferSource buffers = minecraft.renderBuffers().bufferSource();
                 float partialTick = event.getPartialTick().getGameTimeDeltaPartialTick(false);
                 AfterimageManager.render(minecraft.level, event.getCamera(), event.getPoseStack(), partialTick);
-                AttachmentEntityRenderDispatcher.render(minecraft.level, event.getCamera(), event.getPoseStack(), buffers, partialTick);
+                AttachmentEntityRenderDispatcher.render(minecraft.level, event.getCamera(), event.getPoseStack(), TrailRenderBatch.collect(buffers), partialTick);
                 buffers.endBatch();
             }
         }
@@ -122,6 +133,7 @@ public class ClientEvent {
             AfterimageManager.close();
             WholeModelTransparency.close();
             EffectPipeline.close();
+            TrailRenderBatch.close();
         }
     }
 

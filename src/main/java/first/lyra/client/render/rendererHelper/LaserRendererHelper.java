@@ -17,9 +17,7 @@ import org.joml.Matrix4f;
  * 多层标准半透明叠加即得到“实心核心 + 散开边缘”的视觉，类似旧版“内核+外晕”思路的泛化。
  * </p>
  * <p>
- * 使用原版 {@code entity_translucent_emissive} 渲染类型（{@link LyraRenderTypes#getTrail()}），
- * 该类型在原版与光影（Iris/Oculus）环境下效果完全一致。
- * 所有视觉效果在 Java 侧预乘进顶点色，着色器只读取顶点色与位置变换。
+ * 使用 {@link LyraRenderTypes#getTrail()} 进行半透明混合，保留深度测试并关闭深度写入。
  * </p>
  * <p>
  * 坐标约定：激光沿 -Z 方向铺设（z=0 为近端起点，z=-length 为远端终点），
@@ -188,7 +186,7 @@ public class LaserRendererHelper {
      * 提交单个顶点（{@code NEW_ENTITY} 格式）。
      * <p>
      * 调用顺序对齐拖尾顶点提交：setNormal 在最后以触发顶点提交。
-     * UV0 保留 (周向u, 轴向v) 供纹理坐标使用（emissive 着色器会读取，无纹理时仅占位）。
+     * UV0 保存周向和轴向纹理坐标。
      * </p>
      */
     private void emitVertex(VertexConsumer consumer, Matrix4f pose, float x, float y, float z, int color, float u, float v) {

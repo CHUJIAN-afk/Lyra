@@ -23,7 +23,22 @@ public class LyraRenderTypes extends RenderType {
         super(name, format, mode, bufferSize, affectsCrumbling, sortOnUpload, setupState, clearState);
     }
 
-    private static final RenderType TRAIL = RenderType.entityTranslucent(Lyra.rl("textures/trail.png"));
+    private static final RenderType TRAIL = trail("lyra_trail", RENDERTYPE_ENTITY_TRANSLUCENT_SHADER, LEQUAL_DEPTH_TEST);
+    static final RenderType FABULOUS_TRAIL = trail("lyra_fabulous_trail", new ShaderStateShard(TrailRenderBatch::fabulousShader), NO_DEPTH_TEST);
+
+    private static RenderType trail(String name, ShaderStateShard shader, DepthTestStateShard depthTest) {
+        CompositeState state = CompositeState.builder()
+                .setShaderState(shader)
+                .setTextureState(new TextureStateShard(Lyra.rl("textures/trail.png"), false, false))
+                .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
+                .setCullState(NO_CULL)
+                .setLightmapState(LIGHTMAP)
+                .setOverlayState(OVERLAY)
+                .setDepthTestState(depthTest)
+                .setWriteMaskState(COLOR_WRITE)
+                .createCompositeState(true);
+        return create(name, DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.QUADS, 1536, true, true, state);
+    }
 
     public static RenderType getTrail() {
         return TRAIL;

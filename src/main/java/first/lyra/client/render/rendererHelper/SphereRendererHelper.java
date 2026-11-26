@@ -18,8 +18,7 @@ import org.joml.Matrix4f;
  * 一致，仅几何由圆柱改为球面。
  * </p>
  * <p>
- * 使用原版 {@code entity_translucent_emissive} 渲染类型（{@link LyraRenderTypes#getTrail()}），
- * 原版与光影（Iris/Oculus）环境下效果一致。所有视觉效果在 Java 侧预乘进顶点色。
+ * 使用 {@link LyraRenderTypes#getTrail()} 进行半透明混合，保留深度测试并关闭深度写入。
  * </p>
  * <p>
  * 坐标约定：球心位于 PoseStack 原点，半径在 XYZ 三轴均匀展开。无需实体朝向 PoseStack 约定，
