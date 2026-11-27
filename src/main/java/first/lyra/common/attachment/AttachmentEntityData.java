@@ -9,6 +9,7 @@ import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraRegistries;
 import first.lyra.utils.LyraStreamCodecs;
 import io.netty.buffer.Unpooled;
+import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -20,7 +21,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 
 public class AttachmentEntityData {
 
@@ -29,8 +30,9 @@ public class AttachmentEntityData {
     private final Map<UUID, AttachmentEntity> uuidToEntity = new HashMap<>();
     private final List<AttachmentEntity> renderCache = new ArrayList<>();
     private final Map<MinionSlotType, Integer> slotLimits = new EnumMap<>(MinionSlotType.class);
-    private final AtomicReference<List<byte[]>> pendingPayloads = new AtomicReference<>(List.of());
+    private final Object pendingPayloadLock = new Object();
     private final Player owner;
+    private List<byte[]> pendingPayloads;
     private Level level = null;
     private boolean changed = false;
     private boolean slotCostChanged = false;
@@ -65,16 +67,19 @@ public class AttachmentEntityData {
             if (isRunning()) {
                 boolean levelChange = level != null && level != owner.level();
                 level = owner.level();
-                Map<Long, List<Minion>> sameCache = new HashMap<>();
+                Long2ObjectOpenHashMap<List<Minion>> sameCache = null;
                 // tick实体
                 for (List<AttachmentEntity> list : groups.values()) {
                     for (AttachmentEntity entity : list) {
                         if (entity instanceof Minion minion) {
+                            if (sameCache == null) {
+                                sameCache = new Long2ObjectOpenHashMap<>();
+                            }
                             List<Minion> minionList = sameCache.computeIfAbsent(minion.getSameHash(), key -> new ArrayList<>());
                             minion.setOrder(minionList.size());
                             minionList.add(minion);
-                            for (Minion minion1 : minionList) {
-                                minion1.setSameSize(list.size());
+                            for (int i = 0; i < minionList.size(); i++) {
+                                minionList.get(i).setSameSize(list.size());
                             }
                         }
                         if (levelChange) {
@@ -126,27 +131,33 @@ public class AttachmentEntityData {
                     }
                 }
                 // 清理所有分组中标记移除的实体
+                Predicate<AttachmentEntity> removeEntity = entity -> {
+                    if (!entity.isAlive()) {
+                        entity.setRemove();
+                    }
+                    if (entity.isRemove()) {
+                        uuidToEntity.remove(entity.getUuid());
+                        entity.onRemove();
+                        changed = true;
+                        return true;
+                    }
+                    return false;
+                };
                 groups.values().removeIf(list -> {
-                    while (true) {
-                        list.removeIf(entity -> {
-                            if (!entity.isAlive()) {
-                                entity.setRemove();
-                            }
-                            if (entity.isRemove()) {
-                                uuidToEntity.remove(entity.getUuid());
-                                entity.onRemove();
-                                changed = true;
-                                return true;
-                            }
-                            return false;
-                        });
+                    boolean repeat;
+                    do {
+                        list.removeIf(removeEntity);
                         if (list.isEmpty()) {
                             break;
                         }
-                        if (list.stream().noneMatch(AttachmentEntity::isRemove)) {
-                            break;
+                        repeat = false;
+                        for (AttachmentEntity entity : list) {
+                            if (entity.isRemove()) {
+                                repeat = true;
+                                break;
+                            }
                         }
-                    }
+                    } while (repeat);
                     return list.isEmpty();
                 });
                 if (!groups.isEmpty() || changed) {
@@ -190,28 +201,30 @@ public class AttachmentEntityData {
     @SuppressWarnings("unchecked")
     public <T extends AttachmentEntity> List<T> get(AttachmentEntityType<T> attachmentEntityType) {
         List<T> result = new ArrayList<>();
-        groups.getOrDefault(attachmentEntityType, new ArrayList<>())
-                .stream()
-                .filter(entity -> !entity.isRemove())
-                .map(entity -> (T) entity)
-                .forEach(result::add);
+        for (AttachmentEntity entity : groups.getOrDefault(attachmentEntityType, Collections.emptyList())) {
+            if (!entity.isRemove()) {
+                result.add((T) entity);
+            }
+        }
         return result;
     }
 
     @SuppressWarnings("unchecked")
     public <T extends AttachmentEntity> List<T> get(Class<T> classType) {
+        Objects.requireNonNull(classType);
         List<T> result = new ArrayList<>();
-        groups.values().stream()
-                .flatMap(Collection::stream)
-                .filter(entity -> !entity.isRemove())
-                .filter(classType::isInstance)
-                .map(entity -> (T) entity)
-                .forEach(result::add);
+        for (List<AttachmentEntity> list : groups.values()) {
+            for (AttachmentEntity entity : list) {
+                if (!entity.isRemove() && classType.isInstance(entity)) {
+                    result.add((T) entity);
+                }
+            }
+        }
         return result;
     }
 
     public void remove(AttachmentEntityType<?> entityType) {
-        getGroups().getOrDefault(entityType, new ArrayList<>()).forEach(AttachmentEntity::setRemove);
+        getGroups().getOrDefault(entityType, Collections.emptyList()).forEach(AttachmentEntity::setRemove);
     }
 
     public Map<AttachmentEntityType<?>, List<AttachmentEntity>> getGroups() {
@@ -222,18 +235,28 @@ public class AttachmentEntityData {
         return renderCache;
     }
 
-    /**
-     * 网络包到达时只暂存载荷，在客户端 tick 起点执行真实解码。
-     */
+    // 在客户端 tick 起点按接收顺序解码同步载荷。
     private void applyPendingSync() {
         Level level = getLevel();
-        List<byte[]> snapshot = pendingPayloads.getAndSet(List.of());
+        List<byte[]> snapshot;
+        synchronized (pendingPayloadLock) {
+            snapshot = pendingPayloads == null ? List.of() : pendingPayloads;
+            pendingPayloads = null;
+        }
+        Map<UUID, AttachmentEntity> existing = null;
         for (byte[] payload : snapshot) {
             RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.wrappedBuffer(payload), level.registryAccess(), ConnectionType.NEOFORGE);
             try {
-                // 保留现有实体的缓存引用
-                Map<UUID, AttachmentEntity> existing = new HashMap<>();
-                groups.values().forEach(list -> list.forEach(entity -> existing.put(entity.getUuid(), entity)));
+                if (existing == null) {
+                    existing = new HashMap<>();
+                } else {
+                    existing.clear();
+                }
+                for (List<AttachmentEntity> list : groups.values()) {
+                    for (AttachmentEntity entity : list) {
+                        existing.put(entity.getUuid(), entity);
+                    }
+                }
                 groups.clear();
                 int typeCount = buf.readVarInt();
                 for (int i = 0; i < typeCount; i++) {
@@ -300,15 +323,14 @@ public class AttachmentEntityData {
             AttachmentEntityData data = oldData != null ? oldData : new AttachmentEntityData(holder);
             byte[] payload = new byte[buf.readInt()];
             buf.readBytes(payload);
-            if (payload.length == 0) {
-                return data;
+            if (payload.length != 0) {
+                synchronized (data.pendingPayloadLock) {
+                    if (data.pendingPayloads == null) {
+                        data.pendingPayloads = new ArrayList<>();
+                    }
+                    data.pendingPayloads.add(payload);
+                }
             }
-            data.pendingPayloads.updateAndGet(payloads -> {
-                List<byte[]> updated = new ArrayList<>(payloads.size() + 1);
-                updated.addAll(payloads);
-                updated.add(payload);
-                return updated;
-            });
             return data;
         }
     }

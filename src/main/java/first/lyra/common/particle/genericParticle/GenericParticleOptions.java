@@ -27,21 +27,51 @@ public record GenericParticleOptions(int centerColor, int edgeColor, int lifetim
 
     public static final StreamCodec<RegistryFriendlyByteBuf, GenericParticleOptions> STREAM_CODEC = StreamCodec.of(
             (buffer, options) -> {
-                buffer.writeInt(options.centerColor);
-                buffer.writeInt(options.edgeColor);
-                buffer.writeInt(options.lifetime);
-                buffer.writeFloat(options.spinSpeed);
-                buffer.writeFloat(options.friction);
-                buffer.writeFloat(options.scale);
+                int flags = (options.centerColor == options.edgeColor ? 1 : 0)
+                        | (options.centerColor >>> 24 != 0 ? 2 : 0)
+                        | (options.edgeColor >>> 24 != 0 ? 4 : 0)
+                        | (Float.floatToRawIntBits(options.spinSpeed) != 0 ? 8 : 0)
+                        | (options.friction != 1.0F ? 16 : 0)
+                        | (options.scale != 1.0F ? 32 : 0)
+                        | (options.lifetime >>> 28 != 0 ? 64 : 0);
+                buffer.writeByte(flags);
+                if ((flags & 2) != 0) {
+                    buffer.writeInt(options.centerColor);
+                } else {
+                    buffer.writeMedium(options.centerColor);
+                }
+                if ((flags & 1) == 0) {
+                    if ((flags & 4) != 0) {
+                        buffer.writeInt(options.edgeColor);
+                    } else {
+                        buffer.writeMedium(options.edgeColor);
+                    }
+                }
+                if ((flags & 64) != 0) {
+                    buffer.writeInt(options.lifetime);
+                } else {
+                    buffer.writeVarInt(options.lifetime);
+                }
+                if ((flags & 8) != 0) {
+                    buffer.writeFloat(options.spinSpeed);
+                }
+                if ((flags & 16) != 0) {
+                    buffer.writeFloat(options.friction);
+                }
+                if ((flags & 32) != 0) {
+                    buffer.writeFloat(options.scale);
+                }
             },
-            buffer -> new GenericParticleOptions(
-                    buffer.readInt(),
-                    buffer.readInt(),
-                    buffer.readInt(),
-                    buffer.readFloat(),
-                    buffer.readFloat(),
-                    buffer.readFloat()
-            )
+            buffer -> {
+                int flags = buffer.readUnsignedByte();
+                int center = (flags & 2) != 0 ? buffer.readInt() : buffer.readUnsignedMedium();
+                int edge = (flags & 1) != 0 ? center : (flags & 4) != 0 ? buffer.readInt() : buffer.readUnsignedMedium();
+                int lifetime = (flags & 64) != 0 ? buffer.readInt() : buffer.readVarInt();
+                float spin = (flags & 8) != 0 ? buffer.readFloat() : 0.0F;
+                float friction = (flags & 16) != 0 ? buffer.readFloat() : 1.0F;
+                float scale = (flags & 32) != 0 ? buffer.readFloat() : 1.0F;
+                return new GenericParticleOptions(center, edge, lifetime, spin, friction, scale);
+            }
     );
 
     @Override

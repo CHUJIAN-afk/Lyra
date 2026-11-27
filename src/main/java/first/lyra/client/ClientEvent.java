@@ -16,6 +16,7 @@ import first.lyra.client.tooltip.LyraTooltipHandler;
 import first.lyra.client.tooltip.TooltipProvider;
 import first.lyra.common.item.SummonerWeaponItem;
 import first.lyra.common.particle.genericParticle.GenericParticleProvider;
+import first.lyra.common.particle.genericParticle.GenericParticleRenderer;
 import first.lyra.register.LyraParticleRegister;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -66,6 +67,7 @@ public class ClientEvent {
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("bloom_composite"), DefaultVertexFormat.POSITION), EffectPipeline::setCompositeShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("effect_texture"), DefaultVertexFormat.POSITION_TEX_COLOR), EffectPipeline::setTextureShader);
         event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("effect_composite"), DefaultVertexFormat.POSITION), EffectPipeline::setResolveShader);
+        event.registerShader(new ShaderInstance(event.getResourceProvider(), Lyra.rl("generic_particle"), DefaultVertexFormat.NEW_ENTITY), GenericParticleRenderer::setShader);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
