@@ -1,6 +1,5 @@
 package first.lyra.common.attachment;
 
-import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.minion.Minion;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
@@ -195,13 +194,6 @@ public class TargetCache {
             }
         }
         return distance;
-    }
-
-    //此缓存不能被共享，极易卡顿，不建议使用
-    @Deprecated
-    public boolean isVisibility(AttachmentEntity attachmentEntity, LivingEntity living) {
-        Integer key = attachmentEntity.getUuid().hashCode() + living.getUUID().hashCode();
-        return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(attachmentEntity.getPos(), living.getBoundingBox().getCenter()));
     }
 
     public boolean isVisibility(@Nullable LivingEntity living1, @Nullable LivingEntity living2) {

@@ -78,8 +78,8 @@ public class AttachmentEntityData {
                             List<Minion> minionList = sameCache.computeIfAbsent(minion.getSameHash(), key -> new ArrayList<>());
                             minion.setOrder(minionList.size());
                             minionList.add(minion);
-                            for (int i = 0; i < minionList.size(); i++) {
-                                minionList.get(i).setSameSize(list.size());
+                            for (Minion value : minionList) {
+                                value.setSameSize(list.size());
                             }
                         }
                         if (levelChange) {
