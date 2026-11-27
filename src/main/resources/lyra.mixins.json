@@ -12,7 +12,6 @@
   ],
   "client": [
     "LevelRendererMixin",
-    "ParticleEngineMixin",
     "iris.IrisShadowRendererMixin",
     "LightTextureAccessor"
   ],
