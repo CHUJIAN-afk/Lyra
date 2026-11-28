@@ -6,6 +6,7 @@ import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraDamageRegister;
 import first.lyra.utils.LyraStreamCodecs;
 import net.minecraft.core.Holder;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -102,10 +103,11 @@ public abstract class Minion extends AttachmentEntity {
      * 在所有者周围搜索有效目标
      */
     public LivingEntity searchTarget() {
-        int distance = this.getSearchDistance();
-        if (distance > 0 && owner != null) {
+        int baseDistance = getSearchDistance();
+        if (baseDistance > 0 && owner != null) {
             TargetCache targetCache = getTargetCache();
-            List<LivingEntity> targets = targetCache.getEntitiesInRadius(owner.getBoundingBox().getCenter(), distance, living -> targetCache.isVisibility(owner, living) && targetCache.isTarget(living));
+            float distance = targetCache.getSummonSearchRange(owner, baseDistance);
+            List<LivingEntity> targets = targetCache.getEntitiesInRadius(owner.getBoundingBox().getCenter(), distance, living -> targetCache.isTarget(living) && targetCache.isVisibility(owner, living));
             if (!targets.isEmpty()) {
                 return targetCache.getNewTarget(this, targets, 0, true);
             }
@@ -118,8 +120,13 @@ public abstract class Minion extends AttachmentEntity {
     }
 
     public void setTarget(LivingEntity target) {
-        if (this.target != null && this.target != target) {
-            setTargetChange(true);
+        if (this.target != target) {
+            if (this.target != null) {
+                setTargetChange(true);
+            }
+            if (owner instanceof ServerPlayer && !isRemove()) {
+                getTargetCache().updateAssignment(this.target, target, getDamage());
+            }
         }
         this.target = target;
     }

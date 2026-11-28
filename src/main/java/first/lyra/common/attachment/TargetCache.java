@@ -1,5 +1,6 @@
 package first.lyra.common.attachment;
 
+import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.minion.Minion;
 import first.lyra.register.LyraAttachmentRegister;
 import first.lyra.register.LyraAttributeRegister;
@@ -39,11 +40,13 @@ public class TargetCache {
     private final Int2BooleanOpenHashMap targetCache = new Int2BooleanOpenHashMap();
     private final Int2IntOpenHashMap hurterHistory = new Int2IntOpenHashMap();
     private final Int2FloatOpenHashMap distanceCache = new Int2FloatOpenHashMap();
+    private final Int2FloatOpenHashMap assignedDamage = new Int2FloatOpenHashMap();
     private final Long2ObjectOpenHashMap<List<LivingEntity>> spatialGroups = new Long2ObjectOpenHashMap<>();
     private final Long2ObjectOpenHashMap<LevelChunk> chunkCache = new Long2ObjectOpenHashMap<>();
     private final BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
     private final ServerPlayer owner;
     private ServerLevel serverLevel;
+    private boolean assignmentsReady;
 
     public TargetCache(IAttachmentHolder owner) {
         if (owner instanceof ServerPlayer player) {
@@ -60,6 +63,8 @@ public class TargetCache {
         hurterHistory.replaceAll((key, value) -> value - 1);
         hurterHistory.values().removeIf(value -> value <= 0);
         distanceCache.clear();
+        assignedDamage.clear();
+        assignmentsReady = false;
         spatialGroups.clear();
         chunkCache.clear();
     }
@@ -84,7 +89,7 @@ public class TargetCache {
     }
 
     private static long cellKey(int x, int y, int z) {
-        return ((long) x & 0x3FFFFFFL) << 38 | ((long) y & 0x3FFFFFFL) << 12 | ((long) z & 0x3FFFFFFL);
+        return SectionPos.asLong(x, y, z);
     }
 
     public List<LivingEntity> getEntitiesInRadius(Vec3 pos, double radius, @Nullable Predicate<LivingEntity> filter) {
@@ -149,31 +154,66 @@ public class TargetCache {
         return new AABB(cellX << 4, cellY << 4, cellZ << 4, (cellX + 1) << 4, (cellY + 1) << 4, (cellZ + 1) << 4);
     }
 
-    // ==================== Chunk 缓存（每tick预加载） ====================
-
+    // 用已分配仆从的一次攻击伤害估算集火压力。
     public LivingEntity getNewTarget(Minion minion, List<LivingEntity> targets, float ownerWarningDistance, boolean selfCenter) {
-        LivingEntity owner = minion.getOwner();
+        if (!assignmentsReady && !targets.isEmpty()) {
+            assignmentsReady = true;
+            for (List<AttachmentEntity> group : owner.getData(LyraAttachmentRegister.EntityData).getGroups().values()) {
+                for (AttachmentEntity entity : group) {
+                    if (entity instanceof Minion other && !other.isRemove() && other.isAlive()) {
+                        updateAssignment(null, other.getTarget(), other.getDamage());
+                    }
+                }
+            }
+        }
         LivingEntity currentTarget = minion.getTarget();
+        Vec3 ownerPos = owner.getEyePosition();
+        Vec3 minionPos = minion.getPos();
+        float damage = Math.max(1, minion.getDamage());
         LivingEntity newTarget = null;
+        int bestPriority = -1;
         double bestScore = Double.MAX_VALUE;
         for (LivingEntity entity : targets) {
-            if (owner.getData(LyraAttachmentRegister.TargetCache).isTarget(entity)) {
-                return entity;
+            if (!entity.isAlive() || entity == owner || entity.level() != owner.level()) {
+                continue;
             }
-            double score = selfCenter ? getDistance(minion, entity) : getDistance(owner, entity);
-            if (ownerWarningDistance > 0 && getDistance(owner, entity) < ownerWarningDistance) {
-                score -= 10000.0;
+            Vec3 center = entity.getBoundingBox().getCenter();
+            double ownerDistance = ownerPos.distanceTo(center);
+            int priority = isTarget(entity) ? 2 : 0;
+            if (ownerDistance < ownerWarningDistance) {
+                priority++;
             }
+            if (priority < bestPriority) {
+                continue;
+            }
+            double score = selfCenter ? minionPos.distanceTo(center) * 0.65 + ownerDistance * 0.35 : ownerDistance;
+            float otherDamage = assignedDamage.get(entity.getId());
             if (entity == currentTarget) {
-                score -= 1000.0;
+                otherDamage -= damage;
+                score -= 3;
             }
-            score += ((entity.getId() * 31 + minion.hashCode() * 17) % 5) * 40;
-            if (score < bestScore) {
+            double armor = Mth.clamp(entity.getArmorValue() - minion.getArmorPierce(), 0, 20);
+            double pressure = Math.max(0, otherDamage) * (1 - armor / 25) / Math.max(1, entity.getHealth() + entity.getAbsorptionAmount());
+            score += 8 * pressure + 32 * Math.max(0, pressure - 0.75);
+            if (priority > bestPriority || score < bestScore) {
+                bestPriority = priority;
                 bestScore = score;
                 newTarget = entity;
             }
         }
         return newTarget;
+    }
+
+    public void updateAssignment(@Nullable LivingEntity previous, @Nullable LivingEntity next, float damage) {
+        if (assignmentsReady) {
+            float estimate = Math.max(1, damage);
+            if (previous != null) {
+                assignedDamage.addTo(previous.getId(), -estimate);
+            }
+            if (next != null) {
+                assignedDamage.addTo(next.getId(), estimate);
+            }
+        }
     }
 
     public float getDistance(Minion minion, LivingEntity living) {
@@ -194,6 +234,12 @@ public class TargetCache {
             }
         }
         return distance;
+    }
+
+    //此缓存不能被共享
+    public boolean isVisibility(AttachmentEntity attachmentEntity, LivingEntity living) {
+        Integer key = attachmentEntity.getUuid().hashCode() + living.getUUID().hashCode();
+        return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(attachmentEntity.getPos(), living.getBoundingBox().getCenter()));
     }
 
     public boolean isVisibility(@Nullable LivingEntity living1, @Nullable LivingEntity living2) {
