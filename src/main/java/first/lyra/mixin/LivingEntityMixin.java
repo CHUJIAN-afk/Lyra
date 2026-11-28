@@ -3,9 +3,12 @@ package first.lyra.mixin;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import first.lyra.common.attachment.SummonMarkTracker;
+import first.lyra.common.attachmentEntity.AttachmentEntity;
 import first.lyra.common.attachmentEntity.AttachmentEntityDamageSource;
+import first.lyra.common.attachmentEntity.IMomentumAttachmentEntity;
 import first.lyra.common.minion.Minion;
 import first.lyra.common.projectile.Projectile;
 import first.lyra.register.LyraAttachmentRegister;
@@ -24,7 +27,6 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
 
 import javax.annotation.Nullable;
 
@@ -103,24 +105,36 @@ public abstract class LivingEntityMixin {
         return original.call(source, amount);
     }
 
-    @ModifyArg(
+    @WrapOperation(
             method = "hurt",
             at = @At(
                     value = "INVOKE",
                     target = "Lnet/minecraft/world/entity/LivingEntity;knockback(DDD)V"
-            ),
-            index = 0
+            )
     )
-    private double knockback(double strength, @Local(argsOnly = true) DamageSource damageSource) {
-        if (damageSource instanceof AttachmentEntityDamageSource AttachmentEntityDamageSource && AttachmentEntityDamageSource.getAttachmentEntity() instanceof Minion minion) {
-            LivingEntity owner = minion.getOwner();
+    private void knockback(LivingEntity target, double strength, double x, double z, Operation<Void> original, @Local(argsOnly = true) DamageSource damageSource) {
+        if (damageSource instanceof AttachmentEntityDamageSource source) {
+            AttachmentEntity entity = source.getAttachmentEntity();
+            LivingEntity owner = entity.getOwner();
             AttributeInstance instance = owner != null ? owner.getAttribute(LyraAttributeRegister.SummonKnockback) : null;
             double scale = instance != null ? instance.getValue() : 1;
             if (owner != null) {
                 scale *= 0.8 + (0.4 * owner.getRandom().nextDouble());
             }
-            return minion.getKnockback() * scale;
+            strength = entity.getKnockback() * scale;
+
+            if (entity instanceof IMomentumAttachmentEntity momentum) {
+                Vec3 direction = momentum.getVelocity();
+                if (direction.lengthSqr() == 0.0) {
+                    direction = entity.getLookAngle();
+                }
+                double horizontalLength = Math.hypot(direction.x, direction.z);
+                if (horizontalLength > 0.0) {
+                    x = -direction.x / horizontalLength;
+                    z = -direction.z / horizontalLength;
+                }
+            }
         }
-        return strength;
+        original.call(target, strength, x, z);
     }
 }
