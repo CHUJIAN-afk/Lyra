@@ -7,8 +7,8 @@ import first.lyra.register.LyraAttributeRegister;
 import it.unimi.dsi.fastutil.ints.Int2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ByteOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,13 +19,10 @@ import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,14 +33,14 @@ import java.util.function.Predicate;
 
 public class TargetCache {
 
-    private final Int2BooleanOpenHashMap visibilityCache = new Int2BooleanOpenHashMap();
+    private final Long2ByteOpenHashMap visibilityCache = new Long2ByteOpenHashMap();
     private final Int2BooleanOpenHashMap targetCache = new Int2BooleanOpenHashMap();
     private final Int2IntOpenHashMap hurterHistory = new Int2IntOpenHashMap();
     private final Int2FloatOpenHashMap distanceCache = new Int2FloatOpenHashMap();
     private final Int2FloatOpenHashMap assignedDamage = new Int2FloatOpenHashMap();
     private final Long2ObjectOpenHashMap<List<LivingEntity>> spatialGroups = new Long2ObjectOpenHashMap<>();
     private final Long2ObjectOpenHashMap<LevelChunk> chunkCache = new Long2ObjectOpenHashMap<>();
-    private final BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
+    private final LineOfSight lineOfSight = new LineOfSight(this::getVisibilitySection);
     private final ServerPlayer owner;
     private ServerLevel serverLevel;
     private boolean assignmentsReady;
@@ -67,6 +64,7 @@ public class TargetCache {
         assignmentsReady = false;
         spatialGroups.clear();
         chunkCache.clear();
+        lineOfSight.reset(serverLevel);
     }
 
     public void record(LivingEntity target, int time) {
@@ -236,145 +234,34 @@ public class TargetCache {
         return distance;
     }
 
-    //此缓存不能被共享
     public boolean isVisibility(AttachmentEntity attachmentEntity, LivingEntity living) {
-        Integer key = attachmentEntity.getUuid().hashCode() + living.getUUID().hashCode();
-        return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(attachmentEntity.getPos(), living.getBoundingBox().getCenter()));
+        return living.level() == serverLevel && hasLineOfSight(attachmentEntity.getPos(), living.getBoundingBox().getCenter());
     }
 
     public boolean isVisibility(@Nullable LivingEntity living1, @Nullable LivingEntity living2) {
-        if (living1 != null && living2 != null) {
-            Integer key = living1.getUUID().hashCode() + living2.getUUID().hashCode();
-            return visibilityCache.computeIfAbsent(key, k -> hasLineOfSight(living1.getEyePosition(), living2.getEyePosition()));
+        if (living1 != null && living2 != null && living1.level() == serverLevel && living2.level() == serverLevel) {
+            long key = ChunkPos.asLong(living1.getId(), living2.getId());
+            byte visible = visibilityCache.get(key);
+            if (visible == 0) {
+                visible = hasLineOfSight(living1.getEyePosition(), living2.getEyePosition()) ? (byte) 1 : (byte) -1;
+                visibilityCache.put(key, visible);
+            }
+            return visible > 0;
         }
         return false;
     }
 
     private boolean hasLineOfSight(Vec3 from, Vec3 to) {
-        if (serverLevel == null) {
-            return false;
+        return serverLevel != null && lineOfSight.hasLineOfSight(from, to);
+    }
+
+    private @Nullable LevelChunkSection getVisibilitySection(int x, int y, int z) {
+        long key = ChunkPos.asLong(x, z);
+        LevelChunk chunk = chunkCache.get(key);
+        if (chunk == null && !chunkCache.containsKey(key)) {
+            chunk = serverLevel.getChunkSource().getChunkNow(x, z);
+            chunkCache.put(key, chunk);
         }
-        if (from.distanceToSqr(to) > 128.0 * 128.0) {
-            return false;
-        }
-
-        double startX = Mth.lerp(-1.0E-7, from.x, to.x);
-        double startY = Mth.lerp(-1.0E-7, from.y, to.y);
-        double startZ = Mth.lerp(-1.0E-7, from.z, to.z);
-        double endX = Mth.lerp(-1.0E-7, to.x, from.x);
-        double endY = Mth.lerp(-1.0E-7, to.y, from.y);
-        double endZ = Mth.lerp(-1.0E-7, to.z, from.z);
-
-        int curX = Mth.floor(endX);
-        int curY = Mth.floor(endY);
-        int curZ = Mth.floor(endZ);
-
-        double dx = startX - endX;
-        double dy = startY - endY;
-        double dz = startZ - endZ;
-
-        int stepX = Mth.sign(dx);
-        int stepY = Mth.sign(dy);
-        int stepZ = Mth.sign(dz);
-
-        double tDeltaX = stepX == 0 ? Double.MAX_VALUE : (double) stepX / dx;
-        double tDeltaY = stepY == 0 ? Double.MAX_VALUE : (double) stepY / dy;
-        double tDeltaZ = stepZ == 0 ? Double.MAX_VALUE : (double) stepZ / dz;
-
-        double tMaxX = tDeltaX * (stepX > 0 ? 1.0 - Mth.frac(endX) : Mth.frac(endX));
-        double tMaxY = tDeltaY * (stepY > 0 ? 1.0 - Mth.frac(endY) : Mth.frac(endY));
-        double tMaxZ = tDeltaZ * (stepZ > 0 ? 1.0 - Mth.frac(endZ) : Mth.frac(endZ));
-
-        int minBuildHeight = serverLevel.getMinBuildHeight();
-        int maxBuildHeight = serverLevel.getMaxBuildHeight();
-
-        // 局部缓存：同一条射线内复用 chunk/section 引用
-        long lastChunkKey = Long.MIN_VALUE;
-        LevelChunk chunk = null;
-        int lastSectionY = Integer.MIN_VALUE;
-        LevelChunkSection section = null;
-
-        for (int steps = 0; steps < 128; steps++) {
-            if (tMaxX > 1.0 && tMaxY > 1.0 && tMaxZ > 1.0) {
-                return true;
-            }
-
-            // 步进
-            if (tMaxX < tMaxY) {
-                if (tMaxX < tMaxZ) {
-                    curX += stepX;
-                    tMaxX += tDeltaX;
-                } else {
-                    curZ += stepZ;
-                    tMaxZ += tDeltaZ;
-                }
-            } else {
-                if (tMaxY < tMaxZ) {
-                    curY += stepY;
-                    tMaxY += tDeltaY;
-                } else {
-                    curZ += stepZ;
-                    tMaxZ += tDeltaZ;
-                }
-            }
-
-            // 高度裁剪
-            if (curY < minBuildHeight || curY >= maxBuildHeight) {
-                continue;
-            }
-
-            // 从缓存取 chunk，未命中则加载并写入缓存
-            int chunkX = SectionPos.blockToSectionCoord(curX);
-            int chunkZ = SectionPos.blockToSectionCoord(curZ);
-            long chunkKey = ChunkPos.asLong(chunkX, chunkZ);
-            if (chunkKey != lastChunkKey) {
-                chunk = chunkCache.get(chunkKey);
-                if (chunk == null) {
-                    chunk = serverLevel.getChunkSource().getChunkNow(chunkX, chunkZ);
-                    if (chunk != null) {
-                        chunkCache.put(chunkKey, chunk);
-                    }
-                }
-                lastChunkKey = chunkKey;
-                lastSectionY = Integer.MIN_VALUE;
-            }
-
-            if (chunk == null) {
-                return false;
-            }
-
-            // 缓存 Section
-            int sectionY = chunk.getSectionIndex(curY);
-            if (sectionY != lastSectionY) {
-                section = chunk.getSection(sectionY);
-                lastSectionY = sectionY;
-            }
-
-            if (section == null || section.hasOnlyAir()) {
-                continue;
-            }
-
-            BlockState blockState = section.getBlockState(curX & 15, curY & 15, curZ & 15);
-
-            if (!blockState.canOcclude()) {
-                continue;
-            }
-
-            if (blockState.isCollisionShapeFullBlock(serverLevel, mutablePos.set(curX, curY, curZ))) {
-                return false;
-            }
-
-            VoxelShape voxelShape = blockState.getCollisionShape(serverLevel, mutablePos);
-            if (voxelShape.isEmpty()) {
-                continue;
-            }
-
-            BlockHitResult hitResult = voxelShape.clip(from, to, mutablePos);
-            if (hitResult != null) {
-                return false;
-            }
-        }
-
-        return true;
+        return chunk == null ? null : chunk.getSection(y - chunk.getMinSection());
     }
 }

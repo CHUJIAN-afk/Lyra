@@ -100,14 +100,14 @@ public abstract class Minion extends AttachmentEntity {
     }
 
     /**
-     * 在所有者周围搜索有效目标
+     * 在仆从周围搜索有效目标
      */
     public LivingEntity searchTarget() {
         int baseDistance = getSearchDistance();
         if (baseDistance > 0 && owner != null) {
             TargetCache targetCache = getTargetCache();
             float distance = targetCache.getSummonSearchRange(owner, baseDistance);
-            List<LivingEntity> targets = targetCache.getEntitiesInRadius(owner.getBoundingBox().getCenter(), distance, living -> targetCache.isTarget(living) && targetCache.isVisibility(owner, living));
+            List<LivingEntity> targets = targetCache.getEntitiesInRadius(getPos(), distance, living -> targetCache.isTarget(living) && targetCache.isVisibility(this, living));
             if (!targets.isEmpty()) {
                 return targetCache.getNewTarget(this, targets, 0, true);
             }
